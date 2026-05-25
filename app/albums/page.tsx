@@ -176,7 +176,6 @@ export default function AlbumsPage() {
             {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
           </div>
           <button className="btn-primary w-full" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
-          <p className="text-xs leading-5 text-cocoa/55">相册当前为免登录模式，拥有链接的人可以查看和上传相册内容，请不要公开分享链接，也不要上传特别敏感的照片。</p>
         </form>
 
         <section className="soft-card">

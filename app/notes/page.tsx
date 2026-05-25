@@ -75,9 +75,6 @@ export default function NotesPage() {
           {message ? <p className="notice">{message}</p> : null}
         </section>
         <NoteWall notes={notes} />
-        <p className="rounded-[1.35rem] border border-white/70 bg-white/55 px-4 py-3 text-xs leading-5 text-cocoa/55 shadow-sm">
-          这是你们共享的小纸条墙，请不要把链接随意公开，也不要上传特别敏感的照片、视频或语音。
-        </p>
       </div>
     </AppShell>
   );
