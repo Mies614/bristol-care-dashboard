@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { DeadlineCard } from "@/components/DeadlineCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getDaysUntilDeadline } from "@/lib/date";
+import { createAllDeadlinesIcs, createDeadlineIcs, downloadIcs, isDeadlineCalendarExportable, safeIcsFilename } from "@/lib/ics";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import type { AppData, Deadline } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export default function DeadlinesPage() {
   const [data, setData] = useState<AppData | null>(null);
   const [draft, setDraft] = useState<Omit<Deadline, "id">>(emptyDeadline);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
   useEffect(() => setData(loadAppData()), []);
 
@@ -44,6 +46,26 @@ export default function DeadlinesPage() {
     setEditingId(null);
   }
 
+  function exportDeadline(deadline: Deadline) {
+    if (!isDeadlineCalendarExportable(deadline)) {
+      setMessage("Deadline 日期不正确，暂时不能生成日历文件。");
+      return;
+    }
+    downloadIcs(`bristol-ddl-${safeIcsFilename(deadline.title)}-${deadline.dueDate}.ics`, createDeadlineIcs(deadline));
+    setMessage("已生成日历文件，请在手机日历中导入。如果没有自动下载，请长按或在浏览器中打开。");
+  }
+
+  function exportAllDeadlines() {
+    if (!data) return;
+    const exportable = data.deadlines.filter((deadline) => deadline.status !== "done" && isDeadlineCalendarExportable(deadline));
+    if (!exportable.length) {
+      setMessage("没有可导出的未完成 DDL 提醒。");
+      return;
+    }
+    downloadIcs("bristol-deadlines.ics", createAllDeadlinesIcs(exportable));
+    setMessage("已生成日历文件，请在手机日历中导入。如果没有自动下载，请长按或在浏览器中打开。");
+  }
+
   const sorted = useMemo(
     () => (data ? [...data.deadlines].sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b)) : []),
     [data]
@@ -54,6 +76,12 @@ export default function DeadlinesPage() {
   return (
     <AppShell>
       <PageHeader title="Deadline" subtitle="按截止时间排序，把重要任务提前一点点处理。" />
+      <section className="soft-card mb-4">
+        <p className="section-kicker mb-1">Calendar</p>
+        <h2 className="mb-3 font-semibold text-cocoa">日历提醒</h2>
+        <button className="btn-secondary" onClick={exportAllDeadlines}>导出全部 DDL 提醒</button>
+        {message ? <p className="notice mt-3">{message}</p> : null}
+      </section>
 
       <form className="soft-card mb-4 space-y-3 bg-gradient-to-br from-white/85 to-butter/45" onSubmit={submit}>
         <div>
@@ -89,6 +117,7 @@ export default function DeadlinesPage() {
             key={deadline.id}
             onDelete={() => persist(data.deadlines.filter((item) => item.id !== deadline.id))}
             onEdit={() => { setEditingId(deadline.id); setDraft(deadline); }}
+            onCalendar={() => exportDeadline(deadline)}
             onToggle={() =>
               persist(data.deadlines.map((item) =>
                 item.id === deadline.id ? { ...item, status: item.status === "done" ? "todo" : "done" } : item

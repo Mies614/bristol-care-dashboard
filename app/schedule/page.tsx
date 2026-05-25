@@ -7,6 +7,7 @@ import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
 import { sampleCourses } from "@/lib/sampleData";
 import { getCoursesForDay } from "@/lib/schedule";
+import { createAllCoursesIcs, createCourseIcs, downloadIcs, isCourseCalendarExportable, safeIcsFilename } from "@/lib/ics";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import { DAYS, type AppData, type Course, type DayName } from "@/lib/types";
 import { validateCourseArray } from "@/lib/validation";
@@ -52,6 +53,26 @@ export default function SchedulePage() {
     setEditingId(null);
   }
 
+  function exportCourse(course: Course) {
+    if (!isCourseCalendarExportable(course)) {
+      setImportMessage("课程时间不正确，暂时不能生成日历文件。");
+      return;
+    }
+    downloadIcs(`bristol-course-${safeIcsFilename(course.name)}.ics`, createCourseIcs(course, { semesterEndDate: data?.semesterEndDate }));
+    setImportMessage("已生成日历文件，请在手机日历中导入。如果没有自动下载，请长按或在浏览器中打开。");
+  }
+
+  function exportAllCourses() {
+    if (!data) return;
+    const exportable = data.courses.filter(isCourseCalendarExportable);
+    if (!exportable.length) {
+      setImportMessage("没有可导出的课程提醒，请先检查课程时间。");
+      return;
+    }
+    downloadIcs("bristol-weekly-courses.ics", createAllCoursesIcs(exportable, { semesterEndDate: data.semesterEndDate }));
+    setImportMessage("已生成日历文件，请在手机日历中导入。如果没有自动下载，请长按或在浏览器中打开。");
+  }
+
   const grouped = useMemo(
     () => Object.fromEntries(DAYS.map((day) => [day, data ? getCoursesForDay(data.courses, day) : []])) as Record<DayName, Course[]>,
     [data]
@@ -92,6 +113,7 @@ export default function SchedulePage() {
         <div className="flex flex-wrap gap-2">
           <button className="btn-secondary" onClick={() => persist(sampleCourses)}>导入示例课程表</button>
           <button className="btn-danger" onClick={() => persist([])}>清空课程表</button>
+          <button className="btn-secondary" onClick={exportAllCourses}>导出整周课程提醒</button>
           <button className="btn-secondary" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</button>
           <label className="btn-secondary cursor-pointer">
             导入 JSON
@@ -131,6 +153,7 @@ export default function SchedulePage() {
                     <CourseCard course={course} />
                     <div className="mt-2 flex gap-2">
                       <button className="btn-secondary btn-small" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</button>
+                      <button className="btn-secondary btn-small" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</button>
                       <button className="btn-danger btn-small" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</button>
                     </div>
                   </div>

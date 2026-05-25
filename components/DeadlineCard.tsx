@@ -15,12 +15,14 @@ export function DeadlineCard({
   deadline,
   onToggle,
   onEdit,
-  onDelete
+  onDelete,
+  onCalendar
 }: {
   deadline: Deadline;
   onToggle?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCalendar?: () => void;
 }) {
   const tone = getDeadlineTone(deadline);
   const days = getDaysUntilDeadline(deadline);
@@ -39,7 +41,7 @@ export function DeadlineCard({
         </div>
         <span className="shrink-0 rounded-full border border-white/70 bg-white/75 px-3 py-1 text-xs shadow-sm">{label}</span>
       </div>
-      {(onToggle || onEdit || onDelete) && (
+      {(onToggle || onEdit || onDelete || onCalendar) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {onToggle ? (
             <button className="btn-secondary btn-small" onClick={onToggle}>
@@ -49,6 +51,11 @@ export function DeadlineCard({
           {onEdit ? (
             <button className="btn-secondary btn-small" onClick={onEdit}>
               编辑
+            </button>
+          ) : null}
+          {onCalendar ? (
+            <button className="btn-secondary btn-small" disabled={deadline.status === "done"} onClick={onCalendar}>
+              添加提醒
             </button>
           ) : null}
           {onDelete ? (
