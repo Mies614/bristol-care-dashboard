@@ -9,12 +9,12 @@ export const STORAGE_KEY = "bristol-care-data-v1";
 
 export function loadAppData(): AppData {
   if (typeof window === "undefined") return defaultAppData;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    saveAppData(defaultAppData);
-    return defaultAppData;
-  }
   try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      saveAppData(defaultAppData);
+      return defaultAppData;
+    }
     return { ...validateAppData(JSON.parse(raw)), backgroundSettings: getBackgroundSettings() };
   } catch {
     return defaultAppData;
@@ -23,13 +23,26 @@ export function loadAppData(): AppData {
 
 export function saveAppData(data: AppData) {
   if (typeof window === "undefined") return;
-  saveBackgroundSettings(data.backgroundSettings);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  window.dispatchEvent(new Event("bristol-care-data"));
+  try {
+    const backgroundSettings = saveBackgroundSettings(data.backgroundSettings);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backgroundSettings }));
+    window.dispatchEvent(new Event("bristol-care-data"));
+  } catch {
+    try {
+      window.dispatchEvent(new Event("bristol-care-data"));
+    } catch {
+      // Keep rendering even when localStorage or Event is unavailable.
+    }
+  }
 }
 
 export function resetAppData() {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(STORAGE_KEY);
-  saveAppData(defaultAppData);
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore unavailable storage.
+  } finally {
+    saveAppData(defaultAppData);
+  }
 }

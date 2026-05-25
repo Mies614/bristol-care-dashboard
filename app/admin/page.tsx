@@ -32,11 +32,15 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem(ADMIN_PASSWORD_KEY);
-    if (saved) {
-      setPassword(saved);
-      setAdminPassword(saved);
-      setLoggedIn(true);
+    try {
+      const saved = window.sessionStorage.getItem(ADMIN_PASSWORD_KEY);
+      if (saved) {
+        setPassword(saved);
+        setAdminPassword(saved);
+        setLoggedIn(true);
+      }
+    } catch {
+      // Session storage is optional; user can log in manually.
     }
   }, []);
 
@@ -56,7 +60,11 @@ export default function AdminPage() {
       return;
     }
     setAdminPassword(password);
-    window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+    try {
+      window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+    } catch {
+      // Session storage is optional.
+    }
     setLoggedIn(true);
     await loadNotes(password);
   }

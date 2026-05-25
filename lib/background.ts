@@ -97,19 +97,44 @@ export function getBackgroundSettings(): BackgroundSettings {
     const raw = window.localStorage.getItem(BACKGROUND_SETTINGS_KEY);
     if (raw) return normalizeBackgroundSettings(JSON.parse(raw));
   } catch {
-    // Ignore malformed user storage and fall back below.
+    try {
+      window.localStorage.removeItem(BACKGROUND_SETTINGS_KEY);
+    } catch {
+      // Ignore unavailable storage.
+    }
   }
   return readStoredAppBackground() || { ...DEFAULT_BACKGROUND_SETTINGS };
+}
+
+function dispatchBackgroundChanged(settings: BackgroundSettings) {
+  if (typeof window === "undefined") return;
+  try {
+    const event = typeof CustomEvent === "function"
+      ? new CustomEvent(BACKGROUND_SETTINGS_CHANGED_EVENT, { detail: settings })
+      : new Event(BACKGROUND_SETTINGS_CHANGED_EVENT);
+    window.dispatchEvent(event);
+  } catch {
+    // Some older webviews can fail event construction; background still falls back on next render.
+  }
 }
 
 export function saveBackgroundSettings(settings: BackgroundSettings): BackgroundSettings {
   const normalized = normalizeBackgroundSettings(settings);
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(normalized));
-    const event = typeof CustomEvent === "function"
-      ? new CustomEvent(BACKGROUND_SETTINGS_CHANGED_EVENT, { detail: normalized })
-      : new Event(BACKGROUND_SETTINGS_CHANGED_EVENT);
-    window.dispatchEvent(event);
+    try {
+      window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(normalized));
+      dispatchBackgroundChanged(normalized);
+    } catch {
+      const fallback = { ...DEFAULT_BACKGROUND_SETTINGS };
+      try {
+        window.localStorage.removeItem(BACKGROUND_SETTINGS_KEY);
+        window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(fallback));
+      } catch {
+        // Storage can be unavailable in private mode; still keep the page usable.
+      }
+      dispatchBackgroundChanged(fallback);
+      return fallback;
+    }
   }
   return normalized;
 }

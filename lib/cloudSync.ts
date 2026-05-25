@@ -80,15 +80,26 @@ export async function syncSettings(code: string): Promise<CloudResult<AppData>> 
 }
 
 export function saveCloudConnection(code: string) {
-  window.localStorage.setItem(CLOUD_CONNECTION_KEY, JSON.stringify({ code }));
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CLOUD_CONNECTION_KEY, JSON.stringify({ code }));
+  } catch {
+    // Cloud connection is optional; local mode remains usable.
+  }
 }
 
 export function clearCloudConnection() {
-  window.localStorage.removeItem(CLOUD_CONNECTION_KEY);
-  window.localStorage.removeItem(LAST_SYNC_KEY);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(CLOUD_CONNECTION_KEY);
+    window.localStorage.removeItem(LAST_SYNC_KEY);
+  } catch {
+    // Ignore unavailable storage.
+  }
 }
 
 export function getCloudConnection(): CloudConnection | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(CLOUD_CONNECTION_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -98,11 +109,21 @@ export function getCloudConnection(): CloudConnection | null {
 }
 
 export function getLastSyncTime() {
-  return window.localStorage.getItem(LAST_SYNC_KEY);
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LAST_SYNC_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setLastSyncTime(value = new Date().toISOString()) {
-  window.localStorage.setItem(LAST_SYNC_KEY, value);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_SYNC_KEY, value);
+  } catch {
+    // Ignore unavailable storage.
+  }
 }
 
 export function getCloudSyncStatus() {
@@ -116,8 +137,12 @@ export function getCloudSyncStatus() {
 export async function pullAndPersistCloudData(code: string): Promise<CloudResult<AppData>> {
   const result = await pullCloudData(code);
   if (!result.ok || !result.data) return result;
-  saveAppData(result.data);
-  setLastSyncTime();
+  try {
+    saveAppData(result.data);
+    setLastSyncTime();
+  } catch {
+    return { ok: false, error: "云端数据已拉取，但本地缓存写入失败。" };
+  }
   return result;
 }
 
@@ -139,7 +164,11 @@ export async function syncLoveNotesIntoLocalData(code: string): Promise<CloudRes
     loveNotes: result.data,
     note: result.data[0]?.content || current.note
   };
-  saveAppData(next);
-  setLastSyncTime();
+  try {
+    saveAppData(next);
+    setLastSyncTime();
+  } catch {
+    return { ok: false, error: "小纸条已拉取，但本地缓存写入失败。" };
+  }
   return { ok: true, data: next };
 }

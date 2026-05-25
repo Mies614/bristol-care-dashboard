@@ -17,32 +17,89 @@ import type { AppData } from "@/lib/types";
 import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
+import { defaultAppData } from "@/lib/sampleData";
+
+function safeBristolDate() {
+  try {
+    return new Date().toLocaleDateString("zh-CN", { timeZone: "Europe/London", month: "long", day: "numeric", weekday: "long" });
+  } catch {
+    return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
+  }
+}
+
+function safeBristolTime() {
+  try {
+    return new Date().toLocaleTimeString("zh-CN", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  }
+}
+
+function safeBristolStatus() {
+  try {
+    const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hour12: false }).format(new Date()));
+    if (hour < 6) return "Bristol 还在安静的夜里";
+    if (hour < 12) return "Bristol 的早晨开始啦";
+    if (hour < 18) return "Bristol 午后适合慢慢推进";
+  } catch {
+    return "Bristol 的一天正在慢慢展开";
+  }
+  return "Bristol 晚上记得早点休息";
+}
 
 export default function HomePage() {
   const [data, setData] = useState<AppData | null>(null);
   const [syncMessage, setSyncMessage] = useState("");
+  const [initError, setInitError] = useState("");
   const { weather, error } = useWeather();
 
   useEffect(() => {
-    const refresh = () => setData(loadAppData());
+    let settled = false;
+    const refresh = () => {
+      try {
+        setData(loadAppData());
+        settled = true;
+      } catch (loadError) {
+        settled = true;
+        setData(defaultAppData);
+        if (process.env.NODE_ENV === "development") {
+          setInitError(loadError instanceof Error ? loadError.message : "首页初始化失败，已使用默认数据。");
+        }
+      }
+    };
     refresh();
+    const fallback = window.setTimeout(() => {
+      if (!settled) {
+        setData(defaultAppData);
+        if (process.env.NODE_ENV === "development") setInitError("首页初始化超时，已使用默认数据。");
+      }
+    }, 1500);
     window.addEventListener("bristol-care-data", refresh);
-    return () => window.removeEventListener("bristol-care-data", refresh);
+    return () => {
+      window.clearTimeout(fallback);
+      window.removeEventListener("bristol-care-data", refresh);
+    };
   }, []);
 
   useEffect(() => {
     if (!isCloudConfigured()) return;
-    const connection = getCloudConnection();
-    if (connection) {
-      pullAndPersistCloudData(connection.code).then((result) => {
+    try {
+      const connection = getCloudConnection();
+      if (connection) {
+        pullAndPersistCloudData(connection.code).then((result) => {
+          if (result.ok && result.data) setData(result.data);
+          if (!result.ok) setSyncMessage(result.error || "云同步失败，已使用本地缓存。");
+        }).catch(() => setSyncMessage("云同步失败，已使用本地缓存。"));
+        return;
+      }
+      syncLoveNotesIntoLocalData(getDefaultSpaceCode()).then((result) => {
         if (result.ok && result.data) setData(result.data);
-        if (!result.ok) setSyncMessage(result.error || "云同步失败，已使用本地缓存。");
+      }).catch(() => {
+        // Cloud notes are optional for first paint.
       });
-      return;
+    } catch {
+      setSyncMessage("云同步暂时不可用，已使用本地缓存。");
     }
-    syncLoveNotesIntoLocalData(getDefaultSpaceCode()).then((result) => {
-      if (result.ok && result.data) setData(result.data);
-    });
   }, []);
 
   const todayCourses = useMemo(() => (data ? getTodayCourses(data.courses) : []), [data]);
@@ -58,21 +115,9 @@ export default function HomePage() {
     [data]
   );
   const featuredLoveNote = useMemo(() => (data ? pickFeaturedLoveNote(data.loveNotes) : undefined), [data]);
-  const todayLabel = useMemo(
-    () => new Date().toLocaleDateString("zh-CN", { timeZone: "Europe/London", month: "long", day: "numeric", weekday: "long" }),
-    []
-  );
-  const bristolTime = useMemo(
-    () => new Date().toLocaleTimeString("zh-CN", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }),
-    []
-  );
-  const bristolStatus = useMemo(() => {
-    const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hour12: false }).format(new Date()));
-    if (hour < 6) return "Bristol 还在安静的夜里";
-    if (hour < 12) return "Bristol 的早晨开始啦";
-    if (hour < 18) return "Bristol 午后适合慢慢推进";
-    return "Bristol 晚上记得早点休息";
-  }, []);
+  const todayLabel = useMemo(safeBristolDate, []);
+  const bristolTime = useMemo(safeBristolTime, []);
+  const bristolStatus = useMemo(safeBristolStatus, []);
 
   async function refreshLoveNote() {
     const connection = getCloudConnection();
@@ -138,6 +183,7 @@ export default function HomePage() {
       </header>
 
       <div className="space-y-3.5">
+        {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
         <WeatherCard weather={weather} error={error} />
         {outfit ? <OutfitCard suggestion={outfit} /> : null}

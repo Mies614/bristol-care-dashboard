@@ -8,11 +8,19 @@ export function OnboardingCard() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(window.localStorage.getItem(ONBOARDING_KEY) !== "true");
+    try {
+      setVisible(window.localStorage.getItem(ONBOARDING_KEY) !== "true");
+    } catch {
+      setVisible(false);
+    }
   }, []);
 
   function dismiss() {
-    window.localStorage.setItem(ONBOARDING_KEY, "true");
+    try {
+      window.localStorage.setItem(ONBOARDING_KEY, "true");
+    } catch {
+      // Ignore unavailable storage.
+    }
     setVisible(false);
   }
 
