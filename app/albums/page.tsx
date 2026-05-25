@@ -10,7 +10,6 @@ import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValid
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import type { AlbumItem } from "@/lib/types";
 
-const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
 const filters = [
   ["all", "全部"],
   ["favorite", "精选"],
@@ -30,7 +29,8 @@ function formatApiError(payload: Record<string, unknown>, fallback: string) {
 
 function formatUploadError(stage: "upload_image" | "upload_video" | "save_metadata", error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "未知错误");
-  return `stage: ${stage} · error: 上传失败 · detail: ${message}`;
+  const label = stage === "upload_image" ? "图片上传失败" : stage === "upload_video" ? "视频上传失败" : "相册保存失败";
+  return `stage: ${stage} · error: ${label} · detail: ${message}`;
 }
 
 export default function AlbumsPage() {
@@ -38,8 +38,7 @@ export default function AlbumsPage() {
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
   const [message, setMessage] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState(getDefaultSpaceCode());
+  const code = getDefaultSpaceCode();
   const [uploading, setUploading] = useState(false);
   const [uploadStage, setUploadStage] = useState("");
   const [playing, setPlaying] = useState(false);
@@ -48,17 +47,9 @@ export default function AlbumsPage() {
   const [video, setVideo] = useState<File | null>(null);
 
   useEffect(() => {
-    try {
-      setPassword(window.sessionStorage.getItem(ADMIN_PASSWORD_KEY) || "");
-    } catch {
-      // Password can be entered manually.
-    }
-  }, []);
-
-  useEffect(() => {
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, code]);
+  }, [filter]);
 
   const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : ""), [image]);
   const videoPreview = useMemo(() => (video ? URL.createObjectURL(video) : ""), [video]);
@@ -76,10 +67,6 @@ export default function AlbumsPage() {
   async function upload(event: React.FormEvent) {
     event.preventDefault();
     setMessage("");
-    if (!password) {
-      setMessage("请先输入后台密码。");
-      return;
-    }
     if (!image && !video) {
       setMessage("请至少选择一张图片或一个视频。");
       return;
@@ -112,7 +99,7 @@ export default function AlbumsPage() {
       const response = await fetch("/api/albums", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildAlbumMetadataPayload({ password, code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo }))
+        body: JSON.stringify(buildAlbumMetadataPayload({ code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo }))
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -134,15 +121,14 @@ export default function AlbumsPage() {
   }
 
   async function patchItem(id: string, body: Record<string, unknown>) {
-    if (!password) return setMessage("请先输入后台密码。");
     const response = await fetch("/api/albums", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, code, id, ...body })
+      body: JSON.stringify({ code, id, ...body })
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      setMessage(formatApiError(payload, "更新失败。"));
+      setMessage(formatApiError(payload, body.action === "delete" ? "删除失败。" : "精选状态更新失败。"));
       return;
     }
     setMessage(payload.deleted ? "已删除这张回忆。" : "已更新。");
@@ -164,8 +150,6 @@ export default function AlbumsPage() {
             <p className="section-kicker mb-1">Upload</p>
             <h2 className="font-semibold text-cocoa">添加一张回忆</h2>
           </div>
-          <input className="field" placeholder="后台密码" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <input className="field" placeholder="Space code" value={code} onChange={(e) => setCode(e.target.value)} />
           <input className="field" placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           <textarea className="field min-h-24" placeholder="备注" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
@@ -192,6 +176,7 @@ export default function AlbumsPage() {
             {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
           </div>
           <button className="btn-primary w-full" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
+          <p className="text-xs leading-5 text-cocoa/55">相册当前为免登录模式，拥有链接的人可以查看和上传相册内容，请不要公开分享链接，也不要上传特别敏感的照片。</p>
         </form>
 
         <section className="soft-card">

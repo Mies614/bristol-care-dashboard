@@ -18,7 +18,6 @@ export type AlbumUploadDraft = {
 };
 
 export type AlbumMetadataPayload = {
-  password: string;
   code: string;
   title: string;
   note: string;
@@ -68,15 +67,13 @@ export async function uploadAlbumFileDirectly(file: File, kind: "image" | "video
 }
 
 export function buildAlbumMetadataPayload(input: {
-  password: string;
   code: string;
   draft: AlbumUploadDraft;
   imageUpload?: UploadedAlbumFile | null;
   videoUpload?: UploadedAlbumFile | null;
 }): AlbumMetadataPayload {
-  const { password, code, draft, imageUpload, videoUpload } = input;
+  const { code, draft, imageUpload, videoUpload } = input;
   return {
-    password,
     code,
     title: draft.title,
     note: draft.note,

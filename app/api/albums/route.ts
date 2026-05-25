@@ -22,12 +22,6 @@ function fail(error: string, code: string, step: string, status = 500, errorObje
   return NextResponse.json<ApiError>({ ok: false, error, code, step, detail: developmentDetail(errorObject) }, { status });
 }
 
-function validatePassword(password: unknown) {
-  if (!password) return fail("缺少后台密码，请重新登录。", "ADMIN_PASSWORD_MISSING", "validate_admin_password", 401);
-  if (String(password) !== process.env.ADMIN_PASSWORD) return fail("后台密码不正确。", "INVALID_ADMIN_PASSWORD", "validate_admin_password", 401);
-  return null;
-}
-
 function isAlbumType(value: unknown): value is AlbumItem["type"] {
   return value === "photo" || value === "live_photo" || value === "video";
 }
@@ -46,7 +40,7 @@ export async function GET(request: NextRequest) {
     const code = request.nextUrl.searchParams.get("code") || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026";
     const filter = request.nextUrl.searchParams.get("filter") || "all";
     const space = await getSpaceByCode(code);
-    if (!space) return fail("访问码不存在。", "SPACE_NOT_FOUND", "get_space", 404);
+    if (!space) return fail("相册空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
     let query = createSupabaseServerClient()
       .from("album_items")
       .select("*")
@@ -69,13 +63,11 @@ export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法保存。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const passwordError = validatePassword(body.password);
-    if (passwordError) return passwordError;
     const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
 
     step = "get_space";
     const space = await getSpaceByCode(code);
-    if (!space) return fail("访问码不存在。", "SPACE_NOT_FOUND", "get_space", 404);
+    if (!space) return fail("相册空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     step = "validate_metadata";
     if (!isAlbumType(body.type)) return fail("相册类型不正确。", "ALBUM_TYPE_INVALID", "validate_metadata", 400);
@@ -119,13 +111,11 @@ export async function PATCH(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法更新。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const passwordError = validatePassword(body.password);
-    if (passwordError) return passwordError;
     const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
     if (!body.id) return fail("缺少相册项目 ID。", "ALBUM_ID_MISSING", "validate_album_id", 400);
     step = "get_space";
     const space = await getSpaceByCode(code);
-    if (!space) return fail("访问码不存在。", "SPACE_NOT_FOUND", "get_space", 404);
+    if (!space) return fail("相册空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     const supabase = createSupabaseServerClient();
     const { data: current, error: currentError } = await supabase
@@ -141,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     step = "update_album_item";
     const action = String(body.action || "update");
     const patch: Record<string, unknown> = {};
-    if (action === "delete") {
+    if (action === "delete" || action === "soft_delete") {
       patch.deleted_at = new Date().toISOString();
     } else if (action === "toggle_favorite") {
       patch.is_favorite = !current.is_favorite;
@@ -160,7 +150,7 @@ export async function PATCH(request: NextRequest) {
       .select("*")
       .single();
     if (error) return fail("相册项目更新失败。", "ALBUM_UPDATE_FAILED", "update_album_item", 500, error);
-    return NextResponse.json({ ok: true, item: albumItemFromRow(data), deleted: action === "delete" });
+    return NextResponse.json({ ok: true, item: albumItemFromRow(data), deleted: action === "delete" || action === "soft_delete" });
   } catch (error) {
     return fail("相册更新请求失败。", "ALBUM_PATCH_FAILED", step, 500, error);
   }

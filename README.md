@@ -191,10 +191,9 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 上传普通照片：
 
 1. 打开 `/albums`。
-2. 输入后台密码和 space code。
-3. 选择一张封面图片。
-4. 可填写标题、备注、拍摄日期、地点、是否精选。
-5. 点击“上传到相册”。
+2. 选择一张封面图片。
+3. 可填写标题、备注、拍摄日期、地点、是否精选。
+4. 点击“上传到相册”。
 
 上传实况照片：
 
@@ -215,6 +214,7 @@ Storage policy 说明：
 
 - 相册文件上传使用浏览器端 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 直传 `couple-albums` bucket。
 - `album_items` 数据库写入仍然必须走 `/api/albums`，由服务端 `SUPABASE_SERVICE_ROLE_KEY` 写入，前端不会直接写数据库。
+- `/albums` 当前为免登录模式，默认使用 `NEXT_PUBLIC_DEFAULT_SPACE_CODE` 或 `BRISTOL2026`，不需要输入后台密码。
 - 如果前端直传报 `permission denied` 或 `new row violates row-level security policy`，请在 Supabase Storage policies 中允许 `anon` 对 `couple-albums` 执行 `insert`。
 
 可选 SQL 示例：
@@ -229,7 +229,7 @@ on storage.objects for select to anon
 using (bucket_id = 'couple-albums');
 ```
 
-隐私说明：如果 `couple-albums` bucket 设为 Public，相册图片和视频会通过公开 URL 展示，请不要上传过于敏感的照片。若未来需要更私密，可以改为 private bucket + signed URL。
+隐私说明：相册当前为免登录模式，拥有链接的人可以查看和上传相册内容，请不要公开分享链接，也不要上传特别敏感的照片。如果 `couple-albums` bucket 设为 Public，相册图片和视频会通过公开 URL 展示。若未来需要更私密，可以改为 private bucket + signed URL。
 
 Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变量正确即可。
 

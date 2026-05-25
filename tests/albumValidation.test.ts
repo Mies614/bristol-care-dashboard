@@ -61,7 +61,6 @@ describe("album validation", () => {
 
   it("builds metadata payload without File objects", () => {
     const payload = buildAlbumMetadataPayload({
-      password: "pw",
       code: "BRISTOL2026",
       draft: { title: "海边", note: "风很轻", takenAt: "2026-05-25", location: "Bristol", isFavorite: true },
       imageUpload: { url: "https://example.com/image.jpg", path: "BRISTOL2026/images/a.jpg", size: 10, mimeType: "image/jpeg" },
@@ -70,6 +69,7 @@ describe("album validation", () => {
     expect(payload.type).toBe("live_photo");
     expect(payload.file_size).toBe(30);
     expect(JSON.stringify(payload)).not.toContain("File");
+    expect(payload).not.toHaveProperty("password");
     expect(payload).not.toHaveProperty("image");
     expect(payload).not.toHaveProperty("video");
   });
