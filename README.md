@@ -175,6 +175,45 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 5. Build Command 使用默认 `next build`。
 6. 部署后打开 `/settings` 连接云同步，打开 `/admin` 发布远程小纸条。
 
+## 情侣相册
+
+相册页面在 `/albums`，用于上传普通照片、实况照片和短视频。相册数据保存在 Supabase `album_items` 表，图片和视频上传到 Supabase Storage。
+
+需要在 Supabase Storage 手动创建 bucket：
+
+- bucket name: `couple-albums`
+- 建议 Public bucket: On
+- 图片最大 30MB
+- 视频最大 100MB
+- 允许 MIME：`image/jpeg`、`image/png`、`image/webp`、`image/heic`、`image/heif`、`video/mp4`、`video/quicktime`、`video/webm`
+
+上传普通照片：
+
+1. 打开 `/albums`。
+2. 输入后台密码和 space code。
+3. 选择一张封面图片。
+4. 可填写标题、备注、拍摄日期、地点、是否精选。
+5. 点击“上传到相册”。
+
+上传实况照片：
+
+1. 在 `/albums` 同时选择一张封面图片和一个对应短视频。
+2. 系统会自动保存为 `live_photo`。
+3. 卡片会显示 `LIVE` 标记。
+4. 打开详情弹窗后点击“播放实况/视频”播放短视频。
+
+上传视频：
+
+1. 只选择视频文件。
+2. 系统会保存为 `video` 项目。
+3. MOV / `video/quicktime` 允许上传；如果浏览器无法直接播放，可在浏览器中打开或下载查看。
+
+删除相册项目会采用软删除：写入 `deleted_at`，首页和相册不会再显示。
+
+隐私说明：如果 `couple-albums` bucket 设为 Public，相册图片和视频会通过公开 URL 展示，请不要上传过于敏感的照片。若未来需要更私密，可以改为 private bucket + signed URL。
+
+Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变量正确即可。
+
 ## 隐私说明
 
 未开启云同步时：
@@ -186,6 +225,7 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 
 - 课程表、deadline、设置、小纸条、常用链接会保存到 Supabase。
 - 小纸条图片会上传到 Supabase Storage。
+- 相册图片和视频会上传到 `couple-albums` Storage bucket。
 - `SUPABASE_SERVICE_ROLE_KEY` 和 `ADMIN_PASSWORD` 不会进入浏览器 bundle。
 - 前端写入云端数据通过本项目的 Next.js API Route Handler 完成。
 

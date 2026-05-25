@@ -13,7 +13,7 @@ import { formatCountdown, getDaysUntilDeadline } from "@/lib/date";
 import { buildSmartReminder } from "@/lib/reminders";
 import { getNextCourse, getTodayCourses, hasEveningClass } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
-import type { AppData } from "@/lib/types";
+import type { AlbumItem, AppData } from "@/lib/types";
 import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
@@ -51,6 +51,7 @@ export default function HomePage() {
   const [data, setData] = useState<AppData>(defaultAppData);
   const [syncMessage, setSyncMessage] = useState("");
   const [initError, setInitError] = useState("");
+  const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
   const { weather, error } = useWeather();
 
   useEffect(() => {
@@ -81,6 +82,17 @@ export default function HomePage() {
     return () => {
       window.removeEventListener("bristol-care-data", refresh);
     };
+  }, []);
+
+  useEffect(() => {
+    fetch(`/api/albums?code=${encodeURIComponent(getDefaultSpaceCode())}&filter=all`)
+      .then((response) => response.json())
+      .then((payload) => {
+        if (Array.isArray(payload.items)) setAlbumItems(payload.items);
+      })
+      .catch(() => {
+        // Albums are optional for first paint.
+      });
   }, []);
 
   useEffect(() => {
@@ -115,6 +127,10 @@ export default function HomePage() {
     [data]
   );
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
+  const recentMemories = useMemo(() => {
+    const favorites = albumItems.filter((item) => item.isFavorite);
+    return (favorites.length ? favorites : albumItems).slice(0, 3);
+  }, [albumItems]);
   const todayLabel = useMemo(safeBristolDate, []);
   const bristolTime = useMemo(safeBristolTime, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
@@ -270,6 +286,30 @@ export default function HomePage() {
               </a>
             ))}
           </div>
+        </section>
+        <section className="soft-card">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="section-kicker mb-1">Memories</p>
+              <h2 className="font-semibold text-cocoa">最近回忆</h2>
+            </div>
+            <Link className="text-sm text-sage" href="/albums">相册</Link>
+          </div>
+          {recentMemories.length ? (
+            <div className="grid grid-cols-3 gap-2">
+              {recentMemories.map((item) => (
+                <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} />
+                  ) : (
+                    <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>
+                  )}
+                  {item.isFavorite ? <span className="absolute right-1 top-1 rounded-full bg-white/75 px-1.5 text-xs">♡</span> : null}
+                </Link>
+              ))}
+            </div>
+          ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
         <OnboardingCard />
       </div>

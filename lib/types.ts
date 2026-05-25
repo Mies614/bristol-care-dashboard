@@ -60,6 +60,26 @@ export type LoveNote = {
   deletedAt?: string;
 };
 
+export type AlbumItem = {
+  id: string;
+  title?: string;
+  note?: string;
+  takenAt?: string;
+  location?: string;
+  type: "photo" | "live_photo" | "video";
+  imageUrl?: string;
+  imagePath?: string;
+  videoUrl?: string;
+  videoPath?: string;
+  width?: number;
+  height?: number;
+  fileSize?: number;
+  isFavorite?: boolean;
+  createdBy?: string;
+  createdAt?: string;
+  deletedAt?: string;
+};
+
 export type CloudSettings = {
   girlfriendName?: string;
   nextMeetingDate?: string | null;

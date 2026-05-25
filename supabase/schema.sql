@@ -81,12 +81,35 @@ create table if not exists public.quick_links (
   updated_at timestamptz default now()
 );
 
+create table if not exists public.album_items (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  title text,
+  note text,
+  taken_at timestamptz,
+  location text,
+  type text not null default 'photo',
+  image_url text,
+  image_path text,
+  video_url text,
+  video_path text,
+  width int,
+  height int,
+  file_size bigint,
+  is_favorite boolean default false,
+  created_by text default 'admin',
+  created_at timestamptz default now(),
+  deleted_at timestamptz
+);
+
 create index if not exists idx_couple_spaces_code on public.couple_spaces(code);
 create index if not exists idx_settings_space_key on public.settings(space_id, key);
 create index if not exists idx_courses_space on public.courses(space_id);
 create index if not exists idx_deadlines_space_due_date on public.deadlines(space_id, due_date);
 create index if not exists idx_love_notes_visible on public.love_notes(space_id, active, pinned, visible_from);
 create index if not exists idx_quick_links_space_sort on public.quick_links(space_id, sort_order);
+create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
+create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);
 
 alter table public.couple_spaces enable row level security;
 alter table public.settings enable row level security;
@@ -94,6 +117,7 @@ alter table public.courses enable row level security;
 alter table public.deadlines enable row level security;
 alter table public.love_notes enable row level security;
 alter table public.quick_links enable row level security;
+alter table public.album_items enable row level security;
 
 drop policy if exists "anon can read couple space by code" on public.couple_spaces;
 create policy "anon can read couple space by code"
@@ -111,6 +135,7 @@ using (active = true and visible_from <= now() and deleted_at is null);
 
 -- No anon write policies are defined. Server API routes use the service role key for:
 -- settings, courses, deadlines, quick_links and admin love note writes.
+-- Album reads/writes also go through /api/albums with the service role key.
 
 insert into public.couple_spaces (code, name, girlfriend_name)
 values ('BRISTOL2026', 'Bristol Care', '小乖')
@@ -142,7 +167,10 @@ on conflict (space_id, key) do update set value = to_jsonb('小乖'::text), upda
 
 -- Supabase Storage:
 -- Create a public bucket named "love-notes" in the Supabase dashboard.
+-- Create another public bucket named "couple-albums" for album photos and videos.
 -- Image paths should look like: BRISTOL2026/1700000000000-random.webp
+-- Album paths should look like: BRISTOL2026/images/1700000000000-random.webp
+-- or BRISTOL2026/videos/1700000000000-random.mp4
 -- Optional public read policy for storage.objects, if your project requires explicit policies:
 -- create policy "public read love note images"
 -- on storage.objects for select to anon

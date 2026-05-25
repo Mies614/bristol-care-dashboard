@@ -1,4 +1,4 @@
-import type { CloudSettings, CommonLink, Course, Deadline, LoveNote } from "./types";
+import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote } from "./types";
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 
 type CourseRow = {
@@ -44,6 +44,26 @@ type QuickLinkRow = {
   url: string;
   category?: string | null;
   sort_order?: number | null;
+};
+
+type AlbumItemRow = {
+  id: string;
+  title?: string | null;
+  note?: string | null;
+  taken_at?: string | null;
+  location?: string | null;
+  type: AlbumItem["type"];
+  image_url?: string | null;
+  image_path?: string | null;
+  video_url?: string | null;
+  video_path?: string | null;
+  width?: number | null;
+  height?: number | null;
+  file_size?: number | null;
+  is_favorite?: boolean | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  deleted_at?: string | null;
 };
 
 function withOptionalUuid(id: string) {
@@ -156,6 +176,50 @@ export function quickLinkToRow(link: CommonLink, spaceId?: string) {
     url: link.url,
     category: link.category || "general",
     sort_order: link.sortOrder ?? 0
+  };
+}
+
+export function albumItemFromRow(row: AlbumItemRow): AlbumItem {
+  return {
+    id: row.id,
+    title: row.title || undefined,
+    note: row.note || undefined,
+    takenAt: row.taken_at || undefined,
+    location: row.location || undefined,
+    type: row.type,
+    imageUrl: row.image_url || undefined,
+    imagePath: row.image_path || undefined,
+    videoUrl: row.video_url || undefined,
+    videoPath: row.video_path || undefined,
+    width: row.width ?? undefined,
+    height: row.height ?? undefined,
+    fileSize: row.file_size ?? undefined,
+    isFavorite: row.is_favorite ?? false,
+    createdBy: row.created_by || undefined,
+    createdAt: row.created_at || undefined,
+    deletedAt: row.deleted_at || undefined
+  };
+}
+
+export function albumItemToRow(item: Omit<AlbumItem, "id"> & { id?: string }, spaceId?: string) {
+  return {
+    ...(spaceId ? { space_id: spaceId } : {}),
+    ...(item.id ? withOptionalUuid(item.id) : {}),
+    title: item.title || null,
+    note: item.note || null,
+    taken_at: item.takenAt || null,
+    location: item.location || null,
+    type: item.type,
+    image_url: item.imageUrl || null,
+    image_path: item.imagePath || null,
+    video_url: item.videoUrl || null,
+    video_path: item.videoPath || null,
+    width: item.width ?? null,
+    height: item.height ?? null,
+    file_size: item.fileSize ?? null,
+    is_favorite: item.isFavorite ?? false,
+    created_by: item.createdBy || "admin",
+    deleted_at: item.deletedAt || null
   };
 }
 
