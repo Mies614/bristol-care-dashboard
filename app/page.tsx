@@ -48,19 +48,28 @@ function safeBristolStatus() {
 }
 
 export default function HomePage() {
-  const [data, setData] = useState<AppData | null>(null);
+  const [data, setData] = useState<AppData>(defaultAppData);
   const [syncMessage, setSyncMessage] = useState("");
   const [initError, setInitError] = useState("");
   const { weather, error } = useWeather();
 
   useEffect(() => {
-    let settled = false;
+    const emergencyReset = () => {
+      try {
+        if (!window.location.search.includes("reset=1")) return;
+        const keys = Object.keys(window.localStorage);
+        for (const key of keys) {
+          if (key.startsWith("bristol_dashboard_")) window.localStorage.removeItem(key);
+        }
+      } catch {
+        // Emergency reset must never block rendering.
+      }
+    };
     const refresh = () => {
       try {
+        emergencyReset();
         setData(loadAppData());
-        settled = true;
       } catch (loadError) {
-        settled = true;
         setData(defaultAppData);
         if (process.env.NODE_ENV === "development") {
           setInitError(loadError instanceof Error ? loadError.message : "首页初始化失败，已使用默认数据。");
@@ -68,15 +77,8 @@ export default function HomePage() {
       }
     };
     refresh();
-    const fallback = window.setTimeout(() => {
-      if (!settled) {
-        setData(defaultAppData);
-        if (process.env.NODE_ENV === "development") setInitError("首页初始化超时，已使用默认数据。");
-      }
-    }, 1500);
     window.addEventListener("bristol-care-data", refresh);
     return () => {
-      window.clearTimeout(fallback);
       window.removeEventListener("bristol-care-data", refresh);
     };
   }, []);
@@ -102,19 +104,17 @@ export default function HomePage() {
     }
   }, []);
 
-  const todayCourses = useMemo(() => (data ? getTodayCourses(data.courses) : []), [data]);
-  const nextCourse = useMemo(() => (data ? getNextCourse(data.courses) : undefined), [data]);
+  const todayCourses = useMemo(() => getTodayCourses(data.courses), [data]);
+  const nextCourse = useMemo(() => getNextCourse(data.courses), [data]);
   const nearestDeadlines = useMemo(
     () =>
-      data
-        ? data.deadlines
+      data.deadlines
             .filter((deadline) => deadline.status === "todo")
             .sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b))
-            .slice(0, 5)
-        : [],
+            .slice(0, 5),
     [data]
   );
-  const featuredLoveNote = useMemo(() => (data ? pickFeaturedLoveNote(data.loveNotes) : undefined), [data]);
+  const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
   const todayLabel = useMemo(safeBristolDate, []);
   const bristolTime = useMemo(safeBristolTime, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
@@ -145,7 +145,7 @@ export default function HomePage() {
   }
   const outfit = useMemo(
     () =>
-      weather && data
+      weather
         ? getOutfitSuggestion({
             temperature: weather.temperature,
             apparentTemperature: weather.apparentTemperature,
@@ -157,8 +157,6 @@ export default function HomePage() {
         : undefined,
     [weather, data]
   );
-
-  if (!data) return <AppShell><div className="soft-card">正在准备你的小首页...</div></AppShell>;
 
   return (
     <AppShell>
