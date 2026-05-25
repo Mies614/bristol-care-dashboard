@@ -1,0 +1,18 @@
+{
+  "name": "Bristol Care",
+  "short_name": "Bristol Care",
+  "description": "A gentle Bristol life dashboard for study, weather, deadlines and care notes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f0",
+  "theme_color": "#f7b6a6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
