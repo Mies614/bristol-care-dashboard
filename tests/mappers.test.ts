@@ -5,6 +5,7 @@ import {
   deadlineFromRow,
   deadlineToRow,
   loveNoteFromRow,
+  loveNoteToRow,
   cloudSettingsToRows,
   quickLinkFromRow,
   quickLinkToRow,
@@ -20,6 +21,27 @@ describe("mappers", () => {
     expect(courseFromRow({ id: uuid, name: "Seminar", day: "Monday", start_time: "09:00", end_time: "10:00" }).startTime).toBe("09:00");
   });
 
+  it("maps LoveNote media camelCase to snake_case", () => {
+    const row = loveNoteToRow({
+      content: "voice",
+      active: true,
+      pinned: false,
+      author: "me",
+      noteType: "audio",
+      displayStyle: "bubble",
+      audioUrl: "https://example.com/a.webm",
+      audioPath: "BRISTOL2026/audio/a.webm",
+      videoUrl: "https://example.com/a.mp4",
+      videoPath: "BRISTOL2026/videos/a.mp4",
+      mediaSize: 456
+    }, "space");
+    expect(row.audio_url).toBe("https://example.com/a.webm");
+    expect(row.video_url).toBe("https://example.com/a.mp4");
+    expect(row.display_style).toBe("bubble");
+    expect(row.note_type).toBe("audio");
+    expect(row.media_size).toBe(456);
+  });
+
   it("maps Deadline camelCase and snake_case", () => {
     const row = deadlineToRow({ id: uuid, title: "Essay", courseName: "Methods", dueDate: "2026-06-01", priority: "high", status: "todo" }, "space");
     expect(row.course_name).toBe("Methods");
@@ -32,14 +54,28 @@ describe("mappers", () => {
       content: "hello",
       active: true,
       pinned: true,
+      author: "xiaoguai",
+      note_type: "mixed",
+      display_style: "postcard",
+      mood: "想你",
       image_url: "https://example.com/a.jpg",
       image_path: "BRISTOL2026/a.jpg",
       image_alt: "photo",
+      audio_url: "https://example.com/a.webm",
+      audio_path: "BRISTOL2026/audio/a.webm",
+      video_url: "https://example.com/a.mp4",
+      video_path: "BRISTOL2026/videos/a.mp4",
+      media_size: 123,
       deleted_at: "2026-05-25T12:00:00Z"
     });
     expect(note.imageUrl).toBe("https://example.com/a.jpg");
     expect(note.imagePath).toBe("BRISTOL2026/a.jpg");
     expect(note.imageAlt).toBe("photo");
+    expect(note.audioUrl).toBe("https://example.com/a.webm");
+    expect(note.videoUrl).toBe("https://example.com/a.mp4");
+    expect(note.displayStyle).toBe("postcard");
+    expect(note.noteType).toBe("mixed");
+    expect(note.mediaSize).toBe(123);
     expect(note.deletedAt).toBe("2026-05-25T12:00:00Z");
   });
 

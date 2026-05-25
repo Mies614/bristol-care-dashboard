@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "首页", icon: "⌂" },
+  { href: "/notes", label: "纸条", icon: "✎" },
   { href: "/albums", label: "相册", icon: "▧" },
   { href: "/schedule", label: "课程", icon: "◴" },
   { href: "/deadlines", label: "DDL", icon: "✓" },
-  { href: "/settings", label: "设置", icon: "⚙" },
-  { href: "/about", label: "关于", icon: "i" }
+  { href: "/settings", label: "设置", icon: "⚙" }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

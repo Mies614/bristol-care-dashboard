@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 
 export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; fallback: string; onRefresh?: () => void }) {
@@ -16,9 +17,10 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
           <h2 className="font-semibold text-cocoa">小纸条</h2>
         </div>
         {onRefresh ? (
-          <button className="btn-secondary btn-small" onClick={onRefresh}>
-            刷新小纸条
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link className="btn-secondary btn-small" href="/notes">去小纸条墙</Link>
+            <button className="btn-secondary btn-small" onClick={onRefresh}>刷新</button>
+          </div>
         ) : null}
       </div>
       <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
@@ -31,6 +33,8 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
           onError={() => setImageFailed(true)}
         />
       ) : null}
+      {note?.audioUrl ? <audio className="mt-4 w-full" src={note.audioUrl} controls /> : null}
+      {note?.videoUrl ? <video className="mt-4 max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls /> : null}
       {imageFailed ? <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-cocoa/65">图片暂时加载失败。</p> : null}
     </section>
   );

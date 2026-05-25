@@ -9,7 +9,7 @@
 - 课程表
 - Deadline
 - 下次见面倒计时
-- 小纸条，支持远程发布文字和图片
+- 小纸条墙，支持双方上传文字、语音、照片和视频
 - `/admin` 支持发布、置顶、停用、软删除小纸条
 - 常用链接
 - PWA，可添加到手机桌面
@@ -79,6 +79,7 @@ supabase/schema.sql
 - `deadlines`
 - `love_notes`
 - `quick_links`
+- `album_items`
 
 并插入默认 space：
 
@@ -88,7 +89,7 @@ name = Bristol Care
 girlfriend_name = 小乖
 ```
 
-## 创建图片 bucket
+## 创建 love-notes bucket
 
 进入 Supabase Storage，手动创建 bucket：
 
@@ -96,17 +97,45 @@ girlfriend_name = 小乖
 love-notes
 ```
 
-建议设为 Public bucket。首页需要直接显示小纸条图片，Public bucket 可以通过 public URL 加载图片。图片上传路径格式类似：
+建议设为 Public bucket。首页和小纸条墙需要直接显示图片、语音和视频，Public bucket 可以通过 public URL 加载媒体。路径格式类似：
 
 ```text
-BRISTOL2026/1700000000000-a1b2c3d4.webp
+BRISTOL2026/images/1700000000000-a1b2c3d4.webp
+BRISTOL2026/audio/1700000000000-a1b2c3d4.webm
+BRISTOL2026/videos/1700000000000-a1b2c3d4.mp4
 ```
 
 不要使用原始文件名。应用限制：
 
-- 只允许 `image/jpeg`、`image/png`、`image/webp`
-- 最大 5MB
-- 图片上传必须走服务端 `/api/admin/love-notes`
+- 用户端图片最大 30MB，视频最大 100MB，语音最大 20MB
+- 用户端 `/notes` 媒体文件由浏览器直传 Storage，再由 `/api/notes` 写数据库 metadata
+- `/admin` 旧后台发布图片仍走服务端 `/api/admin/love-notes`
+
+用户端直传需要 Storage policy 允许 anon insert/select：
+
+```sql
+create policy "Allow public uploads to love notes"
+on storage.objects
+for insert
+to anon
+with check (bucket_id = 'love-notes');
+
+create policy "Allow public reads from love notes"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'love-notes');
+```
+
+## 使用 /notes 小纸条墙
+
+1. 打开 `/notes`。
+2. 选择上传者：“我”或“小乖”。
+3. 可以写文字，也可以录一段语音、上传照片或视频。
+4. 选择展示样式：便签、明信片、聊天气泡、照片卡或时间线。
+5. 点击“贴到小纸条墙”。
+
+录音使用浏览器 MediaRecorder API。若当前浏览器不支持网页录音，可以上传已有音频文件。`/notes` 是免登录共享页面，拥有链接的人可以查看和上传内容，请不要公开分享链接，也不要上传特别敏感的照片、视频或语音。
 
 ## 使用 /settings 云同步
 
@@ -142,11 +171,12 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 
 发布成功后，首页会优先显示云端最新 active 且已到 visible_from 的小纸条；pinned 小纸条优先。首页也提供“刷新小纸条”按钮。
 
-最近 20 条小纸条支持：
+最近 20 条小纸条会显示 `/admin` 和 `/notes` 上传的双方小纸条，并支持：
 
 - 设为置顶 / 取消置顶
 - 停用 / 重新启用
 - 删除
+- 查看图片、语音、视频来源和展示样式
 
 删除采用软删除：数据库记录保留，写入 `deleted_at`，但首页和最近列表不会再显示。
 
@@ -243,10 +273,10 @@ Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变
 开启云同步后：
 
 - 课程表、deadline、设置、小纸条、常用链接会保存到 Supabase。
-- 小纸条图片会上传到 Supabase Storage。
+- 小纸条图片、语音和视频会上传到 `love-notes` Storage bucket。
 - 相册图片和视频会上传到 `couple-albums` Storage bucket。
 - `SUPABASE_SERVICE_ROLE_KEY` 和 `ADMIN_PASSWORD` 不会进入浏览器 bundle。
-- 前端写入云端数据通过本项目的 Next.js API Route Handler 完成。
+- 小纸条墙和相册为免登录共享页面，拥有链接的人可以上传内容；数据库 metadata 仍通过 Next.js API Route Handler 写入。
 
 ## 常见问题
 

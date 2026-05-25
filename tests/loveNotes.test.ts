@@ -49,4 +49,10 @@ describe("love note selection", () => {
     const picked = pickFeaturedLoveNote([note({ content: "image", imageUrl: "https://example.com/a.webp" }), note({ content: "text" })], now);
     expect(picked?.imageUrl).toBe("https://example.com/a.webp");
   });
+
+  it("keeps audio and video fields on selected notes", () => {
+    const picked = pickFeaturedLoveNote([note({ content: "media", audioUrl: "https://example.com/a.webm", videoUrl: "https://example.com/a.mp4" })], now);
+    expect(picked?.audioUrl).toBe("https://example.com/a.webm");
+    expect(picked?.videoUrl).toBe("https://example.com/a.mp4");
+  });
 });

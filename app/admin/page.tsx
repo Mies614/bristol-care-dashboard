@@ -391,10 +391,15 @@ export default function AdminPage() {
                         <img className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} />
                       ) : null}
                     </div>
+                    {note.audioUrl ? <audio className="mt-3 w-full" src={note.audioUrl} controls /> : null}
+                    {note.videoUrl ? <video className="mt-3 max-h-40 w-full rounded-2xl bg-black" src={note.videoUrl} controls /> : null}
                     <p className="mt-3 flex flex-wrap gap-2">
                       <StatusBadge tone={note.active ? "ok" : "neutral"}>{note.active ? "active" : "inactive"}</StatusBadge>
                       <StatusBadge tone={note.pinned ? "warn" : "neutral"}>{note.pinned ? "pinned" : "not pinned"}</StatusBadge>
                       {note.deletedAt ? <StatusBadge tone="danger">deleted</StatusBadge> : null}
+                      <StatusBadge>{note.author || "admin"}</StatusBadge>
+                      <StatusBadge>{note.noteType || "text"}</StatusBadge>
+                      <StatusBadge>{note.displayStyle || "sticky"}</StatusBadge>
                     </p>
                     <div className="mt-3 border-t border-white/65 pt-3">
                       <p className="mb-2 text-xs font-medium text-cocoa/50">操作</p>

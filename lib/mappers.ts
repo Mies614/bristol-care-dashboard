@@ -29,13 +29,23 @@ type LoveNoteRow = {
   content: string;
   active: boolean;
   pinned: boolean;
+  author?: LoveNote["author"] | null;
+  note_type?: LoveNote["noteType"] | null;
+  display_style?: LoveNote["displayStyle"] | null;
+  mood?: LoveNote["mood"] | null;
   visible_from?: string | null;
   created_at?: string | null;
   created_by?: string | null;
   image_url?: string | null;
   image_path?: string | null;
   image_alt?: string | null;
+  audio_url?: string | null;
+  audio_path?: string | null;
+  video_url?: string | null;
+  video_path?: string | null;
+  media_size?: number | null;
   deleted_at?: string | null;
+  updated_at?: string | null;
 };
 
 type QuickLinkRow = {
@@ -132,13 +142,23 @@ export function loveNoteFromRow(row: LoveNoteRow): LoveNote {
     content: row.content,
     active: row.active,
     pinned: row.pinned,
+    author: row.author || undefined,
+    noteType: row.note_type || undefined,
+    displayStyle: row.display_style || undefined,
+    mood: row.mood || undefined,
     visibleFrom: row.visible_from || undefined,
     createdAt: row.created_at || undefined,
     createdBy: row.created_by || undefined,
     imageUrl: row.image_url || undefined,
     imagePath: row.image_path || undefined,
     imageAlt: row.image_alt || undefined,
-    deletedAt: row.deleted_at || undefined
+    audioUrl: row.audio_url || undefined,
+    audioPath: row.audio_path || undefined,
+    videoUrl: row.video_url || undefined,
+    videoPath: row.video_path || undefined,
+    mediaSize: row.media_size ?? undefined,
+    deletedAt: row.deleted_at || undefined,
+    updatedAt: row.updated_at || undefined
   };
 }
 
@@ -149,12 +169,22 @@ export function loveNoteToRow(note: (Omit<LoveNote, "id"> & { id?: string }), sp
     content: note.content,
     active: note.active,
     pinned: note.pinned,
+    author: note.author || "admin",
+    note_type: note.noteType || "text",
+    display_style: note.displayStyle || "sticky",
+    mood: note.mood || null,
     visible_from: note.visibleFrom || new Date().toISOString(),
     created_by: note.createdBy || "admin",
     image_url: note.imageUrl || null,
     image_path: note.imagePath || null,
     image_alt: note.imageAlt || null,
-    deleted_at: note.deletedAt || null
+    audio_url: note.audioUrl || null,
+    audio_path: note.audioPath || null,
+    video_url: note.videoUrl || null,
+    video_path: note.videoPath || null,
+    media_size: note.mediaSize ?? null,
+    deleted_at: note.deletedAt || null,
+    updated_at: note.updatedAt || null
   };
 }
 

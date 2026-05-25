@@ -51,13 +51,23 @@ export type LoveNote = {
   content: string;
   active: boolean;
   pinned: boolean;
+  author?: "admin" | "user" | "xiaoguai" | "me";
+  noteType?: "text" | "image" | "audio" | "video" | "mixed";
+  displayStyle?: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline";
+  mood?: "开心" | "想你" | "累了" | "记录一下" | "加油" | "今日小事";
   visibleFrom?: string;
   createdAt?: string;
   createdBy?: string;
   imageUrl?: string;
   imagePath?: string;
   imageAlt?: string;
+  audioUrl?: string;
+  audioPath?: string;
+  videoUrl?: string;
+  videoPath?: string;
+  mediaSize?: number;
   deletedAt?: string;
+  updatedAt?: string;
 };
 
 export type AlbumItem = {

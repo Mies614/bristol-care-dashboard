@@ -268,6 +268,10 @@ export default function HomePage() {
             <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
           </div>
           <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+          <div className="grid grid-cols-2 gap-2">
+            <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
+            <Link className="btn-secondary text-center" href="/notes">写一张</Link>
+          </div>
         </section>
 
         <section className="soft-card">

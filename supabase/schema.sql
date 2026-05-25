@@ -60,15 +60,35 @@ create table if not exists public.love_notes (
   pinned boolean default false,
   visible_from timestamptz default now(),
   created_by text default 'admin',
+  author text default 'admin',
+  note_type text default 'text',
+  display_style text default 'sticky',
+  mood text,
   image_url text,
   image_path text,
   image_alt text,
+  audio_url text,
+  audio_path text,
+  video_url text,
+  video_path text,
+  media_size bigint,
   deleted_at timestamptz,
+  updated_at timestamptz default now(),
   created_at timestamptz default now()
 );
 
 alter table public.love_notes
-add column if not exists deleted_at timestamptz;
+add column if not exists deleted_at timestamptz,
+add column if not exists author text default 'admin',
+add column if not exists note_type text default 'text',
+add column if not exists display_style text default 'sticky',
+add column if not exists mood text,
+add column if not exists audio_url text,
+add column if not exists audio_path text,
+add column if not exists video_url text,
+add column if not exists video_path text,
+add column if not exists media_size bigint,
+add column if not exists updated_at timestamptz default now();
 
 create table if not exists public.quick_links (
   id uuid primary key default gen_random_uuid(),
@@ -107,6 +127,9 @@ create index if not exists idx_settings_space_key on public.settings(space_id, k
 create index if not exists idx_courses_space on public.courses(space_id);
 create index if not exists idx_deadlines_space_due_date on public.deadlines(space_id, due_date);
 create index if not exists idx_love_notes_visible on public.love_notes(space_id, active, pinned, visible_from);
+create index if not exists love_notes_space_wall_idx on public.love_notes(space_id, active, pinned, created_at desc);
+create index if not exists love_notes_space_author_idx on public.love_notes(space_id, author, created_at desc);
+create index if not exists love_notes_space_type_idx on public.love_notes(space_id, note_type, created_at desc);
 create index if not exists idx_quick_links_space_sort on public.quick_links(space_id, sort_order);
 create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
 create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);
@@ -133,8 +156,8 @@ for select
 to anon
 using (active = true and visible_from <= now() and deleted_at is null);
 
--- No anon write policies are defined. Server API routes use the service role key for:
--- settings, courses, deadlines, quick_links and admin love note writes.
+-- No anon database write policies are defined. Server API routes use the service role key for:
+-- settings, courses, deadlines, quick_links and love note metadata writes.
 -- Album reads/writes also go through /api/albums with the service role key.
 
 insert into public.couple_spaces (code, name, girlfriend_name)
@@ -185,3 +208,11 @@ on conflict (space_id, key) do update set value = to_jsonb('小乖'::text), upda
 -- create policy "public read couple album files"
 -- on storage.objects for select to anon
 -- using (bucket_id = 'couple-albums');
+-- User note wall media uploads use browser direct uploads to love-notes.
+-- Add these policies if the bucket blocks public uploads:
+-- create policy "Allow public uploads to love notes"
+-- on storage.objects for insert to anon
+-- with check (bucket_id = 'love-notes');
+-- create policy "Allow public reads from love notes"
+-- on storage.objects for select to anon
+-- using (bucket_id = 'love-notes');
