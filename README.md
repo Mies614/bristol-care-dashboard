@@ -177,15 +177,16 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 
 ## 情侣相册
 
-相册页面在 `/albums`，用于上传普通照片、实况照片和短视频。相册数据保存在 Supabase `album_items` 表，图片和视频上传到 Supabase Storage。
+相册页面在 `/albums`，用于上传普通照片、实况照片和短视频。相册数据保存在 Supabase `album_items` 表，图片和视频由浏览器直传到 Supabase Storage，避免手机 Safari 通过 Vercel API Route 上传大视频时超时。
 
 需要在 Supabase Storage 手动创建 bucket：
 
 - bucket name: `couple-albums`
 - 建议 Public bucket: On
 - 图片最大 30MB
-- 视频最大 100MB
+- 视频最大 50MB
 - 允许 MIME：`image/jpeg`、`image/png`、`image/webp`、`image/heic`、`image/heif`、`video/mp4`、`video/quicktime`、`video/webm`
+- iPhone 有时会把 `.mov` / `.mp4` / `.webm` 标记为 `application/octet-stream`，项目会按文件扩展名兼容这些视频
 
 上传普通照片：
 
@@ -209,6 +210,24 @@ BRISTOL2026/1700000000000-a1b2c3d4.webp
 3. MOV / `video/quicktime` 允许上传；如果浏览器无法直接播放，可在浏览器中打开或下载查看。
 
 删除相册项目会采用软删除：写入 `deleted_at`，首页和相册不会再显示。
+
+Storage policy 说明：
+
+- 相册文件上传使用浏览器端 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 直传 `couple-albums` bucket。
+- `album_items` 数据库写入仍然必须走 `/api/albums`，由服务端 `SUPABASE_SERVICE_ROLE_KEY` 写入，前端不会直接写数据库。
+- 如果前端直传报 `permission denied` 或 `new row violates row-level security policy`，请在 Supabase Storage policies 中允许 `anon` 对 `couple-albums` 执行 `insert`。
+
+可选 SQL 示例：
+
+```sql
+create policy "anon upload couple album files"
+on storage.objects for insert to anon
+with check (bucket_id = 'couple-albums');
+
+create policy "public read couple album files"
+on storage.objects for select to anon
+using (bucket_id = 'couple-albums');
+```
 
 隐私说明：如果 `couple-albums` bucket 设为 Public，相册图片和视频会通过公开 URL 展示，请不要上传过于敏感的照片。若未来需要更私密，可以改为 private bucket + signed URL。
 

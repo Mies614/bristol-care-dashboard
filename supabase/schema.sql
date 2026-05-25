@@ -175,3 +175,13 @@ on conflict (space_id, key) do update set value = to_jsonb('小乖'::text), upda
 -- create policy "public read love note images"
 -- on storage.objects for select to anon
 -- using (bucket_id = 'love-notes');
+-- Album uploads use the browser publishable key to upload files directly to Storage.
+-- Database metadata is still written only by /api/albums with the service role key.
+-- If direct album upload returns "permission denied", add a Storage insert policy like:
+-- create policy "anon upload couple album files"
+-- on storage.objects for insert to anon
+-- with check (bucket_id = 'couple-albums');
+-- Optional public read policy:
+-- create policy "public read couple album files"
+-- on storage.objects for select to anon
+-- using (bucket_id = 'couple-albums');

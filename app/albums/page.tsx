@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
+import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import type { AlbumItem } from "@/lib/types";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
@@ -27,6 +28,11 @@ function formatApiError(payload: Record<string, unknown>, fallback: string) {
   ].filter(Boolean).join(" · ");
 }
 
+function formatUploadError(stage: "upload_image" | "upload_video" | "save_metadata", error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "未知错误");
+  return `stage: ${stage} · error: 上传失败 · detail: ${message}`;
+}
+
 export default function AlbumsPage() {
   const [items, setItems] = useState<AlbumItem[]>([]);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
@@ -35,6 +41,7 @@ export default function AlbumsPage() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState(getDefaultSpaceCode());
   const [uploading, setUploading] = useState(false);
+  const [uploadStage, setUploadStage] = useState("");
   const [playing, setPlaying] = useState(false);
   const [draft, setDraft] = useState({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
   const [image, setImage] = useState<File | null>(null);
@@ -86,22 +93,38 @@ export default function AlbumsPage() {
       if (!validation.ok) return setMessage(validation.error || "视频不符合要求。");
     }
     setUploading(true);
-    const form = new FormData();
-    form.append("password", password);
-    form.append("code", code);
-    form.append("title", draft.title);
-    form.append("note", draft.note);
-    form.append("taken_at", draft.takenAt ? new Date(draft.takenAt).toISOString() : "");
-    form.append("location", draft.location);
-    form.append("is_favorite", String(draft.isFavorite));
-    if (image) form.append("image", image);
-    if (video) form.append("video", video);
-    const response = await fetch("/api/albums", { method: "POST", body: form });
-    const payload = await response.json().catch(() => ({}));
-    setUploading(false);
-    if (!response.ok) {
-      setMessage(formatApiError(payload, "上传失败。"));
+    let uploadedImage: UploadedAlbumFile | null = null;
+    let uploadedVideo: UploadedAlbumFile | null = null;
+    let currentStage: "upload_image" | "upload_video" | "save_metadata" = "upload_image";
+    try {
+      if (image) {
+        currentStage = "upload_image";
+        setUploadStage("正在上传图片...");
+        uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
+      }
+      if (video) {
+        currentStage = "upload_video";
+        setUploadStage("正在上传视频...");
+        uploadedVideo = await uploadAlbumFileDirectly(video, "video", code);
+      }
+      currentStage = "save_metadata";
+      setUploadStage("正在保存到相册...");
+      const response = await fetch("/api/albums", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAlbumMetadataPayload({ password, code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo }))
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(formatApiError(payload, "上传失败。"));
+        return;
+      }
+    } catch (error) {
+      setMessage(formatUploadError(currentStage, error));
       return;
+    } finally {
+      setUploading(false);
+      setUploadStage("");
     }
     setDraft({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
     setImage(null);
@@ -156,19 +179,19 @@ export default function AlbumsPage() {
           <label className="file-panel">
             <span className="font-medium text-cocoa">封面图片</span>
             <span className="block text-xs text-cocoa/55">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
-            <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} />
+            <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} />
           </label>
           <label className="file-panel">
             <span className="font-medium text-cocoa">视频 / 实况视频</span>
-            <span className="block text-xs text-cocoa/55">MP4 / MOV / WebM，最大 100MB</span>
-            <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
+            <span className="block text-xs text-cocoa/55">MP4 / MOV / WebM，最大 50MB</span>
+            <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
           </label>
           <div className="grid gap-2">
             {imagePreview ? <img className="max-h-56 w-full rounded-[1.35rem] object-cover shadow-sm" src={imagePreview} alt="图片预览" /> : null}
             {image?.type.includes("heic") || image?.type.includes("heif") ? <p className="notice">该格式可能无法在浏览器中预览，但可以上传保存。</p> : null}
             {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
           </div>
-          <button className="btn-primary w-full" disabled={uploading} type="submit">{uploading ? "上传中..." : "上传到相册"}</button>
+          <button className="btn-primary w-full" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
         </form>
 
         <section className="soft-card">

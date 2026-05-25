@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { albumItemFromRow, albumItemToRow } from "@/lib/mappers";
 import { getSpaceByCode } from "@/lib/api/cloud";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import {
-  determineAlbumItemType,
-  getAlbumFileExtension,
-  validateAlbumImageFile,
-  validateAlbumVideoFile
-} from "@/lib/albumValidation";
-
-const BUCKET = "couple-albums";
+import type { AlbumItem } from "@/lib/types";
 
 type ApiError = {
   ok: false;
@@ -35,19 +28,16 @@ function validatePassword(password: unknown) {
   return null;
 }
 
-function randomPath(code: string, kind: "images" | "videos", mimeType: string) {
-  const ext = getAlbumFileExtension(mimeType);
-  const random = Math.random().toString(36).slice(2, 10);
-  return `${code}/${kind}/${Date.now()}-${random}.${ext}`;
+function isAlbumType(value: unknown): value is AlbumItem["type"] {
+  return value === "photo" || value === "live_photo" || value === "video";
 }
 
-async function uploadFile(file: File, code: string, kind: "images" | "videos") {
-  const supabase = createSupabaseServerClient();
-  const path = randomPath(code, kind, file.type);
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return { path, url: data.publicUrl };
+function optionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function optionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 export async function GET(request: NextRequest) {
@@ -75,50 +65,40 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let step = "parse_form_data";
+  let step = "parse_body";
   try {
-    if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法上传。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
-    const form = await request.formData();
-    const passwordError = validatePassword(form.get("password"));
+    if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法保存。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
+    const body = await request.json();
+    const passwordError = validatePassword(body.password);
     if (passwordError) return passwordError;
-    const code = String(form.get("code") || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
-    const image = form.get("image");
-    const video = form.get("video");
-    const imageFile = image instanceof File && image.size > 0 ? image : null;
-    const videoFile = video instanceof File && video.size > 0 ? video : null;
-    if (!imageFile && !videoFile) return fail("请至少上传一张图片或一个视频。", "ALBUM_FILE_MISSING", "validate_files", 400);
+    const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
 
     step = "get_space";
     const space = await getSpaceByCode(code);
     if (!space) return fail("访问码不存在。", "SPACE_NOT_FOUND", "get_space", 404);
 
-    step = "validate_files";
-    if (imageFile) {
-      const validation = validateAlbumImageFile(imageFile);
-      if (!validation.ok) return fail(validation.error || "图片不符合要求。", "ALBUM_IMAGE_INVALID", "validate_files", 400);
-    }
-    if (videoFile) {
-      const validation = validateAlbumVideoFile(videoFile);
-      if (!validation.ok) return fail(validation.error || "视频不符合要求。", "ALBUM_VIDEO_INVALID", "validate_files", 400);
-    }
-
-    step = "upload_files";
-    const uploadedImage = imageFile ? await uploadFile(imageFile, code, "images") : null;
-    const uploadedVideo = videoFile ? await uploadFile(videoFile, code, "videos") : null;
+    step = "validate_metadata";
+    if (!isAlbumType(body.type)) return fail("相册类型不正确。", "ALBUM_TYPE_INVALID", "validate_metadata", 400);
+    const hasImage = Boolean(optionalString(body.image_url) && optionalString(body.image_path));
+    const hasVideo = Boolean(optionalString(body.video_url) && optionalString(body.video_path));
+    if (!hasImage && !hasVideo) return fail("请至少提供图片或视频的 Storage URL。", "ALBUM_MEDIA_MISSING", "validate_metadata", 400);
+    if (body.type === "photo" && !hasImage) return fail("照片项目缺少图片。", "ALBUM_IMAGE_METADATA_MISSING", "validate_metadata", 400);
+    if (body.type === "video" && !hasVideo) return fail("视频项目缺少视频。", "ALBUM_VIDEO_METADATA_MISSING", "validate_metadata", 400);
+    if (body.type === "live_photo" && (!hasImage || !hasVideo)) return fail("实况照片需要同时包含封面图片和视频。", "ALBUM_LIVE_METADATA_MISSING", "validate_metadata", 400);
 
     step = "insert_album_item";
     const item = {
-      title: String(form.get("title") || "").trim() || undefined,
-      note: String(form.get("note") || "").trim() || undefined,
-      takenAt: String(form.get("taken_at") || "") || undefined,
-      location: String(form.get("location") || "").trim() || undefined,
-      type: determineAlbumItemType(Boolean(uploadedImage), Boolean(uploadedVideo)),
-      imageUrl: uploadedImage?.url,
-      imagePath: uploadedImage?.path,
-      videoUrl: uploadedVideo?.url,
-      videoPath: uploadedVideo?.path,
-      fileSize: (imageFile?.size || 0) + (videoFile?.size || 0),
-      isFavorite: form.get("is_favorite") === "true",
+      title: optionalString(body.title),
+      note: optionalString(body.note),
+      takenAt: optionalString(body.taken_at),
+      location: optionalString(body.location),
+      type: body.type,
+      imageUrl: optionalString(body.image_url),
+      imagePath: optionalString(body.image_path),
+      videoUrl: optionalString(body.video_url),
+      videoPath: optionalString(body.video_path),
+      fileSize: optionalNumber(body.file_size),
+      isFavorite: Boolean(body.is_favorite),
       createdBy: "admin"
     };
     const row = albumItemToRow(item, space.id);
@@ -130,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (error) return fail("相册保存失败。", "ALBUM_INSERT_FAILED", "insert_album_item", 500, error);
     return NextResponse.json({ ok: true, item: albumItemFromRow(data) });
   } catch (error) {
-    return fail("相册上传失败。", "ALBUM_UPLOAD_FAILED", step, 500, error);
+    return fail("相册保存请求失败。", "ALBUM_CREATE_FAILED", step, 500, error);
   }
 }
 
