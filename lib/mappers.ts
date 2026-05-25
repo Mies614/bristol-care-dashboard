@@ -166,7 +166,7 @@ export function loveNoteToRow(note: (Omit<LoveNote, "id"> & { id?: string }), sp
   return {
     ...(spaceId ? { space_id: spaceId } : {}),
     ...(note.id ? withOptionalUuid(note.id) : {}),
-    content: note.content,
+    content: note.content || "",
     active: note.active,
     pinned: note.pinned,
     author: note.author || "admin",

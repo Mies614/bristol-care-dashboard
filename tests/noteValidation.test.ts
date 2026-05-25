@@ -20,6 +20,8 @@ describe("note validation", () => {
 
   it("normalizes display style and author", () => {
     expect(normalizeDisplayStyle("postcard")).toBe("postcard");
+    expect(normalizeDisplayStyle("minimal")).toBe("minimal");
+    expect(normalizeDisplayStyle("romantic")).toBe("romantic");
     expect(normalizeDisplayStyle("unknown")).toBe("sticky");
     expect(normalizeNoteAuthor("me")).toBe("me");
     expect(normalizeNoteAuthor(undefined)).toBe("xiaoguai");

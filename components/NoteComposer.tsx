@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUpload";
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
@@ -9,11 +9,11 @@ import { VoiceRecorder } from "./VoiceRecorder";
 type Draft = {
   author: "me" | "xiaoguai";
   content: string;
-  displayStyle: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline";
+  displayStyle: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline" | "minimal" | "romantic";
   mood: string;
 };
 
-const moods = ["", "开心", "想你", "累了", "记录一下", "加油", "今日小事"];
+const moods = ["", "开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"];
 
 function formatError(stage: string, error: unknown) {
   return `stage: ${stage} · detail: ${error instanceof Error ? error.message : String(error || "未知错误")}`;
@@ -26,6 +26,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
   const [audio, setAudio] = useState<File | Blob | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const cancelRef = useRef(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -48,6 +49,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
     }
 
     setSubmitting(true);
+    cancelRef.current = false;
     const code = getDefaultSpaceCode();
     let uploadedImage: UploadedNoteMedia | null = null;
     let uploadedVideo: UploadedNoteMedia | null = null;
@@ -56,14 +58,17 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
       if (image) {
         setMessage("正在上传图片...");
         uploadedImage = await uploadNoteMediaDirectly(image, "images", code);
+        if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (audio) {
         setMessage("正在上传语音...");
         uploadedAudio = await uploadNoteMediaDirectly(audio, "audio", code);
+        if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (video) {
         setMessage("正在上传视频...");
         uploadedVideo = await uploadNoteMediaDirectly(video, "videos", code);
+        if (cancelRef.current) throw new Error("上传已取消。");
       }
       setMessage("正在贴到小纸条墙...");
       const response = await fetch("/api/notes", {
@@ -119,6 +124,8 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
           <option value="bubble">聊天气泡</option>
           <option value="photo_card">照片卡</option>
           <option value="timeline">时间线</option>
+          <option value="minimal">极简</option>
+          <option value="romantic">浪漫</option>
         </select>
       </div>
       <select className="field" value={draft.mood} onChange={(event) => setDraft({ ...draft, mood: event.target.value })}>
@@ -139,7 +146,10 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(event) => setVideo(event.currentTarget.files?.[0] || null)} />
       </label>
       {message ? <p className="notice">{message}</p> : null}
-      <button className="btn-primary w-full" disabled={submitting} type="submit">{submitting ? "提交中..." : "贴到小纸条墙"}</button>
+      <div className="flex gap-2">
+        <button className="btn-primary flex-1" disabled={submitting} type="submit">{submitting ? "提交中..." : "贴到小纸条墙"}</button>
+        {submitting ? <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>取消</button> : null}
+      </div>
     </form>
   );
 }

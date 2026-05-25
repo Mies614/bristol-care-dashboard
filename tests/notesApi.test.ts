@@ -1,0 +1,70 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const updateMock = vi.fn();
+
+vi.mock("@/lib/api/cloud", () => ({
+  getDefaultSpaceCode: () => "BRISTOL2026",
+  getSpaceByCode: vi.fn(async () => ({ id: "space-id", code: "BRISTOL2026" }))
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  isSupabaseServerConfigured: vi.fn(() => true),
+  createSupabaseServerClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            is: () => ({
+              maybeSingle: async () => ({ data: { id: "note-id", active: true, pinned: false }, error: null })
+            })
+          })
+        })
+      }),
+      update: updateMock
+    }))
+  }))
+}));
+
+function patchRequest(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/notes", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+}
+
+describe("notes API", () => {
+  beforeEach(() => {
+    updateMock.mockReset();
+    updateMock.mockReturnValue({
+      eq: () => ({
+        eq: () => ({
+          select: () => ({
+            single: async () => ({
+              data: {
+                id: "note-id",
+                content: "updated",
+                active: true,
+                pinned: false,
+                author: "me",
+                note_type: "text",
+                display_style: "minimal"
+              },
+              error: null
+            })
+          })
+        })
+      })
+    });
+  });
+
+  it("PATCH does not require password", async () => {
+    const { PATCH } = await import("@/app/api/notes/route");
+    const response = await PATCH(patchRequest({ id: "note-id", action: "update", content: "updated" }));
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ content: "updated" }));
+  });
+});

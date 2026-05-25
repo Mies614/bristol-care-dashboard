@@ -41,7 +41,7 @@ function isCommonLink(value: unknown): value is CommonLink {
 
 function isLoveNote(value: unknown): value is LoveNote {
   if (!isRecord(value)) return false;
-  return isString(value.id) && isString(value.content) && typeof value.active === "boolean" && typeof value.pinned === "boolean";
+  return isString(value.id) && (value.content === undefined || isString(value.content)) && typeof value.active === "boolean" && typeof value.pinned === "boolean";
 }
 
 export function validateCourseArray(value: unknown): Course[] {

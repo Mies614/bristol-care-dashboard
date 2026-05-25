@@ -130,6 +130,7 @@ create index if not exists idx_love_notes_visible on public.love_notes(space_id,
 create index if not exists love_notes_space_wall_idx on public.love_notes(space_id, active, pinned, created_at desc);
 create index if not exists love_notes_space_author_idx on public.love_notes(space_id, author, created_at desc);
 create index if not exists love_notes_space_type_idx on public.love_notes(space_id, note_type, created_at desc);
+create index if not exists love_notes_space_style_idx on public.love_notes(space_id, display_style, created_at desc);
 create index if not exists idx_quick_links_space_sort on public.quick_links(space_id, sort_order);
 create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
 create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);

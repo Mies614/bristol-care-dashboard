@@ -14,3 +14,16 @@ export function getVisibleLoveNotes(notes: LoveNote[], now = new Date()): LoveNo
 export function pickFeaturedLoveNote(notes: LoveNote[], now = new Date()): LoveNote | undefined {
   return getVisibleLoveNotes(notes, now)[0];
 }
+
+export function filterNoteWallNotes(notes: LoveNote[], options: { author?: string; noteType?: string; q?: string } = {}) {
+  const query = options.q?.trim().toLowerCase();
+  return notes
+    .filter((note) => !note.deletedAt)
+    .filter((note) => note.active)
+    .filter((note) => !options.author || note.author === options.author)
+    .filter((note) => !options.noteType || note.noteType === options.noteType)
+    .filter((note) => {
+      if (!query) return true;
+      return [note.content, note.mood, note.author].some((value) => value?.toLowerCase().includes(query));
+    });
+}

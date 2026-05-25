@@ -4,10 +4,10 @@ export const MAX_NOTE_IMAGE_SIZE = 30 * 1024 * 1024;
 export const MAX_NOTE_VIDEO_SIZE = 100 * 1024 * 1024;
 export const MAX_NOTE_AUDIO_SIZE = 20 * 1024 * 1024;
 
-export const NOTE_DISPLAY_STYLES = ["sticky", "postcard", "bubble", "photo_card", "timeline"] as const;
+export const NOTE_DISPLAY_STYLES = ["sticky", "postcard", "bubble", "photo_card", "timeline", "minimal", "romantic"] as const;
 export const NOTE_AUTHORS = ["admin", "user", "xiaoguai", "me"] as const;
 export const NOTE_TYPES = ["text", "image", "audio", "video", "mixed"] as const;
-export const NOTE_MOODS = ["开心", "想你", "累了", "记录一下", "加油", "今日小事"] as const;
+export const NOTE_MOODS = ["开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"] as const;
 
 export const ALLOWED_NOTE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
 export const ALLOWED_NOTE_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"] as const;
@@ -79,6 +79,14 @@ export function normalizeNoteAuthor(value: unknown): NonNullable<LoveNote["autho
 
 export function normalizeDisplayStyle(value: unknown): NonNullable<LoveNote["displayStyle"]> {
   return NOTE_DISPLAY_STYLES.includes(value as NonNullable<LoveNote["displayStyle"]>) ? value as NonNullable<LoveNote["displayStyle"]> : "sticky";
+}
+
+export function isValidDisplayStyle(value: unknown): value is NonNullable<LoveNote["displayStyle"]> {
+  return NOTE_DISPLAY_STYLES.includes(value as NonNullable<LoveNote["displayStyle"]>);
+}
+
+export function isValidAuthor(value: unknown): value is NonNullable<LoveNote["author"]> {
+  return NOTE_AUTHORS.includes(value as NonNullable<LoveNote["author"]>);
 }
 
 export function hasNoteContent(input: { content?: string; imageUrl?: string; audioUrl?: string; videoUrl?: string }) {

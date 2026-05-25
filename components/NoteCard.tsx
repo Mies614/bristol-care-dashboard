@@ -11,7 +11,21 @@ const authorLabel: Record<string, string> = {
   xiaoguai: "小乖"
 };
 
-export function NoteCard({ note, onClick, featured = false }: { note: LoveNote; onClick?: () => void; featured?: boolean }) {
+export function NoteCard({
+  note,
+  onClick,
+  featured = false,
+  onEdit,
+  onPatch,
+  busy
+}: {
+  note: LoveNote;
+  onClick?: () => void;
+  featured?: boolean;
+  onEdit?: () => void;
+  onPatch?: (body: Record<string, unknown>) => void;
+  busy?: boolean;
+}) {
   const style = note.displayStyle || "sticky";
   const base = "overflow-hidden border shadow-soft backdrop-blur-xl text-left transition hover:-translate-y-0.5";
   const styleClass = {
@@ -19,7 +33,9 @@ export function NoteCard({ note, onClick, featured = false }: { note: LoveNote; 
     postcard: "rounded-[1.7rem] border-white/80 bg-white/75 p-3",
     bubble: `rounded-[1.7rem] border-white/75 p-4 ${note.author === "xiaoguai" ? "bg-blush/70" : "bg-skySoft/70"}`,
     photo_card: "rounded-[1.7rem] border-white/80 bg-white/72 p-2",
-    timeline: "rounded-[1.4rem] border-lilac/70 bg-white/65 p-4"
+    timeline: "rounded-[1.4rem] border-lilac/70 bg-white/65 p-4",
+    minimal: "rounded-[1.25rem] border-white/80 bg-white/78 p-4",
+    romantic: "rounded-[1.8rem] border-blush/60 bg-gradient-to-br from-blush/75 via-white/75 to-lilac/65 p-4"
   }[style];
   const type = note.noteType || (note.videoUrl ? "video" : note.audioUrl ? "audio" : note.imageUrl ? "image" : "text");
 
@@ -38,6 +54,23 @@ export function NoteCard({ note, onClick, featured = false }: { note: LoveNote; 
         <span className="rounded-full bg-cocoa/8 px-2.5 py-1 text-[11px] uppercase text-cocoa/55">{type}</span>
         {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-[11px] text-cocoa/65">置顶</span> : null}
       </div>
+      {onPatch ? (
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
+          <button className="btn-secondary btn-small" disabled={busy} onClick={onEdit} type="button">编辑</button>
+          <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
+          <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
+          <select className="field h-9 w-auto min-w-24 py-1 text-xs" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
+            <option value="sticky">便签</option>
+            <option value="postcard">明信片</option>
+            <option value="bubble">气泡</option>
+            <option value="photo_card">照片卡</option>
+            <option value="timeline">时间线</option>
+            <option value="minimal">极简</option>
+            <option value="romantic">浪漫</option>
+          </select>
+          <button className="btn-danger btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
+        </div>
+      ) : null}
     </article>
   );
 }

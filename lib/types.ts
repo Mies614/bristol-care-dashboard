@@ -48,13 +48,13 @@ export type QuickLink = CommonLink & {
 
 export type LoveNote = {
   id: string;
-  content: string;
+  content?: string;
   active: boolean;
   pinned: boolean;
   author?: "admin" | "user" | "xiaoguai" | "me";
   noteType?: "text" | "image" | "audio" | "video" | "mixed";
-  displayStyle?: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline";
-  mood?: "开心" | "想你" | "累了" | "记录一下" | "加油" | "今日小事";
+  displayStyle?: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline" | "minimal" | "romantic";
+  mood?: string;
   visibleFrom?: string;
   createdAt?: string;
   createdBy?: string;

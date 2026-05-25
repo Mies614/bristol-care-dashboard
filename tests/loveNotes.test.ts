@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickFeaturedLoveNote } from "@/lib/loveNotes";
+import { filterNoteWallNotes, pickFeaturedLoveNote } from "@/lib/loveNotes";
 import type { LoveNote } from "@/lib/types";
 
 const now = new Date("2026-05-25T12:00:00Z");
@@ -54,5 +54,19 @@ describe("love note selection", () => {
     const picked = pickFeaturedLoveNote([note({ content: "media", audioUrl: "https://example.com/a.webm", videoUrl: "https://example.com/a.mp4" })], now);
     expect(picked?.audioUrl).toBe("https://example.com/a.webm");
     expect(picked?.videoUrl).toBe("https://example.com/a.mp4");
+  });
+
+  it("filters note wall by author and note type", () => {
+    const notes = [
+      note({ content: "a", author: "me", noteType: "text" }),
+      note({ content: "b", author: "xiaoguai", noteType: "audio" })
+    ];
+    expect(filterNoteWallNotes(notes, { author: "me" })).toHaveLength(1);
+    expect(filterNoteWallNotes(notes, { noteType: "audio" })[0].content).toBe("b");
+  });
+
+  it("searches note wall content", () => {
+    const notes = [note({ content: "Bristol sunshine" }), note({ content: "quiet night" })];
+    expect(filterNoteWallNotes(notes, { q: "sun" })[0].content).toBe("Bristol sunshine");
   });
 });
