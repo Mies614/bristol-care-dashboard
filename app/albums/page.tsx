@@ -46,11 +46,13 @@ export default function AlbumsPage() {
   const [uploadStage, setUploadStage] = useState("");
   const [cancelled, setCancelled] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [draft, setDraft] = useState({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("upload=1")) setUploadOpen(true);
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
@@ -146,6 +148,7 @@ export default function AlbumsPage() {
     setDraft({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
     setImage(null);
     setVideo(null);
+    setUploadOpen(false);
     setMessage(createUploadStageMessage("done"));
     await loadItems();
   }
@@ -176,11 +179,16 @@ export default function AlbumsPage() {
     <AppShell>
       <PageHeader title="我们的相册" subtitle="把喜欢的瞬间慢慢收起来。" />
       <div className="space-y-4">
-        <form className="soft-card space-y-3 bg-gradient-to-br from-white/85 to-blush/40" onSubmit={upload}>
-          <div>
-            <p className="section-kicker mb-1">Upload</p>
-            <h2 className="font-semibold text-cocoa">添加一张回忆</h2>
-          </div>
+        <section className="soft-card bg-gradient-to-br from-white/85 to-blush/40">
+          <button className="flex w-full items-center justify-between text-left" onClick={() => setUploadOpen((value) => !value)} type="button">
+            <span>
+              <span className="section-kicker mb-1 block">Upload</span>
+              <span className="font-semibold text-cocoa">添加一张回忆</span>
+            </span>
+            <span className="btn-secondary btn-small">{uploadOpen ? "收起" : "展开"}</span>
+          </button>
+          <form className={`grid transition-all duration-300 ${uploadOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} onSubmit={upload}>
+          <div className="space-y-3 overflow-hidden">
           <input className="field" placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           <textarea className="field min-h-24" placeholder="备注" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
@@ -210,7 +218,9 @@ export default function AlbumsPage() {
             <button className="btn-primary flex-1" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
             {uploading ? <button className="btn-secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>取消</button> : null}
           </div>
+          </div>
         </form>
+        </section>
 
         <section className="soft-card">
           <div className="mb-3 flex flex-wrap gap-2">

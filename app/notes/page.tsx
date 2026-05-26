@@ -43,6 +43,7 @@ export default function NotesPage() {
   const [style, setStyle] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
   const [message, setMessage] = useState("");
+  const [composerOpen, setComposerOpen] = useState(false);
 
   async function loadNotes() {
     const params = new URLSearchParams({ code: getDefaultSpaceCode(), filter, sort });
@@ -59,6 +60,7 @@ export default function NotesPage() {
   }
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("compose=1")) setComposerOpen(true);
     loadNotes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, sort]);
@@ -91,7 +93,20 @@ export default function NotesPage() {
         </div>
       </section>
       <div className="space-y-4">
-        <NoteComposer onCreated={loadNotes} />
+        <section className="soft-card">
+          <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((value) => !value)} type="button">
+            <span>
+              <span className="section-kicker mb-1 block">Compose</span>
+              <span className="font-semibold text-cocoa">写一张小纸条</span>
+            </span>
+            <span className="btn-secondary btn-small">{composerOpen ? "收起" : "展开"}</span>
+          </button>
+          <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+            <div className="overflow-hidden">
+              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} />
+            </div>
+          </div>
+        </section>
         <section className="soft-card space-y-3">
           <div className="flex flex-wrap gap-2">
             {filters.map(([value, label]) => (

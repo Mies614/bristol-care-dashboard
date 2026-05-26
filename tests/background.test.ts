@@ -34,8 +34,11 @@ describe("background settings", () => {
       preset: "cream",
       imageFit: "cover",
       imagePosition: "center",
+      focalPoint: { x: 50, y: 38 },
       overlay: "light",
-      blur: false
+      blur: false,
+      dim: 20,
+      scale: 100
     });
   });
 
@@ -100,5 +103,44 @@ describe("background settings", () => {
 
   it("exports the uppercase default constant", () => {
     expect(DEFAULT_BACKGROUND_SETTINGS).toEqual(defaultBackgroundSettings);
+  });
+
+  it("generates soft portrait styles for people photos", () => {
+    const style = getBackgroundStyle({
+      mode: "image",
+      imageDataUrl: "data:image/png;base64,abc",
+      imageFit: "softPortrait",
+      focalPoint: { x: 50, y: 35 },
+      scale: 108
+    });
+
+    expect(style.backgroundSize).toBe("cover");
+    expect(style.backgroundPosition).toBe("50% 35%");
+  });
+
+  it("uses focal point for image background position", () => {
+    expect(getBackgroundStyle({
+      mode: "url",
+      imageUrl: "https://example.com/bg.webp",
+      focalPoint: { x: 24, y: 32 }
+    }).backgroundPosition).toBe("24% 32%");
+  });
+
+  it("keeps a safe dim default and clamps invalid values", () => {
+    const normalized = normalizeBackgroundSettings({
+      mode: "image",
+      imageDataUrl: "data:image/png;base64,abc",
+      dim: 999,
+      scale: 10,
+      focalPoint: { x: -20, y: 140 }
+    });
+
+    expect(normalized.dim).toBe(80);
+    expect(normalized.scale).toBe(90);
+    expect(normalized.focalPoint).toEqual({ x: 0, y: 100 });
+  });
+
+  it("falls back to default for invalid background settings", () => {
+    expect(normalizeBackgroundSettings({ mode: "bad", imageFit: "stretch" })).toMatchObject(DEFAULT_BACKGROUND_SETTINGS);
   });
 });

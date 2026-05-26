@@ -42,10 +42,21 @@ export function AppBackground({ children }: { children: React.ReactNode }) {
 
   const safeSettings = normalizeBackgroundSettings(settings);
   const dark = isDarkBackground(safeSettings);
+  const hasPhotoBackground = safeSettings.mode === "image" || safeSettings.mode === "url";
+  const portraitMode = hasPhotoBackground && (safeSettings.imageFit === "softPortrait" || safeSettings.portraitEnhance);
+  const scale = Math.max(safeSettings.blur || safeSettings.imageFit === "softPortrait" ? 105 : 100, safeSettings.scale || 100);
+  const backgroundFilter = safeSettings.blur || safeSettings.imageFit === "softPortrait" ? "blur(8px)" : undefined;
 
   return (
-    <div className={dark ? "relative isolate min-h-screen text-white" : "relative isolate min-h-screen text-cocoa"}>
-      <div className="fixed inset-0 z-0" style={{ ...getBackgroundStyle(safeSettings), filter: safeSettings.blur ? "blur(10px)" : undefined, transform: safeSettings.blur ? "scale(1.04)" : undefined }} />
+    <div className={`${dark ? "text-white" : "text-cocoa"} ${portraitMode ? "portrait-background" : ""} relative isolate min-h-screen`}>
+      <div
+        className="fixed inset-0 z-0 will-change-transform"
+        style={{
+          ...getBackgroundStyle(safeSettings),
+          filter: backgroundFilter,
+          transform: hasPhotoBackground && scale !== 100 ? `scale(${scale / 100})` : undefined
+        }}
+      />
       <div className="fixed inset-0 z-[1]" style={getBackgroundOverlayStyle(safeSettings)} />
       <div className="relative z-10">{children}</div>
     </div>

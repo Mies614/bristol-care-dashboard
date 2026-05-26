@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [colorDraft, setColorDraft] = useState("#fff8f0");
   const [imageUrlDraft, setImageUrlDraft] = useState("");
+  const [dataCenterOpen, setDataCenterOpen] = useState(false);
 
   useEffect(() => {
     const current = loadAppData();
@@ -68,6 +69,11 @@ export default function SettingsPage() {
     if (!data) return;
     const saved = saveBackgroundSettings(next);
     update({ ...data, backgroundSettings: saved });
+  }
+
+  function updateBackgroundPartial(partial: Partial<BackgroundSettings>) {
+    if (!data) return;
+    updateBackground({ ...data.backgroundSettings, ...partial });
   }
 
   function fileToDataUrl(file: File) {
@@ -247,9 +253,14 @@ export default function SettingsPage() {
                     ...data.backgroundSettings,
                     mode: "image",
                     imageDataUrl: await fileToDataUrl(file),
-                    imageFit: data.backgroundSettings.imageFit || "cover",
-                    imagePosition: data.backgroundSettings.imagePosition || "center",
-                    overlay: data.backgroundSettings.overlay || "light"
+                    imageFit: "softPortrait",
+                    imagePosition: "top",
+                    focalPoint: { x: 50, y: 35 },
+                    overlay: "medium",
+                    dim: 35,
+                    scale: 105,
+                    blur: false,
+                    portraitEnhance: true
                   });
                 } catch (error) {
                   setImportMessage(error instanceof Error ? error.message : "图片读取失败。");
@@ -281,35 +292,121 @@ export default function SettingsPage() {
             />
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4 rounded-[1.5rem] border border-white/80 bg-white/55 p-3 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold text-cocoa">人物照片优化</p>
+              <p className="mt-1 text-xs leading-5 text-cocoa/55">如果用人物照片做背景，可以试试“人物照片”或“柔和人物背景”。</p>
+            </div>
             <label className="block text-sm text-cocoa/70">
-              显示方式
-              <select className="field mt-1" value={data.backgroundSettings.imageFit || "cover"} onChange={(e) => updateBackground({ ...data.backgroundSettings, imageFit: e.target.value as BackgroundSettings["imageFit"] })}>
-                <option value="cover">cover</option>
-                <option value="contain">contain</option>
+              背景显示模式
+              <select
+                className="field mt-1"
+                value={data.backgroundSettings.imageFit || "cover"}
+                onChange={(e) => {
+                  const imageFit = e.target.value as BackgroundSettings["imageFit"];
+                  if (imageFit === "portrait") {
+                    updateBackgroundPartial({ imageFit, imagePosition: "top", focalPoint: { x: 50, y: 35 }, dim: Math.max(data.backgroundSettings.dim || 20, 28), portraitEnhance: true });
+                    return;
+                  }
+                  if (imageFit === "softPortrait") {
+                    updateBackgroundPartial({ imageFit, imagePosition: "top", focalPoint: { x: 50, y: 35 }, overlay: "medium", dim: Math.max(data.backgroundSettings.dim || 20, 36), scale: Math.max(data.backgroundSettings.scale || 100, 105), portraitEnhance: true });
+                    return;
+                  }
+                  updateBackgroundPartial({ imageFit, portraitEnhance: false });
+                }}
+              >
+                <option value="cover">普通铺满</option>
+                <option value="contain">完整显示</option>
+                <option value="portrait">人物照片</option>
+                <option value="softPortrait">柔和人物背景</option>
               </select>
             </label>
-            <label className="block text-sm text-cocoa/70">
-              图片位置
-              <select className="field mt-1" value={data.backgroundSettings.imagePosition || "center"} onChange={(e) => updateBackground({ ...data.backgroundSettings, imagePosition: e.target.value as BackgroundSettings["imagePosition"] })}>
-                <option value="center">center</option>
-                <option value="top">top</option>
-                <option value="bottom">bottom</option>
-              </select>
-            </label>
-            <label className="block text-sm text-cocoa/70">
-              遮罩强度
-              <select className="field mt-1" value={data.backgroundSettings.overlay || "light"} onChange={(e) => updateBackground({ ...data.backgroundSettings, overlay: e.target.value as BackgroundSettings["overlay"] })}>
-                <option value="none">无</option>
-                <option value="light">浅</option>
-                <option value="medium">中</option>
-                <option value="strong">强</option>
-              </select>
-            </label>
-            <label className="check-card">
-              <input checked={Boolean(data.backgroundSettings.blur)} type="checkbox" onChange={(e) => updateBackground({ ...data.backgroundSettings, blur: e.target.checked })} />
-              图片模糊
-            </label>
+            <div>
+              <p className="mb-2 text-sm text-cocoa/70">焦点位置</p>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  ["居中", { x: 50, y: 50 }, "center"],
+                  ["靠上", { x: 50, y: 28 }, "top"],
+                  ["靠下", { x: 50, y: 74 }, "bottom"],
+                  ["偏左", { x: 28, y: 45 }, "left"],
+                  ["偏右", { x: 72, y: 45 }, "right"]
+                ].map(([label, focalPoint, imagePosition]) => (
+                  <button
+                    className="btn-secondary btn-small"
+                    key={String(label)}
+                    onClick={() => updateBackgroundPartial({ focalPoint: focalPoint as BackgroundSettings["focalPoint"], imagePosition: imagePosition as BackgroundSettings["imagePosition"] })}
+                    type="button"
+                  >
+                    {String(label)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block text-sm text-cocoa/70">
+                焦点 X：{data.backgroundSettings.focalPoint?.x ?? 50}%
+                <input
+                  className="mt-2 w-full accent-[#8c6a60]"
+                  max={100}
+                  min={0}
+                  type="range"
+                  value={data.backgroundSettings.focalPoint?.x ?? 50}
+                  onChange={(e) => updateBackgroundPartial({ focalPoint: { x: Number(e.target.value), y: data.backgroundSettings.focalPoint?.y ?? 38 } })}
+                />
+              </label>
+              <label className="block text-sm text-cocoa/70">
+                焦点 Y：{data.backgroundSettings.focalPoint?.y ?? 38}%
+                <input
+                  className="mt-2 w-full accent-[#8c6a60]"
+                  max={100}
+                  min={0}
+                  type="range"
+                  value={data.backgroundSettings.focalPoint?.y ?? 38}
+                  onChange={(e) => updateBackgroundPartial({ focalPoint: { x: data.backgroundSettings.focalPoint?.x ?? 50, y: Number(e.target.value) } })}
+                />
+              </label>
+              <label className="block text-sm text-cocoa/70">
+                背景遮罩：{data.backgroundSettings.dim ?? 20}%
+                <input
+                  className="mt-2 w-full accent-[#8c6a60]"
+                  max={80}
+                  min={0}
+                  type="range"
+                  value={data.backgroundSettings.dim ?? 20}
+                  onChange={(e) => updateBackgroundPartial({ dim: Number(e.target.value) })}
+                />
+              </label>
+              <label className="block text-sm text-cocoa/70">
+                背景缩放：{data.backgroundSettings.scale ?? 100}%
+                <input
+                  className="mt-2 w-full accent-[#8c6a60]"
+                  max={130}
+                  min={90}
+                  type="range"
+                  value={data.backgroundSettings.scale ?? 100}
+                  onChange={(e) => updateBackgroundPartial({ scale: Number(e.target.value) })}
+                />
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block text-sm text-cocoa/70">
+                兼容遮罩
+                <select className="field mt-1" value={data.backgroundSettings.overlay || "light"} onChange={(e) => updateBackgroundPartial({ overlay: e.target.value as BackgroundSettings["overlay"] })}>
+                  <option value="none">无</option>
+                  <option value="light">浅</option>
+                  <option value="medium">中</option>
+                  <option value="strong">强</option>
+                </select>
+              </label>
+              <label className="check-card">
+                <input checked={Boolean(data.backgroundSettings.blur)} type="checkbox" onChange={(e) => updateBackgroundPartial({ blur: e.target.checked })} />
+                柔化背景
+              </label>
+              <label className="check-card md:col-span-2">
+                <input checked={Boolean(data.backgroundSettings.portraitEnhance)} type="checkbox" onChange={(e) => updateBackgroundPartial({ portraitEnhance: e.target.checked, dim: e.target.checked ? Math.max(data.backgroundSettings.dim || 20, 35) : data.backgroundSettings.dim })} />
+                人物照片优化
+              </label>
+            </div>
           </div>
 
           <button className="btn-secondary w-full" onClick={() => { setColorDraft("#fff8f0"); setImageUrlDraft(""); updateBackground(DEFAULT_BACKGROUND_SETTINGS); }} type="button">
@@ -405,7 +502,20 @@ export default function SettingsPage() {
           </div>
           {importMessage ? <p className="notice mt-3">{importMessage}</p> : null}
         </section>
-        <DataManagementCenter data={data} onData={setData} onUploadCloud={uploadCloud} onPullCloud={pullCloud} />
+        <section className="soft-card">
+          <button className="flex w-full items-center justify-between text-left" onClick={() => setDataCenterOpen((value) => !value)} type="button">
+            <span>
+              <span className="section-kicker mb-1 block">Advanced</span>
+              <span className="font-semibold text-cocoa">高级数据管理</span>
+            </span>
+            <span className="btn-secondary btn-small">{dataCenterOpen ? "收起" : "展开"}</span>
+          </button>
+          <div className={`grid transition-all duration-300 ${dataCenterOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+            <div className="overflow-hidden">
+              <DataManagementCenter data={data} onData={setData} onUploadCloud={uploadCloud} onPullCloud={pullCloud} />
+            </div>
+          </div>
+        </section>
       </div>
     </AppShell>
   );

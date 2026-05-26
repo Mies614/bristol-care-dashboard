@@ -123,10 +123,17 @@ export type BackgroundSettings = {
   color?: string;
   imageDataUrl?: string;
   imageUrl?: string;
-  imageFit?: "cover" | "contain";
-  imagePosition?: "center" | "top" | "bottom";
+  imageFit?: "cover" | "contain" | "portrait" | "softPortrait";
+  imagePosition?: "center" | "top" | "bottom" | "left" | "right";
+  focalPoint?: {
+    x: number;
+    y: number;
+  };
   overlay?: "none" | "light" | "medium" | "strong";
   blur?: boolean;
+  portraitEnhance?: boolean;
+  dim?: number;
+  scale?: number;
 };
 
 export type AppData = {

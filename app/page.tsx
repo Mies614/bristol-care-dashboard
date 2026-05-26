@@ -10,7 +10,7 @@ import { OnboardingCard } from "@/components/OnboardingCard";
 import { OutfitCard } from "@/components/OutfitCard";
 import { WeatherCard, useWeather } from "@/components/WeatherCard";
 import { formatCountdown, getDaysUntilDeadline } from "@/lib/date";
-import { getNextCourse, hasEveningClass } from "@/lib/schedule";
+import { getCurrentDayName, getNextCourse, hasEveningClass } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getOutfitSuggestion } from "@/lib/outfit";
@@ -20,6 +20,9 @@ import { defaultAppData } from "@/lib/sampleData";
 import { calculateNextPeriodStart, DEFAULT_PERIOD_SETTINGS, getDaysUntilNextPeriod } from "@/lib/period";
 import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { PriorityReminderList } from "@/components/PriorityReminderList";
+import { getDailyCare } from "@/lib/dailyCare";
+import { DailyCareCard } from "@/components/DailyCareCard";
+import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 
 function safeBristolDate() {
   try {
@@ -142,6 +145,7 @@ export default function HomePage() {
     [data]
   );
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
+  const todayCourses = useMemo(() => data.courses.filter((course) => course.day === getCurrentDayName()), [data.courses]);
   const priorityReminders = useMemo(() => getTodayPriorityReminders({
     courses: data.courses,
     deadlines: data.deadlines,
@@ -152,6 +156,7 @@ export default function HomePage() {
     const favorites = albumItems.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albumItems).slice(0, 3);
   }, [albumItems]);
+  const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
   const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const daysUntilPeriod = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const todayLabel = useMemo(safeBristolDate, []);
@@ -196,6 +201,16 @@ export default function HomePage() {
         : undefined,
     [weather, data]
   );
+  const dailyCare = useMemo(() => getDailyCare({
+    weather,
+    outfit,
+    todayCourses,
+    deadlines: nearestDeadlines,
+    periodRecords,
+    periodSettings,
+    featuredNote: featuredLoveNote,
+    randomMemory
+  }), [weather, outfit, todayCourses, nearestDeadlines, periodRecords, periodSettings, featuredLoveNote, randomMemory]);
 
   return (
     <AppShell>
@@ -222,6 +237,7 @@ export default function HomePage() {
       <div className="space-y-3.5">
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
+        <DailyCareCard care={dailyCare} />
         <WeatherCard weather={weather} error={error} />
         {outfit ? <OutfitCard suggestion={outfit} /> : null}
 

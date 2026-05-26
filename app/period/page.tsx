@@ -48,6 +48,7 @@ export default function PeriodPage() {
   const [editingId, setEditingId] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
     loadPeriod();
@@ -58,6 +59,7 @@ export default function PeriodPage() {
   const nextStart = useMemo(() => calculateNextPeriodStart(records, settings), [records, settings]);
   const cycleDay = useMemo(() => getCurrentCycleDay(records), [records]);
   const daysUntil = useMemo(() => getDaysUntilNextPeriod(records, settings), [records, settings]);
+  const visibleRecords = showAllHistory ? records : records.slice(0, 3);
 
   async function loadPeriod() {
     const response = await fetch(`/api/period?code=${encodeURIComponent(code)}`);
@@ -235,14 +237,17 @@ export default function PeriodPage() {
           </section>
 
           <section className="soft-card">
-            <div className="mb-3">
-              <p className="section-kicker mb-1">History</p>
-              <h2 className="font-semibold text-cocoa">历史记录</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="section-kicker mb-1">History</p>
+                <h2 className="font-semibold text-cocoa">历史记录</h2>
+              </div>
+              {records.length > 3 ? <button className="btn-secondary btn-small" onClick={() => setShowAllHistory((value) => !value)}>{showAllHistory ? "收起" : `展开 ${records.length} 条`}</button> : null}
             </div>
             {message ? <p className="notice mb-3">{message}</p> : null}
             {records.length ? (
-              <div className="space-y-2">
-                {records.map((record) => (
+              <div className="space-y-2 transition-all duration-300">
+                {visibleRecords.map((record) => (
                   <article className="rounded-[1.35rem] border border-white/70 bg-white/58 p-3 text-sm text-cocoa/72 shadow-sm" key={record.id}>
                     <div className="flex items-start justify-between gap-3">
                       <div>

@@ -26,6 +26,7 @@ export default function DeadlinesPage() {
   const [draft, setDraft] = useState<Omit<Deadline, "id">>(emptyDeadline);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => setData(loadAppData()), []);
 
@@ -78,6 +79,8 @@ export default function DeadlinesPage() {
     return deadline.status !== "done" && days > 0 && days <= 3;
   });
   const overdue = sorted.filter((deadline) => deadline.status !== "done" && getDaysUntilDeadline(deadline) < 0);
+  const activeDeadlines = sorted.filter((deadline) => deadline.status !== "done");
+  const completedDeadlines = sorted.filter((deadline) => deadline.status === "done");
 
   if (!data) return <AppShell><div className="soft-card">正在加载 deadline...</div></AppShell>;
 
@@ -128,7 +131,7 @@ export default function DeadlinesPage() {
       </form>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {sorted.length ? sorted.map((deadline) => (
+        {activeDeadlines.length ? activeDeadlines.map((deadline) => (
           <DeadlineCard
             deadline={deadline}
             key={deadline.id}
@@ -143,6 +146,35 @@ export default function DeadlinesPage() {
           />
         )) : <div className="empty-state">暂时没有 deadline。</div>}
       </div>
+      {completedDeadlines.length ? (
+        <section className="soft-card mt-4">
+          <button className="flex w-full items-center justify-between text-left" onClick={() => setShowDone((value) => !value)} type="button">
+            <span>
+              <span className="section-kicker mb-1 block">Done</span>
+              <span className="font-semibold text-cocoa">已完成 DDL（{completedDeadlines.length}）</span>
+            </span>
+            <span className="btn-secondary btn-small">{showDone ? "收起" : "展开"}</span>
+          </button>
+          <div className={`grid transition-all duration-300 ${showDone ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+            <div className="grid gap-3 overflow-hidden md:grid-cols-2">
+              {completedDeadlines.map((deadline) => (
+                <DeadlineCard
+                  deadline={deadline}
+                  key={deadline.id}
+                  onDelete={() => persist(data.deadlines.filter((item) => item.id !== deadline.id))}
+                  onEdit={() => { setEditingId(deadline.id); setDraft(deadline); }}
+                  onCalendar={() => exportDeadline(deadline)}
+                  onToggle={() =>
+                    persist(data.deadlines.map((item) =>
+                      item.id === deadline.id ? { ...item, status: item.status === "done" ? "todo" : "done" } : item
+                    ))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
     </AppShell>
   );
 }

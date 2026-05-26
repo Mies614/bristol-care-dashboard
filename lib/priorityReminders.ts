@@ -12,6 +12,7 @@ export type PriorityReminder = {
   priority: "urgent" | "soon" | "normal" | "info";
   href: string;
   icon: string;
+  careText?: string;
 };
 
 const priorityRank: Record<PriorityReminder["priority"], number> = {
@@ -64,7 +65,8 @@ export function getCourseReminders(courses: Course[], now = new Date()): Priorit
           datetime: courseDateTime(course, now),
           priority: "urgent",
           href: "/schedule",
-          icon: "◴"
+          icon: "◴",
+          careText: ongoing ? "先专心把这一节上完，结束后给自己一点缓冲。" : "可以提前一点出门，路上不用太赶。"
         });
       } else if (laterToday) {
         reminders.push({
@@ -75,7 +77,8 @@ export function getCourseReminders(courses: Course[], now = new Date()): Priorit
           datetime: courseDateTime(course, now),
           priority: "soon",
           href: "/schedule",
-          icon: "◴"
+          icon: "◴",
+          careText: "今天还有课，记得把水和要用的东西带好。"
         });
       }
     } else if (course.day === tomorrow) {
@@ -87,7 +90,8 @@ export function getCourseReminders(courses: Course[], now = new Date()): Priorit
         datetime: courseDateTime(course, now, 1),
         priority: "normal",
         href: "/schedule",
-        icon: "◴"
+        icon: "◴",
+        careText: "明天有课，今晚可以顺手看一眼要带的东西。"
       });
     }
   }
@@ -114,7 +118,8 @@ export function getDeadlineReminders(deadlines: Deadline[], now = new Date()): P
           datetime: due.toISOString(),
           priority: "urgent" as const,
           href: "/deadlines",
-          icon: "✓"
+          icon: "✓",
+          careText: "这件先放到前面处理，做一点也算往前走。"
         };
       }
       if (isToday || days === 0) {
@@ -126,7 +131,8 @@ export function getDeadlineReminders(deadlines: Deadline[], now = new Date()): P
           datetime: due.toISOString(),
           priority: "urgent" as const,
           href: "/deadlines",
-          icon: "✓"
+          icon: "✓",
+          careText: "今天先抓最关键的一步，别把自己逼得太紧。"
         };
       }
       if (days <= 3) {
@@ -138,7 +144,8 @@ export function getDeadlineReminders(deadlines: Deadline[], now = new Date()): P
           datetime: due.toISOString(),
           priority: "soon" as const,
           href: "/deadlines",
-          icon: "✓"
+          icon: "✓",
+          careText: "还有一点时间，可以拆成小块慢慢完成。"
         };
       }
       if (days <= 7) {
@@ -150,7 +157,8 @@ export function getDeadlineReminders(deadlines: Deadline[], now = new Date()): P
           datetime: due.toISOString(),
           priority: "normal" as const,
           href: "/deadlines",
-          icon: "✓"
+          icon: "✓",
+          careText: "这周可以提前安排一下，给后面的自己轻松一点。"
         };
       }
       return null;
@@ -167,7 +175,8 @@ export function getPeriodReminders(records: PeriodRecord[], settings: PeriodSett
       subtitle: "可以去补一条记录",
       priority: "info",
       href: "/period",
-      icon: "☾"
+      icon: "☾",
+      careText: "先留一个记录入口，之后补上也可以。"
     }];
   }
   const days = getDaysUntilNextPeriod(records, settings, now);
@@ -183,7 +192,8 @@ export function getPeriodReminders(records: PeriodRecord[], settings: PeriodSett
       datetime: `${nextStart}T09:00:00.000Z`,
       priority: "urgent",
       href: "/period",
-      icon: "☾"
+      icon: "☾",
+      careText: "今天对自己温柔一点，节奏可以放慢。"
     }];
   }
   if (days >= 1 && days <= 3) {
@@ -195,7 +205,8 @@ export function getPeriodReminders(records: PeriodRecord[], settings: PeriodSett
       datetime: `${nextStart}T09:00:00.000Z`,
       priority: "soon",
       href: "/period",
-      icon: "☾"
+      icon: "☾",
+      careText: "这几天可以多留意身体感受，包里备一点常用东西。"
     }];
   }
   if (days > 3 && days <= 7) {
@@ -207,7 +218,8 @@ export function getPeriodReminders(records: PeriodRecord[], settings: PeriodSett
       datetime: `${nextStart}T09:00:00.000Z`,
       priority: "normal",
       href: "/period",
-      icon: "☾"
+      icon: "☾",
+      careText: "快到预计时间了，日程可以给自己留点余地。"
     }];
   }
   return [];

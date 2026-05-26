@@ -6,7 +6,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
 import { validateImageFile } from "@/lib/imageValidation";
 import { getUserFacingAuthorLabel } from "@/lib/identity";
-import type { LoveNote } from "@/lib/types";
+import { getTodayPriorityReminders } from "@/lib/priorityReminders";
+import { PriorityReminderList } from "@/components/PriorityReminderList";
+import { defaultAppData } from "@/lib/sampleData";
+import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
+import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
 
@@ -20,6 +24,10 @@ export default function AdminPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
   const [notes, setNotes] = useState<LoveNote[]>([]);
+  const [careData, setCareData] = useState<AppData>(defaultAppData);
+  const [careAlbums, setCareAlbums] = useState<AlbumItem[]>([]);
+  const [carePeriods, setCarePeriods] = useState<PeriodRecord[]>([]);
+  const [carePeriodSettings, setCarePeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
   const [noteFilter, setNoteFilter] = useState("all");
   const [content, setContent] = useState("");
   const [active, setActive] = useState(true);
@@ -53,6 +61,30 @@ export default function AdminPage() {
     if (noteFilter === "xiaoguai") return notes.filter((note) => note.author === "xiaoguai" || note.author === "user");
     return notes.filter((note) => note.noteType === noteFilter);
   }, [notes, noteFilter]);
+  const adminReminders = useMemo(() => getTodayPriorityReminders({
+    courses: careData.courses,
+    deadlines: careData.deadlines,
+    periodRecords: carePeriods,
+    periodSettings: carePeriodSettings
+  }), [careData.courses, careData.deadlines, carePeriods, carePeriodSettings]);
+  const latestNote = notes[0];
+  const latestAlbum = careAlbums[0];
+
+  async function loadCareSummary() {
+    const [cloudPayload, albumPayload, periodPayload] = await Promise.all([
+      fetch(`/api/cloud/pull`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      }).then((response) => response.json()).catch(() => ({})),
+      fetch(`/api/albums?code=${encodeURIComponent(code)}&filter=all`).then((response) => response.json()).catch(() => ({})),
+      fetch(`/api/period?code=${encodeURIComponent(code)}`).then((response) => response.json()).catch(() => ({}))
+    ]);
+    if (cloudPayload.data) setCareData(cloudPayload.data);
+    if (Array.isArray(albumPayload.items)) setCareAlbums(albumPayload.items);
+    if (Array.isArray(periodPayload.records)) setCarePeriods(periodPayload.records);
+    if (periodPayload.settings) setCarePeriodSettings(periodPayload.settings);
+  }
 
   async function login(event: React.FormEvent) {
     event.preventDefault();
@@ -75,6 +107,7 @@ export default function AdminPage() {
     }
     setLoggedIn(true);
     await loadNotes(password);
+    await loadCareSummary();
   }
 
   async function loadNotes(pass = adminPassword || password) {
@@ -298,8 +331,33 @@ export default function AdminPage() {
               </label>
             </section>
 
+            <section className="soft-card space-y-3 bg-gradient-to-br from-white/88 via-blush/38 to-skySoft/50">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="section-kicker mb-1">Care Console</p>
+                  <h2 className="font-semibold text-cocoa">今日照顾摘要</h2>
+                  <p className="mt-2 text-sm leading-6 text-cocoa/62">可以先看最紧急的一件事，再决定今天要发什么小纸条。</p>
+                </div>
+                <button className="btn-secondary btn-small" onClick={loadCareSummary}>刷新</button>
+              </div>
+              <PriorityReminderList reminders={adminReminders} limit={3} empty="今天暂时没有特别紧急的提醒。" />
+              <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
+                <div className="rounded-2xl bg-white/58 p-3">今日课程 {careData.courses.length}</div>
+                <div className="rounded-2xl bg-white/58 p-3">最近 DDL {careData.deadlines.filter((item) => item.status !== "done").length}</div>
+                <div className="rounded-2xl bg-white/58 p-3">最新纸条 {latestNote?.content ? latestNote.content.slice(0, 12) : "暂无"}</div>
+                <div className="rounded-2xl bg-white/58 p-3">最新相册 {latestAlbum?.title || "暂无"}</div>
+              </div>
+              <p className="notice">今日可以关心她什么：看一眼课程和 DDL，再发一句具体的小提醒会更贴近当天。</p>
+              <div className="grid grid-cols-2 gap-2">
+                <a className="btn-primary text-center" href="#publish-note">发小纸条</a>
+                <a className="btn-secondary text-center" href="/notes">查看小纸条墙</a>
+                <a className="btn-secondary text-center" href="/memories">查看回忆中心</a>
+                <a className="btn-secondary text-center" href="/records">查看记录中心</a>
+              </div>
+            </section>
+
             <div className="grid gap-4">
-            <form className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-butter/45" onSubmit={publish}>
+            <form className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-butter/45" id="publish-note" onSubmit={publish}>
               <div>
                 <p className="section-kicker mb-1">Publish</p>
                 <h2 className="font-semibold text-cocoa">发布新小纸条</h2>

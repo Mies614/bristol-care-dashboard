@@ -28,6 +28,7 @@ export function PriorityReminderCard({ reminder, compact = false }: { reminder: 
           </div>
           <h3 className="mt-1 font-semibold leading-6 text-cocoa">{reminder.title}</h3>
           {reminder.subtitle ? <p className="mt-1 text-sm leading-5 text-cocoa/68">{reminder.subtitle}</p> : null}
+          {reminder.careText ? <p className="mt-2 rounded-2xl bg-white/50 px-3 py-2 text-sm leading-5 text-cocoa/66">{reminder.careText}</p> : null}
         </div>
       </div>
     </Link>

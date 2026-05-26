@@ -37,6 +37,7 @@ describe("priority reminders", () => {
   it("marks today and overdue deadlines as urgent", () => {
     expect(getDeadlineReminders([deadline({})], now)[0].priority).toBe("urgent");
     expect(getDeadlineReminders([deadline({ dueDate: "2026-05-25" })], now)[0].priority).toBe("urgent");
+    expect(getDeadlineReminders([deadline({})], now)[0].careText).toContain("关键");
   });
 
   it("marks deadlines within 3 days as soon", () => {
@@ -50,11 +51,13 @@ describe("priority reminders", () => {
   it("marks courses within 1 hour as urgent and later today as soon", () => {
     expect(getCourseReminders([course({ startTime: "10:15" })], now)[0].priority).toBe("urgent");
     expect(getCourseReminders([course({ startTime: "13:00" })], now)[0].priority).toBe("soon");
+    expect(getCourseReminders([course({ startTime: "13:00" })], now)[0].careText).toContain("带好");
   });
 
   it("marks period expected within 2 days as soon", () => {
     const records: PeriodRecord[] = [{ id: "p1", startDate: "2026-04-30" }];
     expect(getPeriodReminders(records, { averageCycleLength: 28, averagePeriodLength: 5, reminderDaysBefore: 2 }, now)[0].priority).toBe("soon");
+    expect(getPeriodReminders(records, { averageCycleLength: 28, averagePeriodLength: 5, reminderDaysBefore: 2 }, now)[0].careText).toContain("身体");
   });
 
   it("sorts merged reminders with urgent first", () => {

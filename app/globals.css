@@ -35,6 +35,21 @@ select {
     @apply rounded-[1.75rem] border border-white/75 bg-white/75 p-4 shadow-soft ring-1 ring-white/60 backdrop-blur-xl sm:p-5;
   }
 
+  .portrait-background .soft-card {
+    @apply bg-white/85 ring-white/75;
+  }
+
+  .portrait-background .notice,
+  .portrait-background .empty-state,
+  .portrait-background .check-card,
+  .portrait-background .file-panel {
+    @apply bg-white/80;
+  }
+
+  .portrait-background nav > div {
+    @apply bg-white/80 ring-white/75;
+  }
+
   .field {
     @apply w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-base text-cocoa shadow-inner outline-none transition placeholder:text-cocoa/35 focus:border-roseSoft focus:bg-white focus:ring-2 focus:ring-roseSoft/25 sm:text-sm;
   }

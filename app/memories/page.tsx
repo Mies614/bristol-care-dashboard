@@ -9,15 +9,26 @@ import { NoteCard } from "@/components/NoteCard";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
+import { buildRandomMemoryItems, pickRandomMemory, type RandomMemoryItem } from "@/lib/randomMemory";
+import { buildMemoryTimelineItems, groupTimelineByMonth } from "@/lib/memoryTimeline";
+import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, LoveNote } from "@/lib/types";
 
 export default function MemoriesPage() {
   const [notes, setNotes] = useState<LoveNote[]>([]);
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const [randomMemory, setRandomMemory] = useState<RandomMemoryItem | null>(null);
+  const [randomBusy, setRandomBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [nextMeetingDate, setNextMeetingDate] = useState("");
   const code = getDefaultSpaceCode();
 
   useEffect(() => {
+    try {
+      setNextMeetingDate(loadAppData().nextMeetDate || "");
+    } catch {
+      setNextMeetingDate("");
+    }
     Promise.all([
       fetch(`/api/notes?code=${encodeURIComponent(code)}&sort=pinned`).then((response) => response.json()).catch(() => ({})),
       fetch(`/api/albums?code=${encodeURIComponent(code)}&filter=all`).then((response) => response.json()).catch(() => ({}))
@@ -37,14 +48,24 @@ export default function MemoriesPage() {
     const favorites = albums.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albums).slice(0, 6);
   }, [albums]);
-  const randomMemory = useMemo(() => {
-    const candidates: Array<{ kind: "note"; note: LoveNote } | { kind: "album"; album: AlbumItem }> = [
-      ...notes.map((note) => ({ kind: "note" as const, note })),
-      ...albums.map((album) => ({ kind: "album" as const, album }))
-    ];
-    if (!candidates.length) return null;
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }, [notes, albums]);
+  const randomItems = useMemo(() => buildRandomMemoryItems(notes, albums), [notes, albums]);
+  const timelineGroups = useMemo(
+    () => groupTimelineByMonth(buildMemoryTimelineItems({ notes, albums, nextMeetingDate })).slice(0, 4),
+    [notes, albums, nextMeetingDate]
+  );
+
+  useEffect(() => {
+    setRandomMemory((current) => {
+      if (current && randomItems.some((item) => item.id === current.id)) return current;
+      return pickRandomMemory(randomItems);
+    });
+  }, [randomItems]);
+
+  function refreshRandomMemory() {
+    setRandomBusy(true);
+    setRandomMemory((current) => pickRandomMemory(randomItems, current?.id));
+    window.setTimeout(() => setRandomBusy(false), 180);
+  }
 
   return (
     <SharedAccessGate>
@@ -106,21 +127,63 @@ export default function MemoriesPage() {
           </section>
 
           <section className="soft-card">
-            <div className="mb-3">
-              <p className="section-kicker mb-1">Random</p>
-              <h2 className="font-semibold text-cocoa">随机看一张回忆</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="section-kicker mb-1">Random</p>
+                <h2 className="font-semibold text-cocoa">随机看一张回忆</h2>
+              </div>
+              <button className="btn-secondary btn-small" disabled={!randomItems.length || randomBusy} onClick={refreshRandomMemory} type="button">
+                {randomBusy ? "换一张..." : "↻ 换一张"}
+              </button>
             </div>
-            {randomMemory?.kind === "note" ? (
-              <NoteCard featured note={randomMemory.note} />
-            ) : randomMemory?.kind === "album" ? (
-              <Link className="block overflow-hidden rounded-[1.5rem] bg-white/60 shadow-sm" href="/albums">
-                {randomMemory.album.imageUrl ? <img className="max-h-72 w-full object-cover" src={randomMemory.album.imageUrl} alt={randomMemory.album.title || "相册回忆"} /> : <div className="flex h-44 items-center justify-center bg-cocoa/75 text-white">▶</div>}
+            {randomMemory ? (
+              <Link className="block overflow-hidden rounded-[1.5rem] bg-white/65 shadow-sm transition active:scale-[0.99]" href={randomMemory.href}>
+                {randomMemory.imageUrl ? <img className="max-h-72 w-full object-cover" src={randomMemory.imageUrl} alt={randomMemory.title || "随机回忆"} /> : (
+                  <div className="flex h-44 items-center justify-center bg-gradient-to-br from-cocoa/75 to-lilac/70 text-white">
+                    {randomMemory.type === "audio" ? "AUDIO" : randomMemory.type === "video" || randomMemory.type === "live_photo" ? "▶" : "💌"}
+                  </div>
+                )}
                 <div className="p-3">
-                  <p className="font-medium text-cocoa">{randomMemory.album.title || "未命名回忆"}</p>
-                  {randomMemory.album.note ? <p className="mt-1 text-sm text-cocoa/65">{randomMemory.album.note}</p> : null}
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-cocoa/55">
+                    <span className="rounded-full bg-white/70 px-2 py-1">{randomMemory.source === "note" ? "小纸条" : randomMemory.type === "live_photo" ? "实况" : randomMemory.type === "video" ? "视频" : "照片"}</span>
+                    {randomMemory.createdAt ? <span>{new Date(randomMemory.createdAt).toLocaleDateString("zh-CN")}</span> : null}
+                  </div>
+                  <p className="font-medium text-cocoa">{randomMemory.title || (randomMemory.source === "note" ? "一张小纸条" : "未命名回忆")}</p>
+                  {randomMemory.content ? <p className="mt-1 line-clamp-3 text-sm leading-6 text-cocoa/65">{randomMemory.content}</p> : null}
+                  <span className="mt-3 inline-flex rounded-full bg-cocoa/85 px-3 py-1.5 text-xs text-white">查看详情</span>
                 </div>
               </Link>
-            ) : <p className="empty-state text-left">还没有可以随机抽取的回忆。</p>}
+            ) : <p className="empty-state text-left">还没有可以随机看的回忆。</p>}
+          </section>
+
+          <section className="soft-card">
+            <div className="mb-3">
+              <p className="section-kicker mb-1">Timeline</p>
+              <h2 className="font-semibold text-cocoa">关系时间线</h2>
+            </div>
+            {timelineGroups.length ? (
+              <div className="space-y-4">
+                {timelineGroups.map((group) => (
+                  <div key={group.month}>
+                    <p className="mb-2 text-sm font-semibold text-cocoa/70">{group.month}</p>
+                    <div className="space-y-2 border-l border-roseSoft/45 pl-3">
+                      {group.items.slice(0, 5).map((item) => (
+                        <Link className="block rounded-[1.2rem] border border-white/70 bg-white/58 p-3 shadow-sm" href={item.href} key={item.id}>
+                          <div className="flex gap-3">
+                            {item.imageUrl ? <img className="h-14 w-14 shrink-0 rounded-2xl object-cover" src={item.imageUrl} alt={item.title} /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blush/65 text-xs text-cocoa/65">{item.type}</div>}
+                            <div className="min-w-0">
+                              <p className="font-medium text-cocoa">{item.title}</p>
+                              <p className="mt-1 text-xs text-cocoa/50">{new Date(item.date).toLocaleDateString("zh-CN")}</p>
+                              {item.content ? <p className="mt-1 line-clamp-2 text-sm leading-5 text-cocoa/65">{item.content}</p> : null}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="empty-state text-left">时间线还在等第一条回忆。</p>}
           </section>
         </div>
       </AppShell>

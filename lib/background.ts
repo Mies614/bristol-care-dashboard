@@ -6,8 +6,12 @@ export const defaultBackgroundSettings: BackgroundSettings = {
   preset: "cream",
   imageFit: "cover",
   imagePosition: "center",
+  focalPoint: { x: 50, y: 38 },
   overlay: "light",
-  blur: false
+  blur: false,
+  portraitEnhance: false,
+  dim: 20,
+  scale: 100
 };
 
 export const DEFAULT_BACKGROUND_SETTINGS = defaultBackgroundSettings;
@@ -36,6 +40,20 @@ const overlayBackgrounds: Record<NonNullable<BackgroundSettings["overlay"]>, str
   strong: "rgba(255, 250, 246, 0.72)"
 };
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function normalizeFocalPoint(value: unknown) {
+  if (!isRecord(value)) return { ...defaultBackgroundSettings.focalPoint! };
+  return {
+    x: clampNumber(value.x, 0, 100, defaultBackgroundSettings.focalPoint!.x),
+    y: clampNumber(value.y, 0, 100, defaultBackgroundSettings.focalPoint!.y)
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -56,10 +74,10 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
   const preset = ["cream", "pink", "lavender", "blue", "green", "dark"].includes(String(value.preset))
     ? value.preset as BackgroundSettings["preset"]
     : defaultBackgroundSettings.preset;
-  const imageFit = ["cover", "contain"].includes(String(value.imageFit))
+  const imageFit = ["cover", "contain", "portrait", "softPortrait"].includes(String(value.imageFit))
     ? value.imageFit as BackgroundSettings["imageFit"]
     : defaultBackgroundSettings.imageFit;
-  const imagePosition = ["center", "top", "bottom"].includes(String(value.imagePosition))
+  const imagePosition = ["center", "top", "bottom", "left", "right"].includes(String(value.imagePosition))
     ? value.imagePosition as BackgroundSettings["imagePosition"]
     : defaultBackgroundSettings.imagePosition;
   const overlay = ["none", "light", "medium", "strong"].includes(String(value.overlay))
@@ -74,8 +92,12 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
     imageUrl: isHttpsUrl(value.imageUrl) ? value.imageUrl.trim() : undefined,
     imageFit,
     imagePosition,
+    focalPoint: normalizeFocalPoint(value.focalPoint),
     overlay,
-    blur: typeof value.blur === "boolean" ? value.blur : defaultBackgroundSettings.blur
+    blur: typeof value.blur === "boolean" ? value.blur : defaultBackgroundSettings.blur,
+    portraitEnhance: typeof value.portraitEnhance === "boolean" ? value.portraitEnhance : defaultBackgroundSettings.portraitEnhance,
+    dim: clampNumber(value.dim, 0, 80, defaultBackgroundSettings.dim || 20),
+    scale: clampNumber(value.scale, 90, 130, defaultBackgroundSettings.scale || 100)
   };
 }
 
@@ -155,6 +177,23 @@ export function sanitizeBackgroundSettingsForCloud(settings: BackgroundSettings)
   };
 }
 
+function getImageBackgroundSize(settings: BackgroundSettings) {
+  if (settings.imageFit === "contain") return "contain";
+  return "cover";
+}
+
+function getImageBackgroundPosition(settings: BackgroundSettings) {
+  if (settings.focalPoint) return `${settings.focalPoint.x}% ${settings.focalPoint.y}%`;
+  const positions: Record<NonNullable<BackgroundSettings["imagePosition"]>, string> = {
+    center: "50% 50%",
+    top: "50% 22%",
+    bottom: "50% 82%",
+    left: "22% 50%",
+    right: "78% 50%"
+  };
+  return positions[settings.imagePosition || "center"];
+}
+
 export function getBackgroundStyle(settings: BackgroundSettings): CSSProperties {
   const normalized = normalizeBackgroundSettings(settings);
   if (normalized.mode === "color" && normalized.color) {
@@ -163,8 +202,8 @@ export function getBackgroundStyle(settings: BackgroundSettings): CSSProperties 
   if (normalized.mode === "image" && normalized.imageDataUrl) {
     return {
       backgroundImage: `url("${normalized.imageDataUrl}")`,
-      backgroundSize: normalized.imageFit,
-      backgroundPosition: normalized.imagePosition,
+      backgroundSize: getImageBackgroundSize(normalized),
+      backgroundPosition: getImageBackgroundPosition(normalized),
       backgroundRepeat: "no-repeat",
       backgroundAttachment: "fixed"
     };
@@ -172,8 +211,8 @@ export function getBackgroundStyle(settings: BackgroundSettings): CSSProperties 
   if (normalized.mode === "url" && normalized.imageUrl) {
     return {
       backgroundImage: `url("${normalized.imageUrl}")`,
-      backgroundSize: normalized.imageFit,
-      backgroundPosition: normalized.imagePosition,
+      backgroundSize: getImageBackgroundSize(normalized),
+      backgroundPosition: getImageBackgroundPosition(normalized),
       backgroundRepeat: "no-repeat",
       backgroundAttachment: "fixed"
     };
@@ -188,6 +227,14 @@ export function getOverlayClass(settings: BackgroundSettings) {
 
 export function getBackgroundOverlayStyle(settings: BackgroundSettings): CSSProperties {
   const normalized = normalizeBackgroundSettings(settings);
+  const hasPhotoBackground = normalized.mode === "image" || normalized.mode === "url";
+  if (hasPhotoBackground) {
+    const minimumDim = normalized.imageFit === "softPortrait" || normalized.portraitEnhance ? 36 : 0;
+    const opacity = Math.min(0.82, Math.max(minimumDim, normalized.dim || 0) / 100);
+    return {
+      background: `linear-gradient(180deg, rgba(255,250,246,${opacity}) 0%, rgba(255,250,246,${Math.min(0.9, opacity + 0.08)}) 100%)`
+    };
+  }
   const overlay = normalized.preset === "dark" && normalized.overlay !== "none"
     ? "rgba(18, 18, 24, 0.36)"
     : overlayBackgrounds[normalized.overlay || "light"];
