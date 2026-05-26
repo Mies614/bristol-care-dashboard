@@ -74,7 +74,7 @@ export async function fetchCloudDataByCode(code: string) {
     loveNotes: (loveNotes.data || []).map(loveNoteFromRow),
     backgroundSettings: cloudSettings.backgroundSettings || defaultBackgroundSettings,
     periodRecords: [],
-    periodSettings: DEFAULT_PERIOD_SETTINGS
+    periodSettings: cloudSettings.periodSettings || DEFAULT_PERIOD_SETTINGS
   };
 
   return { space, settings: cloudSettings, data: appData };
@@ -88,7 +88,8 @@ export async function replaceCloudData(code: string, data: AppData) {
     girlfriendName: data.nickname || "小乖",
     nextMeetingDate: data.nextMeetDate || null,
     semesterEndDate: data.semesterEndDate || null,
-    backgroundSettings: data.backgroundSettings
+    backgroundSettings: data.backgroundSettings,
+    periodSettings: data.periodSettings
   };
 
   const deletes = await Promise.all([

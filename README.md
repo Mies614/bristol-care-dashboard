@@ -157,6 +157,10 @@ using (bucket_id = 'love-notes');
 
 如果 Supabase 未配置、网络失败或云同步关闭，应用会保留 localStorage 数据并继续本地使用。
 
+## 自动同步
+
+`/settings` 的数据管理中心可以开启或关闭“自动同步到云端”。开启后，课程、DDL、背景和基础设置会在本地修改后自动排队同步；当前自动同步采用本地修改覆盖云端。小纸条和相册媒体通过各自 API/Storage 直接保存，不会通过自动同步重复上传。
+
 ## 使用 /admin 发布小纸条
 
 1. 配好 Supabase 环境变量和 `ADMIN_PASSWORD`。

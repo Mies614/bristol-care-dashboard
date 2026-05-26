@@ -4,6 +4,7 @@ import { defaultAppData } from "./sampleData";
 import type { AppData } from "./types";
 import { validateAppData } from "./validation";
 import { getBackgroundSettings, saveBackgroundSettings } from "./background";
+import { markLocalChange, scheduleAutoSync } from "./autoSync";
 
 export const STORAGE_KEY = "bristol-care-data-v1";
 
@@ -12,7 +13,7 @@ export function loadAppData(): AppData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      saveAppData(defaultAppData);
+      saveAppData(defaultAppData, { suppressAutoSync: true });
       return defaultAppData;
     }
     return { ...validateAppData(JSON.parse(raw)), backgroundSettings: getBackgroundSettings() };
@@ -21,12 +22,16 @@ export function loadAppData(): AppData {
   }
 }
 
-export function saveAppData(data: AppData) {
+export function saveAppData(data: AppData, options: { suppressAutoSync?: boolean; syncReason?: string } = {}) {
   if (typeof window === "undefined") return;
   try {
     const backgroundSettings = saveBackgroundSettings(data.backgroundSettings);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backgroundSettings }));
     window.dispatchEvent(new Event("bristol-care-data"));
+    if (!options.suppressAutoSync) {
+      markLocalChange(options.syncReason || "app_data");
+      scheduleAutoSync(options.syncReason || "app_data_changed");
+    }
   } catch {
     try {
       window.dispatchEvent(new Event("bristol-care-data"));
@@ -44,6 +49,6 @@ export function resetAppData() {
   } catch {
     // Ignore unavailable storage.
   } finally {
-    saveAppData(defaultAppData);
+    saveAppData(defaultAppData, { suppressAutoSync: true });
   }
 }

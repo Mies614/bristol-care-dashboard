@@ -1,5 +1,6 @@
 import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote } from "./types";
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
+import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 
 type CourseRow = {
   id: string;
@@ -254,12 +255,13 @@ export function albumItemToRow(item: Omit<AlbumItem, "id"> & { id?: string }, sp
 }
 
 export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: unknown }>, fallbackName = "小乖"): CloudSettings {
-  const result: CloudSettings = { girlfriendName: fallbackName, backgroundSettings: defaultBackgroundSettings };
+  const result: CloudSettings = { girlfriendName: fallbackName, backgroundSettings: defaultBackgroundSettings, periodSettings: DEFAULT_PERIOD_SETTINGS };
   for (const row of rows) {
     if (row.key === "girlfriend_name" && typeof row.value === "string") result.girlfriendName = row.value || fallbackName;
     if (row.key === "next_meeting_date" && (typeof row.value === "string" || row.value === null)) result.nextMeetingDate = row.value || null;
     if (row.key === "semester_end_date" && (typeof row.value === "string" || row.value === null)) result.semesterEndDate = row.value || null;
     if (row.key === "background_settings") result.backgroundSettings = normalizeBackgroundSettings(row.value);
+    if (row.key === "period_settings") result.periodSettings = normalizePeriodSettings(row.value);
   }
   return result;
 }
@@ -269,6 +271,7 @@ export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
     { space_id: spaceId, key: "girlfriend_name", value: settings.girlfriendName || "小乖" },
     { space_id: spaceId, key: "next_meeting_date", value: settings.nextMeetingDate || "" },
     { space_id: spaceId, key: "semester_end_date", value: settings.semesterEndDate || "" },
-    { space_id: spaceId, key: "background_settings", value: sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings) }
+    { space_id: spaceId, key: "background_settings", value: sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings) },
+    { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) }
   ];
 }

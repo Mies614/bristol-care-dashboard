@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { DeadlineCard } from "@/components/DeadlineCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getDaysUntilDeadline } from "@/lib/date";
@@ -83,8 +84,9 @@ export default function DeadlinesPage() {
   return (
     <AppShell>
       <PageHeader title="Deadline" subtitle="按截止时间排序，把重要任务提前一点点处理。" />
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+        <AutoSyncStatusBadge />
       </div>
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Summary</p>

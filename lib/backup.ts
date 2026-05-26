@@ -27,6 +27,6 @@ export function restoreBackupPayload(value: unknown) {
     links: Array.isArray(record.links) ? record.links : Array.isArray(record.quickLinks) ? record.quickLinks : current.links
   };
   const data = validateAppData(merged);
-  saveAppData(data);
+  saveAppData(data, { suppressAutoSync: true });
   return data;
 }

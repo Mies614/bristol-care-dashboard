@@ -3,6 +3,7 @@
 import type { AppData, LoveNote } from "./types";
 import { loadAppData, saveAppData } from "./storage";
 import { validateAppData } from "./validation";
+import { withAutoSyncSuppressedAsync } from "./autoSync";
 
 const CLOUD_CONNECTION_KEY = "bristol-care-cloud-connection-v1";
 const LAST_SYNC_KEY = "bristol-care-last-sync-v1";
@@ -138,7 +139,7 @@ export async function pullAndPersistCloudData(code: string): Promise<CloudResult
   const result = await pullCloudData(code);
   if (!result.ok || !result.data) return result;
   try {
-    saveAppData(result.data);
+    await withAutoSyncSuppressedAsync(async () => saveAppData(result.data!, { suppressAutoSync: true }));
     setLastSyncTime();
   } catch {
     return { ok: false, error: "云端数据已拉取，但本地缓存写入失败。" };
@@ -151,7 +152,7 @@ export async function refreshFromSavedConnection(): Promise<CloudResult<AppData>
   if (!connection) return { ok: false, error: "未连接云同步。" };
   const before = loadAppData();
   const result = await pullAndPersistCloudData(connection.code);
-  if (!result.ok) saveAppData(before);
+  if (!result.ok) saveAppData(before, { suppressAutoSync: true });
   return result;
 }
 
@@ -165,7 +166,7 @@ export async function syncLoveNotesIntoLocalData(code: string): Promise<CloudRes
     note: result.data[0]?.content || current.note
   };
   try {
-    saveAppData(next);
+    saveAppData(next, { suppressAutoSync: true });
     setLastSyncTime();
   } catch {
     return { ok: false, error: "小纸条已拉取，但本地缓存写入失败。" };

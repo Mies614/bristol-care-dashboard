@@ -1,5 +1,6 @@
 import type { CloudSettings, CommonLink, Course, Deadline, LoveNote } from "./types";
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
+import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 
 type RecordValue = Record<string, unknown>;
 
@@ -36,6 +37,12 @@ export function buildSettingsRows(settings: NormalizedLocalData["settings"], spa
       space_id: spaceId,
       key: "background_settings",
       value: safeSettingValue(sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings), defaultBackgroundSettings),
+      updated_at: updatedAt
+    },
+    {
+      space_id: spaceId,
+      key: "period_settings",
+      value: safeSettingValue(normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS), DEFAULT_PERIOD_SETTINGS),
       updated_at: updatedAt
     }
   ];
@@ -166,6 +173,7 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
     asStringOrNull(data.semesterEndDate) ||
     asStringOrNull(settings.semesterEndDate);
   const backgroundSettings = normalizeBackgroundSettings(data.backgroundSettings || settings.backgroundSettings);
+  const periodSettings = normalizePeriodSettings(data.periodSettings || settings.periodSettings);
 
   const rawLoveNotes = [
     ...asArray(data.loveNotes),
@@ -179,7 +187,8 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
       girlfriendName,
       nextMeetingDate,
       semesterEndDate,
-      backgroundSettings
+      backgroundSettings,
+      periodSettings
     },
     loveNotes: rawLoveNotes.map(normalizeLoveNote).filter((note): note is Omit<LoveNote, "id"> & { id?: string } => Boolean(note)),
     courses: [...asArray(data.courses), ...asArray(data.schedule), ...asArray(data.timetable)].map(normalizeCourse).filter((course): course is Course => Boolean(course)),

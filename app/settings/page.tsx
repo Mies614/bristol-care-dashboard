@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { DataManagementCenter } from "@/components/DataManagementCenter";
+import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -136,6 +137,7 @@ export default function SettingsPage() {
           <div>
             <p className="section-kicker mb-1">Profile</p>
             <h2 className="font-semibold text-cocoa">基础信息</h2>
+            <div className="mt-2"><AutoSyncStatusBadge /></div>
           </div>
           <label className="block text-sm text-cocoa/70">
             昵称
@@ -159,6 +161,7 @@ export default function SettingsPage() {
             <p className="section-kicker mb-1">Appearance</p>
             <h2 className="font-semibold text-cocoa">背景设置</h2>
             <p className="mt-2 text-sm leading-6 text-cocoa/65">背景图片仅保存在当前浏览器；如果图片太大，请先压缩或换一张小图。</p>
+            <div className="mt-2"><AutoSyncStatusBadge /></div>
           </div>
 
           <div>

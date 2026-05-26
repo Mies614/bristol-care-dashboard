@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { downloadJson, readJsonFile } from "./JsonImportExport";
+import { AutoSyncStatusBadge } from "./AutoSyncStatusBadge";
+import { useAutoSync } from "@/hooks/useAutoSync";
 import { DEFAULT_BACKGROUND_SETTINGS, saveBackgroundSettings } from "@/lib/background";
+import { clearPendingSyncState, markLocalChange, runAutoSyncNow, scheduleAutoSync } from "@/lib/autoSync";
 import { createBackupPayload, restoreBackupPayload } from "@/lib/backup";
 import { getCloudStats, getLocalDataStats } from "@/lib/dataStats";
 import { clearSharedAccess } from "@/lib/sharedAccess";
@@ -24,6 +27,7 @@ export function DataManagementCenter({
   const [debugChecks, setDebugChecks] = useState<Array<{ name: string; ok: boolean; detail?: string }>>([]);
   const stats = useMemo(() => getLocalDataStats(data), [data]);
   const cloud = getCloudStats();
+  const autoSync = useAutoSync();
 
   async function diagnose() {
     const response = await fetch("/api/debug/supabase");
@@ -51,9 +55,22 @@ export function DataManagementCenter({
       <div className="rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-sm text-cocoa/70 shadow-sm">
         <p>space code: {cloud.code || "未连接"}</p>
         <p>最近同步: {cloud.lastSync ? new Date(cloud.lastSync).toLocaleString("zh-CN") : "无"}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <AutoSyncStatusBadge />
+          <span>自动同步：{autoSync.enabled ? "开启" : "关闭"}</span>
+        </div>
+        <p>自动同步时间: {autoSync.lastSyncAt ? new Date(autoSync.lastSyncAt).toLocaleString("zh-CN") : "无"}</p>
+        {autoSync.lastError ? <p>最近错误: {autoSync.lastError}</p> : null}
+        {autoSync.pending ? <p>有待同步数据</p> : null}
         {message ? <p className="mt-2">{message}</p> : null}
       </div>
       <div className="flex flex-wrap gap-2">
+        <label className="check-card">
+          <input checked={autoSync.enabled} type="checkbox" onChange={(event) => autoSync.setEnabled(event.target.checked)} />
+          自动同步到云端
+        </label>
+        <button className="btn-secondary" onClick={() => runAutoSyncNow("settings_manual")}>立即同步</button>
+        <button className="btn-secondary" onClick={() => { clearPendingSyncState(); setMessage("同步错误已清除。"); }}>清除同步错误</button>
         <button className="btn-secondary" onClick={() => downloadJson("bristol-care-backup.json", createBackupPayload())}>导出完整 JSON 备份</button>
         <label className="btn-secondary cursor-pointer">
           导入 JSON 备份
@@ -67,7 +84,13 @@ export function DataManagementCenter({
               try {
                 const next = restoreBackupPayload(await readJsonFile(file));
                 onData(next);
-                setMessage("导入完成。");
+                if (confirm("已导入本地，是否同步到云端？")) {
+                  markLocalChange("backup_import");
+                  scheduleAutoSync("backup_import_confirmed");
+                  setMessage("导入完成，已加入同步队列。");
+                } else {
+                  setMessage("导入完成，暂未同步到云端。");
+                }
               } catch (error) {
                 setMessage(error instanceof Error ? error.message : "导入失败。");
               } finally {
@@ -78,7 +101,7 @@ export function DataManagementCenter({
         </label>
         <button className="btn-secondary" onClick={onUploadCloud}>上传本地到云端</button>
         <button className="btn-secondary" onClick={onPullCloud}>从云端恢复到本地</button>
-        <button className="btn-secondary" onClick={() => { if (confirm("确定重置背景设置吗？")) saveBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS); }}>重置背景设置</button>
+        <button className="btn-secondary" onClick={() => { if (confirm("确定重置背景设置吗？")) { saveBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS); markLocalChange("background"); scheduleAutoSync("background_reset"); } }}>重置背景设置</button>
         <button className="btn-secondary" onClick={() => { clearSharedAccess(); setMessage("已退出共享空间。"); }}>退出共享空间</button>
         <button className="btn-secondary" onClick={() => { try { localStorage.removeItem("bristol-care-onboarding-dismissed-v1"); setMessage("新手引导会重新显示。"); } catch { setMessage("操作完成。"); } }}>重新显示新手引导</button>
         <button className="btn-danger" onClick={() => { if (confirm("确定清除本项目本地缓存吗？")) { resetAppData(); onData(loadAppData()); } }}>清除本地缓存</button>

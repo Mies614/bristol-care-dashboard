@@ -114,6 +114,7 @@ export type CloudSettings = {
   nextMeetingDate?: string | null;
   semesterEndDate?: string | null;
   backgroundSettings?: BackgroundSettings;
+  periodSettings?: PeriodSettings;
 };
 
 export type BackgroundSettings = {

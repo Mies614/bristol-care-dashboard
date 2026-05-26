@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { CourseCard } from "@/components/CourseCard";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
@@ -88,6 +89,7 @@ export default function SchedulePage() {
       <PageHeader title="一周课程表" subtitle="把 Bristol 的课程、地点和小提醒放在一个地方。" />
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+        <AutoSyncStatusBadge />
       </div>
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Today</p>
