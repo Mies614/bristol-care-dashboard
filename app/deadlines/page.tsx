@@ -76,6 +76,7 @@ export default function DeadlinesPage() {
     const days = getDaysUntilDeadline(deadline);
     return deadline.status !== "done" && days > 0 && days <= 3;
   });
+  const overdue = sorted.filter((deadline) => deadline.status !== "done" && getDaysUntilDeadline(deadline) < 0);
 
   if (!data) return <AppShell><div className="soft-card">正在加载 deadline...</div></AppShell>;
 
@@ -88,7 +89,7 @@ export default function DeadlinesPage() {
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Summary</p>
         <h2 className="font-semibold text-cocoa">DDL 摘要</h2>
-        <p className="mt-2 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {dueInThreeDays.length} 个。</p>
+        <p className="mt-2 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {dueInThreeDays.length} 个，已逾期 {overdue.length} 个。</p>
       </section>
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Calendar</p>

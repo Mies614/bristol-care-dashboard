@@ -1,4 +1,5 @@
 import type { PeriodRecord, PeriodSettings } from "./types";
+import { escapeIcsText, formatIcsDate } from "./ics";
 
 export const DEFAULT_PERIOD_SETTINGS: PeriodSettings = {
   averageCycleLength: 28,
@@ -138,4 +139,37 @@ export function periodRecordToRow(record: Omit<PeriodRecord, "id">, spaceId: str
     note: record.note || null,
     updated_at: new Date().toISOString()
   };
+}
+
+export function createPeriodReminderIcs(nextStart: string, settings: PeriodSettings = DEFAULT_PERIOD_SETTINGS) {
+  const start = new Date(`${nextStart}T09:00:00`);
+  const reminder = new Date(start);
+  reminder.setDate(reminder.getDate() - settings.reminderDaysBefore);
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Bristol Care//Dashboard//CN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:period-${escapeIcsText(nextStart)}@bristol-care`,
+    `DTSTAMP:${formatIcsDate(new Date())}`,
+    `DTSTART:${formatIcsDate(start)}`,
+    `DTEND:${formatIcsDate(end)}`,
+    "SUMMARY:经期记录提醒",
+    "DESCRIPTION:来自 Bristol Care Dashboard",
+    "BEGIN:VALARM",
+    `TRIGGER;VALUE=DATE-TIME:${formatIcsDate(reminder)}`,
+    "ACTION:DISPLAY",
+    "DESCRIPTION:经期记录提醒",
+    "END:VALARM",
+    "BEGIN:VALARM",
+    "TRIGGER:PT0S",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:今天记得看一下经期记录",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
 }

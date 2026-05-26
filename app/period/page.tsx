@@ -5,11 +5,12 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
-import { downloadIcs, escapeIcsText, formatIcsDate, safeIcsFilename } from "@/lib/ics";
+import { downloadIcs, safeIcsFilename } from "@/lib/ics";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import {
   calculateNextPeriodStart,
   calculatePeriodLength,
+  createPeriodReminderIcs,
   DEFAULT_PERIOD_SETTINGS,
   getCurrentCycleDay,
   getDaysUntilNextPeriod
@@ -36,39 +37,6 @@ function formatApiError(payload: Record<string, unknown>, fallback: string) {
     typeof payload.step === "string" ? `step: ${payload.step}` : "",
     typeof payload.detail === "string" ? `detail: ${payload.detail}` : ""
   ].filter(Boolean).join(" · ");
-}
-
-function createPeriodReminderIcs(nextStart: string, settings: PeriodSettings) {
-  const start = new Date(`${nextStart}T09:00:00`);
-  const reminder = new Date(start);
-  reminder.setDate(reminder.getDate() - settings.reminderDaysBefore);
-  const end = new Date(start.getTime() + 30 * 60 * 1000);
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Bristol Care//Dashboard//CN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:period-${escapeIcsText(nextStart)}@bristol-care`,
-    `DTSTAMP:${formatIcsDate(new Date())}`,
-    `DTSTART:${formatIcsDate(start)}`,
-    `DTEND:${formatIcsDate(end)}`,
-    "SUMMARY:经期记录提醒",
-    "DESCRIPTION:来自 Bristol Care Dashboard",
-    "BEGIN:VALARM",
-    `TRIGGER;VALUE=DATE-TIME:${formatIcsDate(reminder)}`,
-    "ACTION:DISPLAY",
-    "DESCRIPTION:经期记录提醒",
-    "END:VALARM",
-    "BEGIN:VALARM",
-    "TRIGGER:PT0S",
-    "ACTION:DISPLAY",
-    "DESCRIPTION:今天记得看一下经期记录",
-    "END:VALARM",
-    "END:VEVENT",
-    "END:VCALENDAR"
-  ].join("\r\n");
 }
 
 export default function PeriodPage() {

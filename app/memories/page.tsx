@@ -37,6 +37,14 @@ export default function MemoriesPage() {
     const favorites = albums.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albums).slice(0, 6);
   }, [albums]);
+  const randomMemory = useMemo(() => {
+    const candidates: Array<{ kind: "note"; note: LoveNote } | { kind: "album"; album: AlbumItem }> = [
+      ...notes.map((note) => ({ kind: "note" as const, note })),
+      ...albums.map((album) => ({ kind: "album" as const, album }))
+    ];
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }, [notes, albums]);
 
   return (
     <SharedAccessGate>
@@ -95,6 +103,24 @@ export default function MemoriesPage() {
               <Link className="btn-primary text-center" href="/albums">去相册</Link>
               <Link className="btn-secondary text-center" href="/albums?upload=1">上传回忆</Link>
             </div>
+          </section>
+
+          <section className="soft-card">
+            <div className="mb-3">
+              <p className="section-kicker mb-1">Random</p>
+              <h2 className="font-semibold text-cocoa">随机看一张回忆</h2>
+            </div>
+            {randomMemory?.kind === "note" ? (
+              <NoteCard featured note={randomMemory.note} />
+            ) : randomMemory?.kind === "album" ? (
+              <Link className="block overflow-hidden rounded-[1.5rem] bg-white/60 shadow-sm" href="/albums">
+                {randomMemory.album.imageUrl ? <img className="max-h-72 w-full object-cover" src={randomMemory.album.imageUrl} alt={randomMemory.album.title || "相册回忆"} /> : <div className="flex h-44 items-center justify-center bg-cocoa/75 text-white">▶</div>}
+                <div className="p-3">
+                  <p className="font-medium text-cocoa">{randomMemory.album.title || "未命名回忆"}</p>
+                  {randomMemory.album.note ? <p className="mt-1 text-sm text-cocoa/65">{randomMemory.album.note}</p> : null}
+                </div>
+              </Link>
+            ) : <p className="empty-state text-left">还没有可以随机抽取的回忆。</p>}
           </section>
         </div>
       </AppShell>

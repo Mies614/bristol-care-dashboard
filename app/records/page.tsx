@@ -10,7 +10,7 @@ import { PriorityReminderList } from "@/components/PriorityReminderList";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { getDaysUntilDeadline } from "@/lib/date";
 import { createAllCoursesIcs, createAllDeadlinesIcs, downloadIcs, isCourseCalendarExportable, isDeadlineCalendarExportable } from "@/lib/ics";
-import { calculateNextPeriodStart, DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
+import { calculateNextPeriodStart, createPeriodReminderIcs, DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { getNextCourse, getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
@@ -72,15 +72,38 @@ export default function RecordsPage() {
   const periodDays = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
 
+  function exportCourseCalendar() {
+    if (!data) return;
+    const courses = data.courses.filter(isCourseCalendarExportable);
+    if (!courses.length) return setMessage("没有可导出的课程提醒。");
+    downloadIcs("bristol-weekly-courses.ics", createAllCoursesIcs(courses, { semesterEndDate: data.semesterEndDate }));
+    setMessage("已生成课程日历文件。");
+  }
+
+  function exportDeadlineCalendar() {
+    if (!data) return;
+    const deadlines = data.deadlines.filter((deadline) => deadline.status !== "done" && isDeadlineCalendarExportable(deadline));
+    if (!deadlines.length) return setMessage("没有可导出的 DDL 提醒。");
+    downloadIcs("bristol-deadlines.ics", createAllDeadlinesIcs(deadlines));
+    setMessage("已生成 DDL 日历文件。");
+  }
+
+  function exportPeriodCalendar() {
+    if (!nextPeriodStart) return setMessage("需要先添加经期记录，才能生成提醒。");
+    downloadIcs("bristol-period-reminder.ics", createPeriodReminderIcs(nextPeriodStart, periodSettings));
+    setMessage("已生成经期提醒日历文件。");
+  }
+
   function exportAllCalendar() {
     if (!data) return;
     const courses = data.courses.filter(isCourseCalendarExportable);
     const deadlines = data.deadlines.filter((deadline) => deadline.status !== "done" && isDeadlineCalendarExportable(deadline));
     const parts = [
       createAllCoursesIcs(courses, { semesterEndDate: data.semesterEndDate }),
-      createAllDeadlinesIcs(deadlines)
+      createAllDeadlinesIcs(deadlines),
+      nextPeriodStart ? createPeriodReminderIcs(nextPeriodStart, periodSettings) : ""
     ];
-    downloadIcs("bristol-records-reminders.ics", mergeIcsCalendars(parts));
+    downloadIcs("bristol-records-reminders.ics", mergeIcsCalendars(parts.filter(Boolean)));
     setMessage("已生成日历文件。");
   }
 
@@ -101,7 +124,7 @@ export default function RecordsPage() {
             <p className="section-kicker mb-1">Priority</p>
             <h2 className="font-semibold text-cocoa">醒目提醒</h2>
           </div>
-          <PriorityReminderList reminders={reminders} />
+          <PriorityReminderList reminders={reminders} limit={5} />
         </section>
 
         <section className="soft-card">
@@ -114,6 +137,7 @@ export default function RecordsPage() {
           </div>
           {nextCourse ? <p className="notice mb-3">下一节：{nextCourse.name}，{nextCourse.startTime} 开始。</p> : null}
           {todayCourses.length ? <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div> : <p className="empty-state text-left">今天没有课，可以慢慢安排自己的节奏。</p>}
+          <button className="btn-secondary mt-3 w-full" onClick={exportCourseCalendar}>导出课程日历</button>
         </section>
 
         <section className="soft-card">
@@ -126,6 +150,7 @@ export default function RecordsPage() {
           </div>
           <p className="mb-3 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {soonDue.length} 个。</p>
           {incompleteDeadlines.length ? <div className="space-y-2">{incompleteDeadlines.slice(0, 3).map((deadline) => <DeadlineCard deadline={deadline} key={deadline.id} />)}</div> : <p className="empty-state text-left">最近没有未完成 DDL。</p>}
+          <button className="btn-secondary mt-3 w-full" onClick={exportDeadlineCalendar}>导出 DDL 提醒</button>
         </section>
 
         <section className="soft-card">
@@ -141,6 +166,7 @@ export default function RecordsPage() {
             <div className="rounded-2xl bg-white/58 p-3">剩余：<span className="font-semibold text-cocoa">{periodDays === null ? "待记录" : `${periodDays} 天`}</span></div>
             <div className="col-span-2 rounded-2xl bg-white/58 p-3">当前周期：<span className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "待记录"}</span></div>
           </div>
+          <button className="btn-secondary mt-3 w-full" onClick={exportPeriodCalendar}>导出经期提醒</button>
         </section>
 
         <section className="soft-card">

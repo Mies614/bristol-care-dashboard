@@ -93,6 +93,7 @@ export default function SchedulePage() {
         <p className="section-kicker mb-1">Today</p>
         <h2 className="font-semibold text-cocoa">今日课程</h2>
         <p className="mt-2 text-sm text-cocoa/65">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
+        <button className="btn-secondary mt-3" onClick={exportAllCourses}>导出课程日历提醒</button>
       </section>
 
       <form className="soft-card mb-4 space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={submit}>

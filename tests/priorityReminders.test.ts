@@ -43,6 +43,10 @@ describe("priority reminders", () => {
     expect(getDeadlineReminders([deadline({ dueDate: "2026-05-28" })], now)[0].priority).toBe("soon");
   });
 
+  it("excludes completed deadlines", () => {
+    expect(getDeadlineReminders([deadline({ status: "done" })], now)).toEqual([]);
+  });
+
   it("marks courses within 1 hour as urgent and later today as soon", () => {
     expect(getCourseReminders([course({ startTime: "10:15" })], now)[0].priority).toBe("urgent");
     expect(getCourseReminders([course({ startTime: "13:00" })], now)[0].priority).toBe("soon");
