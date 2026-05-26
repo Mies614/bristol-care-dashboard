@@ -81,5 +81,6 @@ describe("priority reminders", () => {
     expect(getActiveNavHref("/period")).toBe("/records");
     expect(getActiveNavHref("/notes")).toBe("/memories");
     expect(getActiveNavHref("/albums")).toBe("/memories");
+    expect(getActiveNavHref("/cards")).toBe("/cards");
   });
 });

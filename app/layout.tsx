@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AppBackground } from "@/components/AppBackground";
+import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN">
       <body>
+        <PwaRegister />
         <AppBackground>{children}</AppBackground>
       </body>
     </html>

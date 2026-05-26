@@ -13,7 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
         <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:max-w-[520px]">
           <div className="rounded-[1.65rem] border border-white/70 bg-white/72 p-1.5 shadow-float ring-1 ring-white/50 backdrop-blur-2xl">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-5 gap-1">
             {appNavItems.map((item) => {
               const active = activeHref === item.href;
               return (
