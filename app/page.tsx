@@ -10,16 +10,16 @@ import { OnboardingCard } from "@/components/OnboardingCard";
 import { OutfitCard } from "@/components/OutfitCard";
 import { WeatherCard, useWeather } from "@/components/WeatherCard";
 import { formatCountdown, getDaysUntilDeadline } from "@/lib/date";
-import { buildSmartReminder } from "@/lib/reminders";
-import { getNextCourse, getTodayCourses, hasEveningClass } from "@/lib/schedule";
+import { getNextCourse, hasEveningClass } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
-import { getCurrentIdentity } from "@/lib/identity";
 import { calculateNextPeriodStart, DEFAULT_PERIOD_SETTINGS, getDaysUntilNextPeriod } from "@/lib/period";
+import { getTodayPriorityReminders } from "@/lib/priorityReminders";
+import { PriorityReminderList } from "@/components/PriorityReminderList";
 
 function safeBristolDate() {
   try {
@@ -56,7 +56,6 @@ export default function HomePage() {
   const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
   const [periodRecords, setPeriodRecords] = useState<PeriodRecord[]>([]);
   const [periodSettings, setPeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
-  const [identity, setIdentity] = useState<"me" | "xiaoguai">("xiaoguai");
   const { weather, error } = useWeather();
 
   useEffect(() => {
@@ -82,14 +81,10 @@ export default function HomePage() {
         }
       }
     };
-    const refreshIdentity = () => setIdentity(getCurrentIdentity());
     refresh();
-    refreshIdentity();
     window.addEventListener("bristol-care-data", refresh);
-    window.addEventListener("bristol-care-identity", refreshIdentity);
     return () => {
       window.removeEventListener("bristol-care-data", refresh);
-      window.removeEventListener("bristol-care-identity", refreshIdentity);
     };
   }, []);
 
@@ -137,7 +132,6 @@ export default function HomePage() {
     }
   }, []);
 
-  const todayCourses = useMemo(() => getTodayCourses(data.courses), [data]);
   const nextCourse = useMemo(() => getNextCourse(data.courses), [data]);
   const nearestDeadlines = useMemo(
     () =>
@@ -148,6 +142,12 @@ export default function HomePage() {
     [data]
   );
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
+  const priorityReminders = useMemo(() => getTodayPriorityReminders({
+    courses: data.courses,
+    deadlines: data.deadlines,
+    periodRecords,
+    periodSettings
+  }), [data.courses, data.deadlines, periodRecords, periodSettings]);
   const recentMemories = useMemo(() => {
     const favorites = albumItems.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albumItems).slice(0, 3);
@@ -204,7 +204,7 @@ export default function HomePage() {
           <div>
             <p className="section-kicker">Bristol Care</p>
             <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
-              {identity === "me" ? "今天也照顾好她" : "小乖，今天也好"}
+              小乖，今天也好
             </h1>
           </div>
           <div className="rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-2 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
@@ -225,14 +225,15 @@ export default function HomePage() {
         <WeatherCard weather={weather} error={error} />
         {outfit ? <OutfitCard suggestion={outfit} /> : null}
 
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/68 p-4 shadow-soft ring-1 ring-white/50 backdrop-blur-xl">
-          <div className="flex gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blush/65 text-lg shadow-sm">♡</div>
+        <section className="soft-card">
+          <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Reminder</p>
-              <p className="text-sm leading-6 text-cocoa/76">{buildSmartReminder(data.courses, data.deadlines, weather)}</p>
+              <p className="section-kicker mb-1">Today</p>
+              <h2 className="font-semibold text-cocoa">今日重点提醒</h2>
             </div>
+            <Link className="text-sm text-sage" href="/records">全部</Link>
           </div>
+          <PriorityReminderList reminders={priorityReminders} limit={3} />
         </section>
 
         <section className="soft-card">
@@ -241,25 +242,12 @@ export default function HomePage() {
               <p className="section-kicker mb-1">Schedule</p>
               <h2 className="font-semibold text-cocoa">今日课程</h2>
             </div>
-            <Link className="text-sm text-sage" href="/schedule">
-              管理
-            </Link>
+            <Link className="text-sm text-sage" href="/records">查看全部</Link>
           </div>
           {nextCourse ? (
-            <p className="mb-3 rounded-2xl bg-blush/55 px-3 py-2 text-sm text-cocoa/75">
-              下一节：{nextCourse.name}，{nextCourse.startTime} 开始。
-            </p>
-          ) : null}
-          {todayCourses.length ? (
-            <div className="space-y-2">
-              {todayCourses.map((course) => (
-                <CourseCard course={course} compact key={course.id} />
-              ))}
-            </div>
+            <CourseCard course={nextCourse} compact />
           ) : (
-            <p className="empty-state text-left">
-              今天没有课，可以慢慢安排自己的节奏。
-            </p>
+            <p className="empty-state text-left">今天后面没有课程，可以慢慢安排自己的节奏。</p>
           )}
         </section>
 
@@ -269,19 +257,16 @@ export default function HomePage() {
               <p className="section-kicker mb-1">Deadlines</p>
               <h2 className="font-semibold text-cocoa">最近 Deadline</h2>
             </div>
-            <Link className="text-sm text-sage" href="/deadlines">
-              管理
-            </Link>
+            <Link className="text-sm text-sage" href="/records">查看全部</Link>
           </div>
           {nearestDeadlines.length ? (
             <div className="space-y-2">
-              {nearestDeadlines.map((deadline) => (
+              {nearestDeadlines.slice(0, 3).map((deadline) => (
                 <DeadlineCard deadline={deadline} key={deadline.id} />
               ))}
             </div>
-          ) : (
-            <p className="empty-state text-left">最近没有未完成的 deadline。</p>
-          )}
+          ) : null}
+          {!nearestDeadlines.length ? <p className="empty-state text-left">最近没有未完成的 deadline。</p> : null}
         </section>
 
         <section className="space-y-3.5">
@@ -312,23 +297,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="soft-card">
-          <p className="section-kicker mb-1">Quick Links</p>
-          <h2 className="mb-3 font-semibold text-cocoa">常用链接</h2>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {data.links.map((link) => (
-              <a
-                className="rounded-[1.25rem] border border-white/75 bg-cream/75 px-3 py-3 text-sm font-medium text-cocoa shadow-sm transition hover:-translate-y-0.5 hover:bg-white/75"
-                href={link.url}
-                key={link.id}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {link.title}
-              </a>
-            ))}
-          </div>
-        </section>
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>

@@ -2,7 +2,6 @@
 
 import { BACKGROUND_SETTINGS_KEY } from "./background";
 import { getCloudConnection, getLastSyncTime } from "./cloudSync";
-import { getCurrentIdentity } from "./identity";
 import { hasSharedAccess } from "./sharedAccess";
 import type { AppData } from "./types";
 
@@ -22,10 +21,9 @@ export function getLocalDataStats(data: AppData) {
     deadlines: data.deadlines.length,
     loveNotes: data.loveNotes.length,
     periodRecords: data.periodRecords?.length || 0,
-    latestPeriodDate: data.periodRecords?.[0]?.startDate || "",
     albumCacheCount,
     hasBackgroundSettings,
-    currentIdentity: getCurrentIdentity(),
+    latestPeriodDate: data.periodRecords?.[0]?.startDate || "",
     sharedAccess: hasSharedAccess()
   };
 }

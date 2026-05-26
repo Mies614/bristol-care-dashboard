@@ -15,12 +15,12 @@ describe("backup", () => {
     vi.stubGlobal("window", { localStorage: makeStorage(), dispatchEvent: vi.fn() });
     vi.stubGlobal("localStorage", window.localStorage);
   });
-  it("exports backgroundSettings and currentIdentity", async () => {
+  it("exports backgroundSettings without identity state", async () => {
     localStorage.clear();
     const { createBackupPayload } = await import("@/lib/backup");
     const payload = createBackupPayload();
     expect(payload.backgroundSettings).toBeDefined();
-    expect(payload.currentIdentity).toBe("xiaoguai");
+    expect(payload).not.toHaveProperty("currentIdentity");
   });
 
   it("restores missing fields without crashing", async () => {

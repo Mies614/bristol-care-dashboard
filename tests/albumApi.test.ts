@@ -116,7 +116,8 @@ describe("album API metadata POST", () => {
       title: "小视频",
       type: "video",
       video_url: "https://example.com/video.mov",
-      video_path: "xiaoguai520/videos/video.mov"
+      video_path: "xiaoguai520/videos/video.mov",
+      created_by: "xiaoguai"
     }));
   });
 

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { DataManagementCenter } from "@/components/DataManagementCenter";
-import { IdentitySelector } from "@/components/IdentitySelector";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -155,8 +154,6 @@ export default function SettingsPage() {
             <textarea className="field mt-1 min-h-28" value={data.note} onChange={(e) => update({ ...data, note: e.target.value })} />
           </label>
         </section>
-        <IdentitySelector />
-
         <section className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-lilac/45">
           <div>
             <p className="section-kicker mb-1">Appearance</p>

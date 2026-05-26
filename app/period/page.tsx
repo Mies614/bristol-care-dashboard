@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
@@ -195,6 +196,9 @@ export default function PeriodPage() {
       <AppShell>
         <PageHeader title="经期记录" subtitle="记录开始日、结束日和下次预计时间。" />
         <div className="space-y-4">
+          <div>
+            <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+          </div>
           <section className="soft-card bg-gradient-to-br from-white/85 via-blush/35 to-lilac/35">
             <p className="section-kicker mb-1">Cycle</p>
             <h2 className="font-semibold text-cocoa">下次预计</h2>

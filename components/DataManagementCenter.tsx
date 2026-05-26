@@ -5,7 +5,6 @@ import { downloadJson, readJsonFile } from "./JsonImportExport";
 import { DEFAULT_BACKGROUND_SETTINGS, saveBackgroundSettings } from "@/lib/background";
 import { createBackupPayload, restoreBackupPayload } from "@/lib/backup";
 import { getCloudStats, getLocalDataStats } from "@/lib/dataStats";
-import { getIdentityLabel } from "@/lib/identity";
 import { clearSharedAccess } from "@/lib/sharedAccess";
 import { loadAppData, resetAppData } from "@/lib/storage";
 import type { AppData } from "@/lib/types";
@@ -46,7 +45,6 @@ export function DataManagementCenter({
         <span>最近经期 {stats.latestPeriodDate || "无"}</span>
         <span>相册缓存 {stats.albumCacheCount}</span>
         <span>背景 {stats.hasBackgroundSettings ? "已设置" : "默认"}</span>
-        <span>身份 {getIdentityLabel(stats.currentIdentity)}</span>
         <span>共享空间 {stats.sharedAccess ? "已进入" : "未进入"}</span>
         <span>云同步 {cloud.connected ? "已连接" : "未连接"}</span>
       </div>

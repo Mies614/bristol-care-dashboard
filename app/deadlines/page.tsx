@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { DeadlineCard } from "@/components/DeadlineCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -70,12 +71,25 @@ export default function DeadlinesPage() {
     () => (data ? [...data.deadlines].sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b)) : []),
     [data]
   );
+  const todayDue = sorted.filter((deadline) => deadline.status !== "done" && getDaysUntilDeadline(deadline) === 0);
+  const dueInThreeDays = sorted.filter((deadline) => {
+    const days = getDaysUntilDeadline(deadline);
+    return deadline.status !== "done" && days > 0 && days <= 3;
+  });
 
   if (!data) return <AppShell><div className="soft-card">正在加载 deadline...</div></AppShell>;
 
   return (
     <AppShell>
       <PageHeader title="Deadline" subtitle="按截止时间排序，把重要任务提前一点点处理。" />
+      <div className="mb-4">
+        <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+      </div>
+      <section className="soft-card mb-4">
+        <p className="section-kicker mb-1">Summary</p>
+        <h2 className="font-semibold text-cocoa">DDL 摘要</h2>
+        <p className="mt-2 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {dueInThreeDays.length} 个。</p>
+      </section>
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Calendar</p>
         <h2 className="mb-3 font-semibold text-cocoa">日历提醒</h2>

@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentity } from "@/lib/identity";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUpload";
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 type Draft = {
-  author: "me" | "xiaoguai";
   content: string;
   displayStyle: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline" | "minimal" | "romantic";
   mood: string;
@@ -22,14 +20,13 @@ function formatError(stage: string, error: unknown) {
 }
 
 export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | void }) {
-  const [draft, setDraft] = useState<Draft>({ author: "xiaoguai", content: "", displayStyle: "sticky", mood: "" });
+  const [draft, setDraft] = useState<Draft>({ content: "", displayStyle: "sticky", mood: "" });
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
   const [audio, setAudio] = useState<File | Blob | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const cancelRef = useRef(false);
-  useEffect(() => setDraft((value) => ({ ...value, author: getCurrentIdentity() })), []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -79,7 +76,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          author: draft.author,
+          author: "xiaoguai",
           content: draft.content,
           display_style: draft.displayStyle,
           mood: draft.mood || undefined,
@@ -97,7 +94,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         setMessage([payload.error || "文件已上传，但记录保存失败，请重试保存。", payload.code ? `code: ${payload.code}` : "", payload.step ? `step: ${payload.step}` : "", payload.detail ? `detail: ${payload.detail}` : ""].filter(Boolean).join(" · "));
         return;
       }
-      setDraft({ author: "xiaoguai", content: "", displayStyle: "sticky", mood: "" });
+      setDraft({ content: "", displayStyle: "sticky", mood: "" });
       setImage(null);
       setVideo(null);
       setAudio(null);
@@ -116,11 +113,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         <p className="section-kicker mb-1">Write</p>
         <h2 className="font-semibold text-cocoa">写一张小纸条</h2>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <select className="field" value={draft.author} onChange={(event) => setDraft({ ...draft, author: event.target.value as Draft["author"] })}>
-          <option value="xiaoguai">小乖发的</option>
-          <option value="me">我发的</option>
-        </select>
+      <div className="grid grid-cols-1 gap-2">
         <select className="field" value={draft.displayStyle} onChange={(event) => setDraft({ ...draft, displayStyle: event.target.value as Draft["displayStyle"] })}>
           <option value="sticky">便签</option>
           <option value="postcard">明信片</option>

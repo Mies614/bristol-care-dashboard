@@ -2,33 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const navItems = [
-  { href: "/", label: "首页", icon: "⌂" },
-  { href: "/notes", label: "纸条", icon: "✎" },
-  { href: "/albums", label: "相册", icon: "▧" },
-  { href: "/period", label: "经期", icon: "☾" },
-  { href: "/schedule", label: "课程", icon: "◴" },
-  { href: "/deadlines", label: "DDL", icon: "✓" },
-  { href: "/settings", label: "设置", icon: "⚙" }
-];
+import { appNavItems, getActiveNavHref } from "@/lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const activeHref = getActiveNavHref(pathname);
 
   return (
       <main className="mx-auto min-h-screen w-full max-w-md px-4 pb-28 pt-4 md:max-w-[520px] md:px-5 md:pt-6">
         {children}
         <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:max-w-[520px]">
           <div className="rounded-[1.65rem] border border-white/70 bg-white/72 p-1.5 shadow-float ring-1 ring-white/50 backdrop-blur-2xl">
-          <div className="grid grid-cols-7 gap-1">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
+          <div className="grid grid-cols-4 gap-1">
+            {appNavItems.map((item) => {
+              const active = activeHref === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex min-h-12 flex-col items-center justify-center rounded-[1.15rem] px-1 py-1.5 text-[11px] transition ${
+                  className={`flex min-h-12 flex-col items-center justify-center rounded-[1.15rem] px-2 py-1.5 text-xs transition ${
                     active ? "bg-gradient-to-br from-blush via-white/75 to-lilac text-cocoa shadow-sm" : "text-cocoa/55 hover:bg-white/55"
                   }`}
                 >

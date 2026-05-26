@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const updateMock = vi.fn();
+const insertMock = vi.fn();
 
 vi.mock("@/lib/api/cloud", () => ({
   getDefaultSpaceCode: () => "xiaoguai520",
@@ -21,6 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
           })
         })
       }),
+      insert: insertMock,
       update: updateMock
     }))
   }))
@@ -37,6 +39,24 @@ function patchRequest(body: Record<string, unknown>) {
 describe("notes API", () => {
   beforeEach(() => {
     updateMock.mockReset();
+    insertMock.mockReset();
+    insertMock.mockReturnValue({
+      select: () => ({
+        single: async () => ({
+          data: {
+            id: "note-id",
+            content: "hello",
+            active: true,
+            pinned: false,
+            author: "xiaoguai",
+            note_type: "text",
+            display_style: "sticky",
+            created_by: "xiaoguai"
+          },
+          error: null
+        })
+      })
+    });
     updateMock.mockReturnValue({
       eq: () => ({
         eq: () => ({
@@ -66,5 +86,22 @@ describe("notes API", () => {
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ content: "updated" }));
+  });
+
+  it("POST defaults user notes to xiaoguai", async () => {
+    const { POST } = await import("@/app/api/notes/route");
+    const request = new NextRequest("http://localhost/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "hello", author: "me" })
+    });
+    const response = await POST(request);
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload.note.author).toBe("xiaoguai");
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      author: "xiaoguai",
+      created_by: "xiaoguai"
+    }));
   });
 });

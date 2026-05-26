@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDefaultSpaceCode, getSpaceByCode } from "@/lib/api/cloud";
 import { loveNoteFromRow, loveNoteToRow } from "@/lib/mappers";
 import { getNotePatchUpdate } from "@/lib/noteActions";
-import { hasNoteContent, inferNoteType, isValidAuthor, isValidDisplayStyle, normalizeDisplayStyle, normalizeNoteAuthor } from "@/lib/noteValidation";
+import { hasNoteContent, inferNoteType, isValidAuthor, isValidDisplayStyle, normalizeDisplayStyle } from "@/lib/noteValidation";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import type { LoveNote } from "@/lib/types";
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (!space) return fail("小纸条空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     step = "insert_note";
-    const author = normalizeNoteAuthor(body.author);
+    const author = "xiaoguai";
     const note: Omit<LoveNote, "id"> = {
       content,
       active: true,
@@ -143,9 +143,6 @@ export async function PATCH(request: NextRequest) {
     if (("display_style" in body || action === "change_style") && body.display_style !== undefined && !isValidDisplayStyle(body.display_style)) {
       return fail("展示样式不正确。", "INVALID_DISPLAY_STYLE", "validate_display_style", 400);
     }
-    if ("author" in body && body.author !== undefined && !isValidAuthor(body.author)) {
-      return fail("上传者不正确。", "INVALID_AUTHOR", "validate_author", 400);
-    }
 
     step = "get_space";
     const space = await getSpaceByCode(code);
@@ -162,7 +159,9 @@ export async function PATCH(request: NextRequest) {
     if (!current) return fail("没有找到这张小纸条。", "NOTE_NOT_FOUND", "find_note", 404);
 
     step = action === "delete" || action === "soft_delete" ? "delete_note" : "update_note";
-    const patch = getNotePatchUpdate({ action, body, current });
+    const safeBody = { ...body };
+    delete safeBody.author;
+    const patch = getNotePatchUpdate({ action, body: safeBody, current });
     const { data, error } = await supabase
       .from("love_notes")
       .update(patch)

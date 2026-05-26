@@ -7,7 +7,6 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentity } from "@/lib/identity";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
@@ -128,7 +127,7 @@ export default function AlbumsPage() {
           draft,
           imageUpload: uploadedImage,
           videoUpload: uploadedVideo,
-          createdBy: getCurrentIdentity(),
+          createdBy: "xiaoguai",
           typeOverride: generatedThumbnail ? "video" : undefined
         }))
       });

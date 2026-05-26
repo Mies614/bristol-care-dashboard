@@ -1,7 +1,6 @@
 "use client";
 
 import { getBackgroundSettings } from "./background";
-import { getCurrentIdentity } from "./identity";
 import { loadAppData, saveAppData } from "./storage";
 import { validateAppData } from "./validation";
 
@@ -15,8 +14,7 @@ export function createBackupPayload() {
       nextMeetDate: data.nextMeetDate,
       semesterEndDate: data.semesterEndDate
     },
-    backgroundSettings: getBackgroundSettings(),
-    currentIdentity: getCurrentIdentity()
+    backgroundSettings: getBackgroundSettings()
   };
 }
 

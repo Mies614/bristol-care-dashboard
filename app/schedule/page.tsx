@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { CourseCard } from "@/components/CourseCard";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
 import { sampleCourses } from "@/lib/sampleData";
-import { getCoursesForDay } from "@/lib/schedule";
+import { getCoursesForDay, getNextCourse, getTodayCourses } from "@/lib/schedule";
 import { createAllCoursesIcs, createCourseIcs, downloadIcs, isCourseCalendarExportable, safeIcsFilename } from "@/lib/ics";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import { DAYS, type AppData, type Course, type DayName } from "@/lib/types";
@@ -77,12 +78,22 @@ export default function SchedulePage() {
     () => Object.fromEntries(DAYS.map((day) => [day, data ? getCoursesForDay(data.courses, day) : []])) as Record<DayName, Course[]>,
     [data]
   );
+  const todayCourses = useMemo(() => data ? getTodayCourses(data.courses) : [], [data]);
+  const nextCourse = useMemo(() => data ? getNextCourse(data.courses) : undefined, [data]);
 
   if (!data) return <AppShell><div className="soft-card">正在加载课程表...</div></AppShell>;
 
   return (
     <AppShell>
       <PageHeader title="一周课程表" subtitle="把 Bristol 的课程、地点和小提醒放在一个地方。" />
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+      </div>
+      <section className="soft-card mb-4">
+        <p className="section-kicker mb-1">Today</p>
+        <h2 className="font-semibold text-cocoa">今日课程</h2>
+        <p className="mt-2 text-sm text-cocoa/65">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
+      </section>
 
       <form className="soft-card mb-4 space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={submit}>
         <div>

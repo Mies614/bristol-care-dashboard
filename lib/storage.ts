@@ -40,6 +40,7 @@ export function resetAppData() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem("bristol_dashboard_current_identity");
   } catch {
     // Ignore unavailable storage.
   } finally {

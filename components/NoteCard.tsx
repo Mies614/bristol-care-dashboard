@@ -3,14 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import type { LoveNote } from "@/lib/types";
-import { getCurrentIdentity } from "@/lib/identity";
-
-const authorLabel: Record<string, string> = {
-  admin: "我",
-  me: "我",
-  user: "我",
-  xiaoguai: "小乖"
-};
+import { getUserFacingAuthorLabel } from "@/lib/identity";
 
 export function NoteCard({
   note,
@@ -39,13 +32,12 @@ export function NoteCard({
     romantic: "rounded-[1.8rem] border-blush/60 bg-gradient-to-br from-blush/75 via-white/75 to-lilac/65 p-4"
   }[style];
   const type = note.noteType || (note.videoUrl ? "video" : note.audioUrl ? "audio" : note.imageUrl ? "image" : "text");
-  const currentIdentity = typeof window === "undefined" ? "xiaoguai" : getCurrentIdentity();
-  const bubbleAlign = style === "bubble" ? (note.author === currentIdentity ? "ml-auto" : "mr-auto") : "";
+  const bubbleAlign = style === "bubble" ? (note.author === "xiaoguai" || note.author === "user" ? "ml-auto" : "mr-auto") : "";
 
   return (
     <article className={`${base} ${styleClass} ${bubbleAlign} ${onClick ? "cursor-pointer" : ""} ${featured ? "w-full" : ""}`} onClick={onClick}>
       <div className="mb-2 flex items-center justify-between gap-2 text-xs text-cocoa/55">
-        <span className="rounded-full bg-white/60 px-2.5 py-1">{authorLabel[note.author || "admin"] || "小纸条"}</span>
+        <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
         <span>{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚"}</span>
       </div>
       {note.imageUrl ? <img className="mb-3 max-h-64 w-full rounded-[1.25rem] object-cover" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} /> : null}

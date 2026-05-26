@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
 import { validateImageFile } from "@/lib/imageValidation";
+import { getUserFacingAuthorLabel } from "@/lib/identity";
 import type { LoveNote } from "@/lib/types";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
@@ -48,7 +49,8 @@ export default function AdminPage() {
   const previewUrl = useMemo(() => (image ? URL.createObjectURL(image) : ""), [image]);
   const filteredNotes = useMemo(() => {
     if (noteFilter === "all") return notes;
-    if (["admin", "me", "xiaoguai", "user"].includes(noteFilter)) return notes.filter((note) => note.author === noteFilter);
+    if (noteFilter === "me") return notes.filter((note) => note.author === "admin" || note.author === "me");
+    if (noteFilter === "xiaoguai") return notes.filter((note) => note.author === "xiaoguai" || note.author === "user");
     return notes.filter((note) => note.noteType === noteFilter);
   }, [notes, noteFilter]);
 
@@ -385,9 +387,9 @@ export default function AdminPage() {
                 <button className="btn-secondary btn-small" onClick={() => loadNotes()}>刷新</button>
               </div>
               <div className="mb-3 flex flex-wrap gap-2">
-                {["all", "admin", "me", "xiaoguai", "user", "image", "audio", "video"].map((value) => (
+                {["all", "xiaoguai", "me", "image", "audio", "video"].map((value) => (
                   <button className={noteFilter === value ? "btn-primary btn-small" : "btn-secondary btn-small"} key={value} onClick={() => setNoteFilter(value)}>
-                    {value === "all" ? "全部" : value}
+                    {value === "all" ? "全部" : value === "xiaoguai" ? "小乖" : value === "me" ? "我" : value}
                   </button>
                 ))}
               </div>
@@ -410,7 +412,7 @@ export default function AdminPage() {
                       <StatusBadge tone={note.active ? "ok" : "neutral"}>{note.active ? "active" : "inactive"}</StatusBadge>
                       <StatusBadge tone={note.pinned ? "warn" : "neutral"}>{note.pinned ? "pinned" : "not pinned"}</StatusBadge>
                       {note.deletedAt ? <StatusBadge tone="danger">deleted</StatusBadge> : null}
-                      <StatusBadge>{note.author || "admin"}</StatusBadge>
+                      <StatusBadge>{getUserFacingAuthorLabel(note.author)}{note.author === "admin" || note.author === "me" ? "发布" : "上传"}</StatusBadge>
                       <StatusBadge>{note.noteType || "text"}</StatusBadge>
                       <StatusBadge>{note.displayStyle || "sticky"}</StatusBadge>
                     </p>
