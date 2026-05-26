@@ -1,30 +1,49 @@
 "use client";
 
 import { CardWalletCard } from "./CardWalletCard";
-import { CARD_WALLET_ITEMS, type CardWalletKey } from "@/lib/cardWallet";
+import type { WalletCard } from "@/lib/cardWallet";
 import type { CardState } from "@/lib/cardWalletDb";
 
 export function CardWalletGrid({
   states,
+  cards,
+  isSorting,
   onOpen,
   onCrop,
+  onEdit,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
   onImage
 }: {
+  cards: WalletCard[];
   states: CardState[];
-  onOpen: (key: CardWalletKey) => void;
-  onCrop: (key: CardWalletKey) => void;
-  onImage: (key: CardWalletKey, file: File) => Promise<void>;
+  isSorting?: boolean;
+  onOpen: (id: string) => void;
+  onCrop: (id: string) => void;
+  onEdit: (card: WalletCard) => void;
+  onDelete: (id: string) => void;
+  onMoveUp: (id: string) => void;
+  onMoveDown: (id: string) => void;
+  onImage: (id: string, file: File) => Promise<void>;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {CARD_WALLET_ITEMS.map((card) => (
+      {cards.map((card, index) => (
         <CardWalletCard
           card={card}
-          key={card.key}
-          state={states.find((state) => state.cardKey === card.key)}
-          onCrop={() => onCrop(card.key)}
-          onImage={(file) => onImage(card.key, file)}
-          onOpen={() => onOpen(card.key)}
+          isFirst={index === 0}
+          isLast={index === cards.length - 1}
+          isSorting={isSorting}
+          key={card.id}
+          state={states.find((state) => state.cardId === card.id)}
+          onCrop={() => onCrop(card.id)}
+          onDelete={() => onDelete(card.id)}
+          onEdit={() => onEdit(card)}
+          onImage={(file) => onImage(card.id, file)}
+          onMoveDown={() => onMoveDown(card.id)}
+          onMoveUp={() => onMoveUp(card.id)}
+          onOpen={() => onOpen(card.id)}
         />
       ))}
     </div>

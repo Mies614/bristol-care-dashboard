@@ -1,79 +1,97 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { CardCropEditor } from "@/components/card-wallet/CardCropEditor";
+import { CardEditorModal } from "@/components/card-wallet/CardEditorModal";
 import { CardScanModal } from "@/components/card-wallet/CardScanModal";
 import { CardWalletGrid } from "@/components/card-wallet/CardWalletGrid";
-import { CARD_WALLET_ITEMS, getCardConfig, getDefaultCardCrop, type CardCrop, type CardWalletKey } from "@/lib/cardWallet";
-import { getCardCrop, getCardImage, listCardStates, saveCardCrop, saveCardImage, type CardState } from "@/lib/cardWalletDb";
+import { getDefaultCardCrop, type CardCrop, type WalletCard, type WalletCardInput } from "@/lib/cardWallet";
+import {
+  createWalletCard,
+  deleteCardImage,
+  deleteWalletCard,
+  getCardCrop,
+  getCardImage,
+  listCardStates,
+  listWalletCards,
+  reorderWalletCards,
+  restoreDefaultWalletCards,
+  saveCardCrop,
+  saveCardImage,
+  updateWalletCard,
+  type CardState
+} from "@/lib/cardWalletDb";
 
 type ActiveCard = {
-  key: CardWalletKey;
-  imageUrl: string;
+  card: WalletCard;
+  imageUrl?: string;
   crop: CardCrop;
 };
 
 export default function CardsPage() {
+  const [cards, setCards] = useState<WalletCard[]>([]);
   const [states, setStates] = useState<CardState[]>([]);
   const [active, setActive] = useState<ActiveCard | null>(null);
-  const [editing, setEditing] = useState<ActiveCard | null>(null);
+  const [cropEditing, setCropEditing] = useState<ActiveCard | null>(null);
+  const [infoEditing, setInfoEditing] = useState<WalletCard | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [sorting, setSorting] = useState(false);
   const [message, setMessage] = useState("");
-  const [objectUrls, setObjectUrls] = useState<string[]>([]);
-
-  const stateMap = useMemo(() => new Map(states.map((state) => [state.cardKey, state])), [states]);
+  const objectUrlsRef = useRef<string[]>([]);
 
   const rememberUrl = useCallback((url: string) => {
-    setObjectUrls((current) => [...current, url]);
+    objectUrlsRef.current.push(url);
     return url;
   }, []);
 
   useEffect(() => {
+    const objectUrls = objectUrlsRef.current;
     refresh();
     return () => {
       for (const url of objectUrls) URL.revokeObjectURL(url);
     };
-    // objectUrls cleanup only on unmount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function refresh() {
-    const next = await listCardStates();
-    setStates(next);
+    const nextCards = await listWalletCards();
+    setCards(nextCards);
+    setStates(await listCardStates(nextCards));
   }
 
-  async function buildActiveCard(key: CardWalletKey): Promise<ActiveCard | null> {
-    const image = await getCardImage(key);
-    if (!image) return null;
-    const crop = await getCardCrop(key);
-    const imageUrl = rememberUrl(URL.createObjectURL(image.blob));
-    return { key, imageUrl, crop: crop || getDefaultCardCrop(key) };
+  async function buildActiveCard(cardId: string): Promise<ActiveCard | null> {
+    const card = cards.find((item) => item.id === cardId) || await listWalletCards().then((items) => items.find((item) => item.id === cardId));
+    if (!card) return null;
+    const image = await getCardImage(card.id);
+    const crop = await getCardCrop(card.id);
+    return {
+      card,
+      imageUrl: image ? rememberUrl(URL.createObjectURL(image.blob)) : undefined,
+      crop: crop || getDefaultCardCrop(card)
+    };
   }
 
-  async function openCard(key: CardWalletKey) {
+  async function openCard(cardId: string) {
     setMessage("");
-    const next = await buildActiveCard(key);
-    if (!next) {
-      setMessage("请先添加卡码图片。");
-      return;
-    }
+    const next = await buildActiveCard(cardId);
+    if (!next) return;
     setActive(next);
   }
 
-  async function editCrop(key: CardWalletKey) {
+  async function editCrop(cardId: string) {
     setMessage("");
-    const next = await buildActiveCard(key);
-    if (!next) {
+    const next = await buildActiveCard(cardId);
+    if (!next?.imageUrl) {
       setMessage("请先添加卡码图片。");
       return;
     }
-    setEditing(next);
+    setCropEditing(next);
   }
 
-  async function uploadImage(key: CardWalletKey, file: File) {
+  async function uploadImage(cardId: string, file: File) {
     setMessage("");
     try {
-      await saveCardImage(key, file, { mimeType: file.type });
+      await saveCardImage(cardId, file, { mimeType: file.type });
       await refresh();
       setMessage("已保存卡码图片。");
     } catch {
@@ -81,15 +99,53 @@ export default function CardsPage() {
     }
   }
 
-  async function persistCrop(key: CardWalletKey, crop: CardCrop) {
-    await saveCardCrop(key, crop);
+  async function persistCrop(cardId: string, crop: CardCrop) {
+    await saveCardCrop(cardId, crop);
     await refresh();
-    setActive((current) => current?.key === key ? { ...current, crop } : current);
-    setEditing((current) => current?.key === key ? { ...current, crop } : current);
+    setCropEditing((current) => current?.card.id === cardId ? { ...current, crop } : current);
     setMessage("裁剪已保存。");
   }
 
+  async function saveCardInfo(input: WalletCardInput, image?: File | null) {
+    if (infoEditing) {
+      await updateWalletCard(infoEditing.id, input);
+      if (image) await saveCardImage(infoEditing.id, image, { mimeType: image.type });
+      setInfoEditing(null);
+      setMessage("会员卡已更新。");
+    } else {
+      const card = await createWalletCard(input);
+      if (card && image) await saveCardImage(card.id, image, { mimeType: image.type });
+      setCreating(false);
+      setMessage("会员卡已添加。");
+    }
+    await refresh();
+  }
+
+  async function removeCard(cardId: string) {
+    if (!confirm("确定删除这张卡吗？本机保存的图片也会一起删除。")) return;
+    await deleteWalletCard(cardId);
+    await refresh();
+    setMessage("会员卡已删除。");
+  }
+
+  async function moveCard(cardId: string, direction: -1 | 1) {
+    const index = cards.findIndex((card) => card.id === cardId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= cards.length) return;
+    const ids = cards.map((card) => card.id);
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    setCards(await reorderWalletCards(ids));
+    await refresh();
+  }
+
+  async function restoreDefaults() {
+    await restoreDefaultWalletCards();
+    await refresh();
+    setMessage("默认卡已恢复。");
+  }
+
   const savedCount = states.filter((state) => state.hasImage).length;
+  const stateMap = useMemo(() => new Map(states.map((state) => [state.cardId, state])), [states]);
 
   return (
     <AppShell>
@@ -97,60 +153,70 @@ export default function CardsPage() {
         <p className="section-kicker mb-1">Wallet</p>
         <h1 className="text-2xl font-semibold text-cocoa">会员卡夹</h1>
         <p className="mt-2 text-sm leading-6 text-cocoa/65">常用卡放在这里，结账时点开就能扫。</p>
-        <p className="mt-3 rounded-2xl bg-white/62 px-3 py-2 text-sm text-cocoa/65">已保存 {savedCount}/4 · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
+        <p className="mt-3 rounded-2xl bg-white/62 px-3 py-2 text-sm text-cocoa/65">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
       </section>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button className="btn-primary" onClick={() => setCreating(true)}>新增会员卡</button>
+        <button className="btn-secondary" onClick={() => setSorting((current) => !current)}>{sorting ? "完成排序" : "编辑排序"}</button>
+        <button className="btn-secondary" onClick={restoreDefaults}>恢复默认卡</button>
+      </div>
 
       {message ? <p className="notice mb-4">{message}</p> : null}
 
-      <CardWalletGrid
-        states={states}
-        onCrop={editCrop}
-        onImage={uploadImage}
-        onOpen={openCard}
-      />
+      {cards.length ? (
+        <CardWalletGrid
+          cards={cards}
+          isSorting={sorting}
+          states={states}
+          onCrop={editCrop}
+          onDelete={removeCard}
+          onEdit={setInfoEditing}
+          onImage={uploadImage}
+          onMoveDown={(id) => moveCard(id, 1)}
+          onMoveUp={(id) => moveCard(id, -1)}
+          onOpen={openCard}
+        />
+      ) : (
+        <section className="empty-state text-left">
+          <p>还没有会员卡，可以先添加一张。</p>
+          <button className="btn-primary mt-3" onClick={() => setCreating(true)}>新增会员卡</button>
+        </section>
+      )}
 
-      <section className="soft-card mt-4 space-y-2 text-sm leading-6 text-cocoa/68">
-        <p className="section-kicker mb-1">Crop Tips</p>
-        <p>Tesco Clubcard：保留二维码主体和下方会员号。</p>
-        <p>Lidl Plus：保留白色卡片区域，包括 Lidl 标志、QR 和会员号。</p>
-        <p>Nectar：保留紫色会员卡区域，包括二维码和卡号。</p>
-        <p>M&S Sparks：保留 Sparks logo、会员号和条形码。</p>
-      </section>
+      {active ? (
+        <CardScanModal
+          card={active.card}
+          crop={active.crop}
+          imageUrl={active.imageUrl}
+          onClose={() => setActive(null)}
+        />
+      ) : null}
 
-      {active ? (() => {
-        const card = getCardConfig(active.key);
-        if (!card) return null;
-        return (
-          <CardScanModal
-            card={card}
-            crop={active.crop}
-            imageUrl={active.imageUrl}
-            onClose={() => setActive(null)}
-            onCrop={() => { setEditing(active); setActive(null); }}
-            onSaveCrop={(crop) => persistCrop(active.key, crop)}
-          />
-        );
-      })() : null}
+      {cropEditing?.imageUrl ? (
+        <CardCropEditor
+          card={cropEditing.card}
+          crop={cropEditing.crop}
+          imageUrl={cropEditing.imageUrl}
+          onClose={() => setCropEditing(null)}
+          onSave={async (crop) => {
+            await persistCrop(cropEditing.card.id, crop);
+            setCropEditing(null);
+          }}
+        />
+      ) : null}
 
-      {editing ? (() => {
-        const card = getCardConfig(editing.key);
-        if (!card) return null;
-        return (
-          <CardCropEditor
-            card={card}
-            crop={editing.crop}
-            imageUrl={editing.imageUrl}
-            onClose={() => setEditing(null)}
-            onSave={async (crop) => {
-              await persistCrop(editing.key, crop);
-              setEditing(null);
-            }}
-          />
-        );
-      })() : null}
+      {(creating || infoEditing) ? (
+        <CardEditorModal
+          card={infoEditing}
+          onClose={() => { setCreating(false); setInfoEditing(null); }}
+          onDeleteImage={infoEditing ? async () => { await deleteCardImage(infoEditing.id); await refresh(); setMessage("图片已删除。"); } : undefined}
+          onSave={saveCardInfo}
+        />
+      ) : null}
 
       <div className="sr-only">
-        {CARD_WALLET_ITEMS.map((card) => <span key={card.key}>{stateMap.get(card.key)?.hasImage ? "saved" : "empty"}</span>)}
+        {cards.map((card) => <span key={card.id}>{stateMap.get(card.id)?.hasImage ? "saved" : "empty"}</span>)}
       </div>
     </AppShell>
   );

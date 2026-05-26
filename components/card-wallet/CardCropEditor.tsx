@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CardImageView } from "./CardImageView";
-import { getDefaultCardCrop, normalizeCardCrop, type CardCrop, type CardWalletItem } from "@/lib/cardWallet";
+import { getDefaultCardCrop, normalizeCardCrop, type CardCrop, type WalletCard } from "@/lib/cardWallet";
 
 export function CardCropEditor({
   card,
@@ -11,15 +11,15 @@ export function CardCropEditor({
   onClose,
   onSave
 }: {
-  card: CardWalletItem;
+  card: WalletCard;
   imageUrl: string;
   crop: CardCrop;
   onClose: () => void;
   onSave: (crop: CardCrop) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState<CardCrop>(normalizeCardCrop(crop, card.key));
+  const [draft, setDraft] = useState<CardCrop>(normalizeCardCrop(crop, card));
 
-  useEffect(() => setDraft(normalizeCardCrop(crop, card.key)), [crop, card.key]);
+  useEffect(() => setDraft(normalizeCardCrop(crop, card)), [crop, card]);
 
   function setPosition(position: "top" | "center" | "bottom") {
     setDraft((current) => ({
@@ -41,6 +41,7 @@ export function CardCropEditor({
         </div>
         <CardImageView alt={`${card.name} 裁剪预览`} crop={draft} imageUrl={imageUrl} />
         <div className="mt-4 space-y-3">
+          <p className="notice">调整图片位置，让扫码区域更清楚。</p>
           <div className="grid grid-cols-3 gap-2">
             <button className="btn-secondary btn-small" onClick={() => setPosition("top")}>靠上</button>
             <button className="btn-secondary btn-small" onClick={() => setPosition("center")}>居中</button>
@@ -64,11 +65,12 @@ export function CardCropEditor({
               <option value="4:5">4:5</option>
               <option value="4:3">4:3</option>
               <option value="16:9">16:9</option>
+              <option value="auto">自适应</option>
             </select>
             <button className="btn-secondary" onClick={() => setDraft({ ...draft, rotate: ((draft.rotate + 90) % 360) as CardCrop["rotate"] })}>旋转</button>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button className="btn-secondary" onClick={() => setDraft(getDefaultCardCrop(card.key))}>使用推荐裁剪</button>
+            <button className="btn-secondary" onClick={() => setDraft(getDefaultCardCrop(card))}>使用默认裁剪</button>
             <button className="btn-primary" onClick={() => onSave(draft)}>保存裁剪</button>
           </div>
         </div>

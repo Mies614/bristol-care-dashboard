@@ -1,6 +1,6 @@
 "use client";
 
-import type { CardWalletItem } from "@/lib/cardWallet";
+import type { WalletCard } from "@/lib/cardWallet";
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
@@ -8,7 +8,7 @@ export function CardImageUploader({
   card,
   onImage
 }: {
-  card: CardWalletItem;
+  card: WalletCard;
   onImage: (file: File) => Promise<void>;
 }) {
   return (

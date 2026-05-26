@@ -8,7 +8,7 @@ import { DEFAULT_BACKGROUND_SETTINGS, saveBackgroundSettings } from "@/lib/backg
 import { clearPendingSyncState, markLocalChange, runAutoSyncNow, scheduleAutoSync } from "@/lib/autoSync";
 import { createBackupPayload, restoreBackupPayload } from "@/lib/backup";
 import { getCloudStats, getLocalDataStats } from "@/lib/dataStats";
-import { clearAllCardImages, listCardStates } from "@/lib/cardWalletDb";
+import { clearAllCardImages, clearAllWalletCards, listCardStates, listWalletCards } from "@/lib/cardWalletDb";
 import { clearSharedAccess } from "@/lib/sharedAccess";
 import { loadAppData, resetAppData } from "@/lib/storage";
 import type { AppData } from "@/lib/types";
@@ -27,12 +27,21 @@ export function DataManagementCenter({
   const [message, setMessage] = useState("");
   const [debugChecks, setDebugChecks] = useState<Array<{ name: string; ok: boolean; detail?: string }>>([]);
   const [cardCount, setCardCount] = useState(0);
+  const [cardImageCount, setCardImageCount] = useState(0);
   const stats = useMemo(() => getLocalDataStats(data), [data]);
   const cloud = getCloudStats();
   const autoSync = useAutoSync();
 
   useEffect(() => {
-    listCardStates().then((states) => setCardCount(states.filter((state) => state.hasImage).length)).catch(() => setCardCount(0));
+    Promise.all([listWalletCards(), listCardStates()])
+      .then(([cards, states]) => {
+        setCardCount(cards.length);
+        setCardImageCount(states.filter((state) => state.hasImage).length);
+      })
+      .catch(() => {
+        setCardCount(0);
+        setCardImageCount(0);
+      });
   }, []);
 
   async function diagnose() {
@@ -54,7 +63,8 @@ export function DataManagementCenter({
         <span>经期记录 {stats.periodRecords}</span>
         <span>最近经期 {stats.latestPeriodDate || "无"}</span>
         <span>相册缓存 {stats.albumCacheCount}</span>
-        <span>本地会员卡 {cardCount}/4</span>
+        <span>本地会员卡 {cardCount}</span>
+        <span>会员卡图片 {cardImageCount}</span>
         <span>背景 {stats.hasBackgroundSettings ? "已设置" : "默认"}</span>
         <span>共享空间 {stats.sharedAccess ? "已进入" : "未进入"}</span>
         <span>云同步 {cloud.connected ? "已连接" : "未连接"}</span>
@@ -110,7 +120,8 @@ export function DataManagementCenter({
         <button className="btn-secondary" onClick={onPullCloud}>从云端恢复到本地</button>
         <button className="btn-secondary" onClick={() => { if (confirm("确定重置背景设置吗？")) { saveBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS); markLocalChange("background"); scheduleAutoSync("background_reset"); } }}>重置背景设置</button>
         <button className="btn-secondary" onClick={() => { clearSharedAccess(); setMessage("已退出共享空间。"); }}>退出共享空间</button>
-        <button className="btn-secondary" onClick={async () => { if (confirm("确定清除本机保存的会员卡图片吗？")) { await clearAllCardImages(); setCardCount(0); setMessage("本地会员卡图片已清除。"); } }}>清除本地会员卡图片</button>
+        <button className="btn-secondary" onClick={async () => { if (confirm("确定清除本机保存的会员卡图片吗？")) { await clearAllCardImages(); setCardImageCount(0); setMessage("本地会员卡图片已清除。"); } }}>清除本地会员卡图片</button>
+        <button className="btn-danger" onClick={async () => { if (confirm("确定清除全部本地会员卡吗？")) { await clearAllWalletCards(); setCardCount(0); setCardImageCount(0); setMessage("本地会员卡已清除。"); } }}>清除全部本地会员卡</button>
         <button className="btn-secondary" onClick={() => { try { localStorage.removeItem("bristol-care-onboarding-dismissed-v1"); setMessage("新手引导会重新显示。"); } catch { setMessage("操作完成。"); } }}>重新显示新手引导</button>
         <button className="btn-danger" onClick={() => { if (confirm("确定清除本项目本地缓存吗？")) { resetAppData(); onData(loadAppData()); } }}>清除本地缓存</button>
         <button className="btn-secondary" onClick={diagnose}>连接诊断</button>
