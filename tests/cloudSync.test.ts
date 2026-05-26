@@ -26,7 +26,7 @@ describe("cloud sync", () => {
   it("fetch failure returns readable error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     const mod = await import("@/lib/cloudSync");
-    const result = await mod.pullCloudData("BRISTOL2026");
+    const result = await mod.pullCloudData("xiaoguai520");
     expect(result.ok).toBe(false);
     expect(result.error).toContain("网络连接失败");
   });
@@ -39,7 +39,7 @@ describe("cloud sync", () => {
       })
     }));
     const mod = await import("@/lib/cloudSync");
-    const result = await mod.syncLoveNotes("BRISTOL2026");
+    const result = await mod.syncLoveNotes("xiaoguai520");
     expect(result.ok).toBe(true);
     expect(result.data?.[0].content).toBe("hello");
   });
@@ -50,7 +50,7 @@ describe("cloud sync", () => {
     storage.setItem("bristol-care-data-v1", JSON.stringify({ nickname: "小乖", nextMeetDate: "", note: "local", courses: [], deadlines: [], links: [], loveNotes: [{ id: "local", content: "local", active: true, pinned: true }] }));
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     const mod = await import("@/lib/cloudSync");
-    const result = await mod.syncLoveNotesIntoLocalData("BRISTOL2026");
+    const result = await mod.syncLoveNotesIntoLocalData("xiaoguai520");
     expect(result.ok).toBe(false);
     expect(JSON.parse(storage.getItem("bristol-care-data-v1") || "{}").loveNotes[0].content).toBe("local");
   });
@@ -63,7 +63,7 @@ describe("cloud sync", () => {
       })
     }));
     const mod = await import("@/lib/cloudSync");
-    const result = await mod.pullCloudData("BRISTOL2026");
+    const result = await mod.pullCloudData("xiaoguai520");
     expect(result.ok).toBe(true);
     expect(result.data?.nickname).toBe("小乖");
   });
@@ -71,7 +71,7 @@ describe("cloud sync", () => {
   it("failed saved-connection refresh preserves local data", async () => {
     const storage = localStorageMock();
     vi.stubGlobal("window", { localStorage: storage, dispatchEvent: vi.fn() });
-    storage.setItem("bristol-care-cloud-connection-v1", JSON.stringify({ code: "BRISTOL2026" }));
+    storage.setItem("bristol-care-cloud-connection-v1", JSON.stringify({ code: "xiaoguai520" }));
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     const mod = await import("@/lib/cloudSync");
     const result = await mod.refreshFromSavedConnection();

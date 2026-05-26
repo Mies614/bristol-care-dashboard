@@ -42,6 +42,8 @@ export function DataManagementCenter({
         <span>课程 {stats.courses}</span>
         <span>DDL {stats.deadlines}</span>
         <span>小纸条缓存 {stats.loveNotes}</span>
+        <span>经期记录 {stats.periodRecords}</span>
+        <span>最近经期 {stats.latestPeriodDate || "无"}</span>
         <span>相册缓存 {stats.albumCacheCount}</span>
         <span>背景 {stats.hasBackgroundSettings ? "已设置" : "默认"}</span>
         <span>身份 {getIdentityLabel(stats.currentIdentity)}</span>

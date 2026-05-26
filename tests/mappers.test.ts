@@ -30,9 +30,9 @@ describe("mappers", () => {
       noteType: "audio",
       displayStyle: "bubble",
       audioUrl: "https://example.com/a.webm",
-      audioPath: "BRISTOL2026/audio/a.webm",
+      audioPath: "xiaoguai520/audio/a.webm",
       videoUrl: "https://example.com/a.mp4",
-      videoPath: "BRISTOL2026/videos/a.mp4",
+      videoPath: "xiaoguai520/videos/a.mp4",
       mediaSize: 456
     }, "space");
     expect(row.audio_url).toBe("https://example.com/a.webm");
@@ -59,17 +59,17 @@ describe("mappers", () => {
       display_style: "postcard",
       mood: "想你",
       image_url: "https://example.com/a.jpg",
-      image_path: "BRISTOL2026/a.jpg",
+      image_path: "xiaoguai520/a.jpg",
       image_alt: "photo",
       audio_url: "https://example.com/a.webm",
-      audio_path: "BRISTOL2026/audio/a.webm",
+      audio_path: "xiaoguai520/audio/a.webm",
       video_url: "https://example.com/a.mp4",
-      video_path: "BRISTOL2026/videos/a.mp4",
+      video_path: "xiaoguai520/videos/a.mp4",
       media_size: 123,
       deleted_at: "2026-05-25T12:00:00Z"
     });
     expect(note.imageUrl).toBe("https://example.com/a.jpg");
-    expect(note.imagePath).toBe("BRISTOL2026/a.jpg");
+    expect(note.imagePath).toBe("xiaoguai520/a.jpg");
     expect(note.imageAlt).toBe("photo");
     expect(note.audioUrl).toBe("https://example.com/a.webm");
     expect(note.videoUrl).toBe("https://example.com/a.mp4");

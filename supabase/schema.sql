@@ -122,6 +122,20 @@ create table if not exists public.album_items (
   deleted_at timestamptz
 );
 
+create table if not exists public.period_records (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  start_date date not null,
+  end_date date,
+  flow text,
+  symptoms text[],
+  mood text,
+  note text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  deleted_at timestamptz
+);
+
 create index if not exists idx_couple_spaces_code on public.couple_spaces(code);
 create index if not exists idx_settings_space_key on public.settings(space_id, key);
 create index if not exists idx_courses_space on public.courses(space_id);
@@ -134,6 +148,7 @@ create index if not exists love_notes_space_style_idx on public.love_notes(space
 create index if not exists idx_quick_links_space_sort on public.quick_links(space_id, sort_order);
 create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
 create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);
+create index if not exists period_records_space_start_idx on public.period_records(space_id, start_date desc);
 
 alter table public.album_items
 add column if not exists created_by text default 'xiaoguai';
@@ -145,6 +160,7 @@ alter table public.deadlines enable row level security;
 alter table public.love_notes enable row level security;
 alter table public.quick_links enable row level security;
 alter table public.album_items enable row level security;
+alter table public.period_records enable row level security;
 
 drop policy if exists "anon can read couple space by code" on public.couple_spaces;
 create policy "anon can read couple space by code"
@@ -165,39 +181,50 @@ using (active = true and visible_from <= now() and deleted_at is null);
 -- Album reads/writes also go through /api/albums with the service role key.
 
 insert into public.couple_spaces (code, name, girlfriend_name)
-values ('BRISTOL2026', 'Bristol Care', '小乖')
+values ('xiaoguai520', 'Bristol Care', '小乖')
 on conflict (code) do update
 set name = excluded.name,
     girlfriend_name = '小乖',
     updated_at = now();
 
 with space as (
-  select id from public.couple_spaces where code = 'BRISTOL2026'
+  select id from public.couple_spaces where code = 'xiaoguai520'
 )
 insert into public.settings (space_id, key, value)
 select id, 'next_meeting_date', 'null'::jsonb from space
 on conflict (space_id, key) do update set value = excluded.value, updated_at = now();
 
 with space as (
-  select id from public.couple_spaces where code = 'BRISTOL2026'
+  select id from public.couple_spaces where code = 'xiaoguai520'
 )
 insert into public.settings (space_id, key, value)
 select id, 'semester_end_date', 'null'::jsonb from space
 on conflict (space_id, key) do update set value = excluded.value, updated_at = now();
 
 with space as (
-  select id from public.couple_spaces where code = 'BRISTOL2026'
+  select id from public.couple_spaces where code = 'xiaoguai520'
 )
 insert into public.settings (space_id, key, value)
 select id, 'girlfriend_name', to_jsonb('小乖'::text) from space
 on conflict (space_id, key) do update set value = to_jsonb('小乖'::text), updated_at = now();
 
+with space as (
+  select id from public.couple_spaces where code = 'xiaoguai520'
+)
+insert into public.settings (space_id, key, value)
+select id, 'period_settings', jsonb_build_object(
+  'averageCycleLength', 28,
+  'averagePeriodLength', 5,
+  'reminderDaysBefore', 2
+) from space
+on conflict (space_id, key) do update set value = excluded.value, updated_at = now();
+
 -- Supabase Storage:
 -- Create a public bucket named "love-notes" in the Supabase dashboard.
 -- Create another public bucket named "couple-albums" for album photos and videos.
--- Image paths should look like: BRISTOL2026/1700000000000-random.webp
--- Album paths should look like: BRISTOL2026/images/1700000000000-random.webp
--- or BRISTOL2026/videos/1700000000000-random.mp4
+-- Image paths should look like: xiaoguai520/1700000000000-random.webp
+-- Album paths should look like: xiaoguai520/images/1700000000000-random.webp
+-- or xiaoguai520/videos/1700000000000-random.mp4
 -- Optional public read policy for storage.objects, if your project requires explicit policies:
 -- create policy "public read love note images"
 -- on storage.objects for select to anon

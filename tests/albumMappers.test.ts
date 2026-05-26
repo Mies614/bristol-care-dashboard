@@ -11,9 +11,9 @@ describe("album mappers", () => {
       location: "Bristol",
       type: "live_photo",
       image_url: "https://example.com/a.jpg",
-      image_path: "BRISTOL2026/images/a.jpg",
+      image_path: "xiaoguai520/images/a.jpg",
       video_url: "https://example.com/a.mov",
-      video_path: "BRISTOL2026/videos/a.mov",
+      video_path: "xiaoguai520/videos/a.mov",
       file_size: 123,
       is_favorite: true,
       created_by: "admin",
@@ -23,7 +23,7 @@ describe("album mappers", () => {
 
     expect(item.takenAt).toBe("2026-05-25T12:00:00Z");
     expect(item.imageUrl).toBe("https://example.com/a.jpg");
-    expect(item.videoPath).toBe("BRISTOL2026/videos/a.mov");
+    expect(item.videoPath).toBe("xiaoguai520/videos/a.mov");
     expect(item.fileSize).toBe(123);
     expect(item.isFavorite).toBe(true);
     expect(item.deletedAt).toBe("2026-05-26T12:01:00Z");
@@ -35,7 +35,7 @@ describe("album mappers", () => {
       takenAt: "2026-05-25T12:00:00Z",
       type: "photo",
       imageUrl: "https://example.com/a.jpg",
-      imagePath: "BRISTOL2026/images/a.jpg",
+      imagePath: "xiaoguai520/images/a.jpg",
       fileSize: 456,
       isFavorite: true,
       deletedAt: "2026-05-26T12:00:00Z"

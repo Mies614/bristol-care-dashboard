@@ -13,12 +13,13 @@ import { formatCountdown, getDaysUntilDeadline } from "@/lib/date";
 import { buildSmartReminder } from "@/lib/reminders";
 import { getNextCourse, getTodayCourses, hasEveningClass } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
-import type { AlbumItem, AppData } from "@/lib/types";
+import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
 import { getCurrentIdentity } from "@/lib/identity";
+import { calculateNextPeriodStart, DEFAULT_PERIOD_SETTINGS, getDaysUntilNextPeriod } from "@/lib/period";
 
 function safeBristolDate() {
   try {
@@ -53,6 +54,8 @@ export default function HomePage() {
   const [syncMessage, setSyncMessage] = useState("");
   const [initError, setInitError] = useState("");
   const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
+  const [periodRecords, setPeriodRecords] = useState<PeriodRecord[]>([]);
+  const [periodSettings, setPeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
   const [identity, setIdentity] = useState<"me" | "xiaoguai">("xiaoguai");
   const { weather, error } = useWeather();
 
@@ -102,6 +105,18 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    fetch(`/api/period?code=${encodeURIComponent(getDefaultSpaceCode())}`)
+      .then((response) => response.json())
+      .then((payload) => {
+        if (Array.isArray(payload.records)) setPeriodRecords(payload.records);
+        if (payload.settings) setPeriodSettings(payload.settings);
+      })
+      .catch(() => {
+        // Period records are optional for first paint.
+      });
+  }, []);
+
+  useEffect(() => {
     if (!isCloudConfigured()) return;
     try {
       const connection = getCloudConnection();
@@ -137,6 +152,8 @@ export default function HomePage() {
     const favorites = albumItems.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albumItems).slice(0, 3);
   }, [albumItems]);
+  const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
+  const daysUntilPeriod = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const todayLabel = useMemo(safeBristolDate, []);
   const bristolTime = useMemo(safeBristolTime, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
@@ -277,6 +294,21 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-2">
             <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
             <Link className="btn-secondary text-center" href="/notes">写一张</Link>
+          </div>
+        </section>
+
+        <section className="soft-card bg-gradient-to-br from-white/78 to-lilac/35">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="section-kicker mb-1">Cycle</p>
+              <h2 className="font-semibold text-cocoa">经期提醒</h2>
+              <p className="mt-2 text-sm leading-6 text-cocoa/70">
+                {nextPeriodStart
+                  ? `预计 ${nextPeriodStart} 开始${daysUntilPeriod === null ? "" : daysUntilPeriod >= 0 ? `，还有 ${daysUntilPeriod} 天。` : `，已过 ${Math.abs(daysUntilPeriod)} 天。`}`
+                  : "还没有记录，可以去补一条。"}
+              </p>
+            </div>
+            <Link className="btn-secondary btn-small shrink-0" href="/period">记录</Link>
           </div>
         </section>
 

@@ -10,6 +10,8 @@
 - Deadline
 - 下次见面倒计时
 - 小纸条墙，支持双方上传文字、语音、照片和视频
+- 情侣相册，支持照片、实况照片、视频和自动视频封面
+- 经期记录，支持周期预测和 .ics 日历提醒
 - `/admin` 支持发布、置顶、停用、软删除小纸条
 - 常用链接
 - PWA，可添加到手机桌面
@@ -47,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_PASSWORD=
-NEXT_PUBLIC_DEFAULT_SPACE_CODE=BRISTOL2026
+NEXT_PUBLIC_DEFAULT_SPACE_CODE=xiaoguai520
 ```
 
 `.env.local`、`.env*.local` 已加入 `.gitignore`，不要提交真实 key。
@@ -80,11 +82,12 @@ supabase/schema.sql
 - `love_notes`
 - `quick_links`
 - `album_items`
+- `period_records`
 
 并插入默认 space：
 
 ```text
-code = BRISTOL2026
+code = xiaoguai520
 name = Bristol Care
 girlfriend_name = 小乖
 ```
@@ -100,9 +103,9 @@ love-notes
 首页和小纸条墙会通过生成的媒体 URL 加载图片、语音和视频。路径格式类似：
 
 ```text
-BRISTOL2026/images/1700000000000-a1b2c3d4.webp
-BRISTOL2026/audio/1700000000000-a1b2c3d4.webm
-BRISTOL2026/videos/1700000000000-a1b2c3d4.mp4
+xiaoguai520/images/1700000000000-a1b2c3d4.webp
+xiaoguai520/audio/1700000000000-a1b2c3d4.webm
+xiaoguai520/videos/1700000000000-a1b2c3d4.mp4
 ```
 
 不要使用原始文件名。应用限制：
@@ -140,7 +143,7 @@ using (bucket_id = 'love-notes');
 ## 使用 /settings 云同步
 
 1. 打开 `/settings`。
-2. 在“云同步”里输入访问码，默认 `BRISTOL2026`。
+2. 在“云同步”里输入访问码，默认 `xiaoguai520`。
 3. 点击“连接云同步”。
 4. 可执行：
    - 手动同步
@@ -159,7 +162,7 @@ using (bucket_id = 'love-notes');
 1. 配好 Supabase 环境变量和 `ADMIN_PASSWORD`。
 2. 打开 `/admin`。
 3. 输入后台密码。
-4. 确认 space code，默认 `BRISTOL2026`。
+4. 确认 space code，默认 `xiaoguai520`。
 5. 写小纸条内容。
 6. 可选择：
    - active
@@ -234,8 +237,9 @@ using (bucket_id = 'love-notes');
 上传视频：
 
 1. 只选择视频文件。
-2. 系统会保存为 `video` 项目。
-3. MOV / `video/quicktime` 允许上传；如果浏览器无法直接播放，可在浏览器中打开或下载查看。
+2. 如果没有选择封面图片，系统会尝试截取视频第一帧作为封面。
+3. 系统会保存为 `video` 项目。
+4. MOV / `video/quicktime` 允许上传；如果浏览器无法直接播放，可在浏览器中打开或下载查看。
 
 删除相册项目会采用软删除：写入 `deleted_at`，首页和相册不会再显示。
 
@@ -259,6 +263,21 @@ using (bucket_id = 'couple-albums');
 
 Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变量正确即可。
 
+## 经期记录
+
+经期记录页面在 `/period`，用于记录开始日、结束日、流量、症状、心情和备注。
+
+使用方式：
+
+1. 打开 `/period`。
+2. 输入访问码后进入记录页。
+3. 添加开始日期和可选结束日期。
+4. 按需选择症状、心情和备注。
+5. 在“周期设置”里调整平均周期、平均经期长度和提前提醒天数。
+6. 点击“导出日历提醒”生成 `.ics` 文件，由手机系统日历负责提醒。
+
+`period_records` 保存每条记录，`settings` 表中的 `period_settings` 保存周期设置。重新运行 `supabase/schema.sql` 会创建表和默认设置。
+
 ## 常见问题
 
 **图片不显示**  
@@ -271,7 +290,7 @@ Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变
 检查 `ADMIN_PASSWORD`、`SUPABASE_SERVICE_ROLE_KEY` 和 Storage bucket。
 
 **云同步失败**  
-检查访问码是否为 `BRISTOL2026`，以及是否已运行 `supabase/schema.sql`。
+检查访问码是否为 `xiaoguai520`，以及是否已运行 `supabase/schema.sql`。
 
 **Vercel 部署后失败**  
 检查 Vercel Project Settings -> Environment Variables 是否完整配置。

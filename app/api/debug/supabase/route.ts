@@ -22,7 +22,7 @@ async function runDebugChecks() {
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     checks.push({ name: "can query couple_spaces", ok: false });
-    checks.push({ name: "BRISTOL2026 space exists", ok: false });
+    checks.push({ name: "default space exists", ok: false });
     checks.push({ name: "love_notes readable", ok: false });
     checks.push({ name: "album_items readable", ok: false });
     checks.push({ name: "love-notes bucket accessible", ok: false });
@@ -34,11 +34,11 @@ async function runDebugChecks() {
   const { data: space, error: spaceError } = await supabase
     .from("couple_spaces")
     .select("id, code")
-    .eq("code", process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026")
+    .eq("code", process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520")
     .maybeSingle();
 
   checks.push({ name: "can query couple_spaces", ok: !spaceError && Boolean(space?.id) });
-  checks.push({ name: "BRISTOL2026 space exists", ok: Boolean(space?.id) });
+  checks.push({ name: "default space exists", ok: Boolean(space?.id) });
 
   if (!space?.id) {
     checks.push({ name: "love_notes readable", ok: false });

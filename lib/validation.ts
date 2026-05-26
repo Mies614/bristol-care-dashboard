@@ -1,6 +1,7 @@
 import { defaultAppData } from "./sampleData";
-import { DAYS, type AppData, type CommonLink, type Course, type Deadline, type LoveNote } from "./types";
+import { DAYS, type AppData, type CommonLink, type Course, type Deadline, type LoveNote, type PeriodRecord } from "./types";
 import { normalizeBackgroundSettings } from "./background";
+import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 
 const LEGACY_DEFAULT_NICKNAME = "\u5b9d\u5b9d";
 
@@ -44,6 +45,11 @@ function isLoveNote(value: unknown): value is LoveNote {
   return isString(value.id) && (value.content === undefined || isString(value.content)) && typeof value.active === "boolean" && typeof value.pinned === "boolean";
 }
 
+function isPeriodRecord(value: unknown): value is PeriodRecord {
+  if (!isRecord(value)) return false;
+  return isString(value.id) && isString(value.startDate);
+}
+
 export function validateCourseArray(value: unknown): Course[] {
   if (!Array.isArray(value) || !value.every(isCourse)) {
     throw new Error("课程表 JSON 格式不正确。请导入由本应用导出的课程表文件。");
@@ -60,6 +66,7 @@ export function validateAppData(value: unknown): AppData {
   const deadlines = Array.isArray(value.deadlines) && value.deadlines.every(isDeadline) ? value.deadlines : null;
   const links = Array.isArray(value.links) && value.links.every(isCommonLink) ? value.links : null;
   const loveNotes = Array.isArray(value.loveNotes) && value.loveNotes.every(isLoveNote) ? value.loveNotes : defaultAppData.loveNotes;
+  const periodRecords = Array.isArray(value.periodRecords) && value.periodRecords.every(isPeriodRecord) ? value.periodRecords : [];
 
   if (!courses || !deadlines || !links) {
     throw new Error("数据 JSON 缺少课程、deadline 或常用链接字段。请检查导入文件。");
@@ -74,6 +81,8 @@ export function validateAppData(value: unknown): AppData {
     deadlines,
     links,
     loveNotes,
-    backgroundSettings: normalizeBackgroundSettings(value.backgroundSettings)
+    backgroundSettings: normalizeBackgroundSettings(value.backgroundSettings),
+    periodRecords,
+    periodSettings: normalizePeriodSettings(value.periodSettings || DEFAULT_PERIOD_SETTINGS)
   };
 }

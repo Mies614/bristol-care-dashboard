@@ -37,7 +37,7 @@ function optionalNumber(value: unknown) {
 export async function GET(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法读取。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
-    const code = request.nextUrl.searchParams.get("code") || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026";
+    const code = request.nextUrl.searchParams.get("code") || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
     const filter = request.nextUrl.searchParams.get("filter") || "all";
     const space = await getSpaceByCode(code);
     if (!space) return fail("相册空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法保存。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
+    const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520");
 
     step = "get_space";
     const space = await getSpaceByCode(code);
@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法更新。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026");
+    const code = String(body.code || process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520");
     if (!body.id) return fail("缺少相册项目 ID。", "ALBUM_ID_MISSING", "validate_album_id", 400);
     step = "get_space";
     const space = await getSpaceByCode(code);

@@ -90,6 +90,25 @@ export type AlbumItem = {
   deletedAt?: string;
 };
 
+export type PeriodRecord = {
+  id: string;
+  startDate: string;
+  endDate?: string;
+  flow?: "light" | "medium" | "heavy";
+  symptoms?: string[];
+  mood?: string;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string;
+};
+
+export type PeriodSettings = {
+  averageCycleLength: number;
+  averagePeriodLength: number;
+  reminderDaysBefore: number;
+};
+
 export type CloudSettings = {
   girlfriendName?: string;
   nextMeetingDate?: string | null;
@@ -119,4 +138,6 @@ export type AppData = {
   links: CommonLink[];
   loveNotes: LoveNote[];
   backgroundSettings: BackgroundSettings;
+  periodRecords?: PeriodRecord[];
+  periodSettings?: PeriodSettings;
 };

@@ -61,10 +61,10 @@ describe("album validation", () => {
 
   it("builds metadata payload without File objects", () => {
     const payload = buildAlbumMetadataPayload({
-      code: "BRISTOL2026",
+      code: "xiaoguai520",
       draft: { title: "海边", note: "风很轻", takenAt: "2026-05-25", location: "Bristol", isFavorite: true },
-      imageUpload: { url: "https://example.com/image.jpg", path: "BRISTOL2026/images/a.jpg", size: 10, mimeType: "image/jpeg" },
-      videoUpload: { url: "https://example.com/video.mov", path: "BRISTOL2026/videos/a.mov", size: 20, mimeType: "video/quicktime" }
+      imageUpload: { url: "https://example.com/image.jpg", path: "xiaoguai520/images/a.jpg", size: 10, mimeType: "image/jpeg" },
+      videoUpload: { url: "https://example.com/video.mov", path: "xiaoguai520/videos/a.mov", size: 20, mimeType: "video/quicktime" }
     });
     expect(payload.type).toBe("live_photo");
     expect(payload.file_size).toBe(30);

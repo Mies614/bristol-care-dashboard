@@ -11,6 +11,7 @@ import { getCurrentIdentity } from "@/lib/identity";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
+import { createThumbnailFileFromVideo, shouldGenerateVideoThumbnail } from "@/lib/videoThumbnail";
 import type { AlbumItem } from "@/lib/types";
 
 const filters = [
@@ -30,9 +31,9 @@ function formatApiError(payload: Record<string, unknown>, fallback: string) {
   ].filter(Boolean).join(" · ");
 }
 
-function formatUploadError(stage: "upload_image" | "upload_video" | "save_metadata", error: unknown) {
+function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata", error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "未知错误");
-  const label = stage === "upload_image" ? "图片上传失败" : stage === "upload_video" ? "视频上传失败" : "相册保存失败";
+  const label = stage === "generate_thumbnail" ? "视频封面生成失败" : stage === "upload_image" ? "图片上传失败" : stage === "upload_video" ? "视频上传失败" : "相册保存失败";
   return `stage: ${stage} · error: ${label} · detail: ${message}`;
 }
 
@@ -87,13 +88,29 @@ export default function AlbumsPage() {
     setCancelled(false);
     let uploadedImage: UploadedAlbumFile | null = null;
     let uploadedVideo: UploadedAlbumFile | null = null;
-    let currentStage: "upload_image" | "upload_video" | "save_metadata" = "upload_image";
+    let generatedThumbnail = false;
+    let currentStage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata" = "upload_image";
     try {
       if (image) {
         currentStage = "upload_image";
         setUploadStage(`${createUploadStageMessage("upload_image")}${isLargeMediaFile(image, "image") ? "，文件较大，可能较慢" : ""}`);
         uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
         if (cancelled) throw new Error("已取消");
+      }
+      if (shouldGenerateVideoThumbnail(image, video) && video) {
+        currentStage = "generate_thumbnail";
+        setUploadStage("正在生成视频封面");
+        try {
+          const thumbnailFile = await createThumbnailFileFromVideo(video);
+          currentStage = "upload_image";
+          setUploadStage("正在上传封面");
+          uploadedImage = await uploadAlbumFileDirectly(thumbnailFile, "image", code);
+          generatedThumbnail = true;
+          if (cancelled) throw new Error("已取消");
+        } catch {
+          uploadedImage = null;
+          generatedThumbnail = false;
+        }
       }
       if (video) {
         currentStage = "upload_video";
@@ -106,7 +123,14 @@ export default function AlbumsPage() {
       const response = await fetch("/api/albums", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildAlbumMetadataPayload({ code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo, createdBy: getCurrentIdentity() }))
+        body: JSON.stringify(buildAlbumMetadataPayload({
+          code,
+          draft,
+          imageUpload: uploadedImage,
+          videoUpload: uploadedVideo,
+          createdBy: getCurrentIdentity(),
+          typeOverride: generatedThumbnail ? "video" : undefined
+        }))
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {

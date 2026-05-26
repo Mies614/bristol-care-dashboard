@@ -3,7 +3,7 @@
 export const SHARED_ACCESS_KEY = "bristol_dashboard_shared_access";
 
 export function getExpectedSharedAccessCode() {
-  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026";
+  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
 }
 
 export function validateSharedAccessCode(value: string) {

@@ -21,6 +21,8 @@ export function getLocalDataStats(data: AppData) {
     courses: data.courses.length,
     deadlines: data.deadlines.length,
     loveNotes: data.loveNotes.length,
+    periodRecords: data.periodRecords?.length || 0,
+    latestPeriodDate: data.periodRecords?.[0]?.startDate || "",
     albumCacheCount,
     hasBackgroundSettings,
     currentIdentity: getCurrentIdentity(),

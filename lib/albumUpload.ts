@@ -75,8 +75,9 @@ export function buildAlbumMetadataPayload(input: {
   imageUpload?: UploadedAlbumFile | null;
   videoUpload?: UploadedAlbumFile | null;
   createdBy?: string;
+  typeOverride?: AlbumItem["type"];
 }): AlbumMetadataPayload {
-  const { code, draft, imageUpload, videoUpload, createdBy } = input;
+  const { code, draft, imageUpload, videoUpload, createdBy, typeOverride } = input;
   return {
     code,
     title: draft.title,
@@ -84,7 +85,7 @@ export function buildAlbumMetadataPayload(input: {
     taken_at: draft.takenAt ? new Date(draft.takenAt).toISOString() : "",
     location: draft.location,
     is_favorite: draft.isFavorite,
-    type: determineAlbumItemType(Boolean(imageUpload), Boolean(videoUpload)),
+    type: typeOverride || determineAlbumItemType(Boolean(imageUpload), Boolean(videoUpload)),
     image_url: imageUpload?.url,
     image_path: imageUpload?.path,
     video_url: videoUpload?.url,

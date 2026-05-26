@@ -12,7 +12,7 @@ function makeStorage() {
 
 describe("shared access", () => {
   beforeEach(() => {
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_SPACE_CODE", "BRISTOL2026");
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_SPACE_CODE", "xiaoguai520");
     vi.stubGlobal("window", { localStorage: makeStorage(), dispatchEvent: vi.fn() });
     vi.stubGlobal("localStorage", window.localStorage);
     localStorage.clear();
@@ -20,7 +20,7 @@ describe("shared access", () => {
 
   it("validates correct and wrong access codes", async () => {
     const mod = await import("@/lib/sharedAccess");
-    expect(mod.validateSharedAccessCode("BRISTOL2026")).toBe(true);
+    expect(mod.validateSharedAccessCode("xiaoguai520")).toBe(true);
     expect(mod.validateSharedAccessCode("WRONG")).toBe(false);
   });
 

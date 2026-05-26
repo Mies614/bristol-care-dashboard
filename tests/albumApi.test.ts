@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 const insertMock = vi.fn();
 const updateMock = vi.fn();
-const getSpaceByCodeMock = vi.fn(async () => ({ id: "space-id", code: "BRISTOL2026" }));
+const getSpaceByCodeMock = vi.fn(async () => ({ id: "space-id", code: "xiaoguai520" }));
 
 vi.mock("@/lib/api/cloud", () => ({
   getSpaceByCode: (...args: unknown[]) => getSpaceByCodeMock(...args)
@@ -66,7 +66,7 @@ describe("album API metadata POST", () => {
             title: "小视频",
             type: "video",
             video_url: "https://example.com/video.mov",
-            video_path: "BRISTOL2026/videos/video.mov",
+            video_path: "xiaoguai520/videos/video.mov",
             file_size: 123,
             is_favorite: false,
             created_at: "2026-05-25T00:00:00.000Z"
@@ -85,7 +85,7 @@ describe("album API metadata POST", () => {
                 space_id: "space-id",
                 type: "video",
                 video_url: "https://example.com/video.mov",
-                video_path: "BRISTOL2026/videos/video.mov",
+                video_path: "xiaoguai520/videos/video.mov",
                 is_favorite: patch.is_favorite ?? false,
                 deleted_at: patch.deleted_at ?? null,
                 created_at: "2026-05-25T00:00:00.000Z"
@@ -104,19 +104,19 @@ describe("album API metadata POST", () => {
       title: "小视频",
       type: "video",
       video_url: "https://example.com/video.mov",
-      video_path: "BRISTOL2026/videos/video.mov",
+      video_path: "xiaoguai520/videos/video.mov",
       file_size: 123
     }));
     const payload = await response.json();
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
     expect(payload.item.type).toBe("video");
-    expect(getSpaceByCodeMock).toHaveBeenCalledWith("BRISTOL2026");
+    expect(getSpaceByCodeMock).toHaveBeenCalledWith("xiaoguai520");
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
       title: "小视频",
       type: "video",
       video_url: "https://example.com/video.mov",
-      video_path: "BRISTOL2026/videos/video.mov"
+      video_path: "xiaoguai520/videos/video.mov"
     }));
   });
 

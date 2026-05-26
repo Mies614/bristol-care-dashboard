@@ -48,7 +48,7 @@ export function isCloudConfigured() {
 }
 
 export function getDefaultSpaceCode() {
-  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026";
+  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
 }
 
 export async function getSpaceByCode(code: string) {

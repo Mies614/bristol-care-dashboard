@@ -15,13 +15,14 @@ import {
 } from "@/lib/mappers";
 import type { AppData, CloudSettings, CommonLink, Course, Deadline } from "@/lib/types";
 import { defaultBackgroundSettings } from "@/lib/background";
+import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 
 export function cloudUnavailableResponse() {
   return NextResponse.json({ error: "云同步未配置，本地模式可继续使用。" }, { status: 503 });
 }
 
 export function getDefaultSpaceCode() {
-  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "BRISTOL2026";
+  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
 }
 
 export async function getSpaceByCode(code: string) {
@@ -71,7 +72,9 @@ export async function fetchCloudDataByCode(code: string) {
     deadlines: (deadlines.data || []).map(deadlineFromRow),
     links: (quickLinks.data || []).map(quickLinkFromRow),
     loveNotes: (loveNotes.data || []).map(loveNoteFromRow),
-    backgroundSettings: cloudSettings.backgroundSettings || defaultBackgroundSettings
+    backgroundSettings: cloudSettings.backgroundSettings || defaultBackgroundSettings,
+    periodRecords: [],
+    periodSettings: DEFAULT_PERIOD_SETTINGS
   };
 
   return { space, settings: cloudSettings, data: appData };

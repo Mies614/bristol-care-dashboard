@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 const updateMock = vi.fn();
 
 vi.mock("@/lib/api/cloud", () => ({
-  getDefaultSpaceCode: () => "BRISTOL2026",
-  getSpaceByCode: vi.fn(async () => ({ id: "space-id", code: "BRISTOL2026" }))
+  getDefaultSpaceCode: () => "xiaoguai520",
+  getSpaceByCode: vi.fn(async () => ({ id: "space-id", code: "xiaoguai520" }))
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
