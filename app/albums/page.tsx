@@ -5,7 +5,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
+import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getCurrentIdentity } from "@/lib/identity";
+import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import type { AlbumItem } from "@/lib/types";
@@ -41,6 +44,7 @@ export default function AlbumsPage() {
   const code = getDefaultSpaceCode();
   const [uploading, setUploading] = useState(false);
   const [uploadStage, setUploadStage] = useState("");
+  const [cancelled, setCancelled] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [draft, setDraft] = useState({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
   const [image, setImage] = useState<File | null>(null);
@@ -80,30 +84,33 @@ export default function AlbumsPage() {
       if (!validation.ok) return setMessage(validation.error || "视频不符合要求。");
     }
     setUploading(true);
+    setCancelled(false);
     let uploadedImage: UploadedAlbumFile | null = null;
     let uploadedVideo: UploadedAlbumFile | null = null;
     let currentStage: "upload_image" | "upload_video" | "save_metadata" = "upload_image";
     try {
       if (image) {
         currentStage = "upload_image";
-        setUploadStage("正在上传图片...");
+        setUploadStage(`${createUploadStageMessage("upload_image")}${isLargeMediaFile(image, "image") ? "，文件较大，可能较慢" : ""}`);
         uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
+        if (cancelled) throw new Error("已取消");
       }
       if (video) {
         currentStage = "upload_video";
-        setUploadStage("正在上传视频...");
+        setUploadStage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
         uploadedVideo = await uploadAlbumFileDirectly(video, "video", code);
+        if (cancelled) throw new Error("已取消");
       }
       currentStage = "save_metadata";
-      setUploadStage("正在保存到相册...");
+      setUploadStage(createUploadStageMessage("save"));
       const response = await fetch("/api/albums", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildAlbumMetadataPayload({ code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo }))
+        body: JSON.stringify(buildAlbumMetadataPayload({ code, draft, imageUpload: uploadedImage, videoUpload: uploadedVideo, createdBy: getCurrentIdentity() }))
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(formatApiError(payload, "上传失败。"));
+        setMessage(formatApiError(payload, "文件已上传，但记录保存失败，请重试保存。"));
         return;
       }
     } catch (error) {
@@ -116,7 +123,7 @@ export default function AlbumsPage() {
     setDraft({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
     setImage(null);
     setVideo(null);
-    setMessage("上传成功，已经放进相册。");
+    setMessage(createUploadStageMessage("done"));
     await loadItems();
   }
 
@@ -142,6 +149,7 @@ export default function AlbumsPage() {
   }
 
   return (
+    <SharedAccessGate>
     <AppShell>
       <PageHeader title="我们的相册" subtitle="把喜欢的瞬间慢慢收起来。" />
       <div className="space-y-4">
@@ -167,7 +175,7 @@ export default function AlbumsPage() {
           </label>
           <label className="file-panel">
             <span className="font-medium text-cocoa">视频 / 实况视频</span>
-            <span className="block text-xs text-cocoa/55">MP4 / MOV / WebM，最大 50MB</span>
+            <span className="block text-xs text-cocoa/55">MP4 / MOV / WebM，最大 100MB</span>
             <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
           </label>
           <div className="grid gap-2">
@@ -175,7 +183,10 @@ export default function AlbumsPage() {
             {image?.type.includes("heic") || image?.type.includes("heif") ? <p className="notice">该格式可能无法在浏览器中预览，但可以上传保存。</p> : null}
             {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
           </div>
-          <button className="btn-primary w-full" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
+          <div className="flex gap-2">
+            <button className="btn-primary flex-1" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
+            {uploading ? <button className="btn-secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>取消</button> : null}
+          </div>
         </form>
 
         <section className="soft-card">
@@ -237,5 +248,6 @@ export default function AlbumsPage() {
         </div>
       ) : null}
     </AppShell>
+    </SharedAccessGate>
   );
 }

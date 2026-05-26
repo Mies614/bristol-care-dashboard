@@ -135,6 +135,9 @@ create index if not exists idx_quick_links_space_sort on public.quick_links(spac
 create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
 create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);
 
+alter table public.album_items
+add column if not exists created_by text default 'xiaoguai';
+
 alter table public.couple_spaces enable row level security;
 alter table public.settings enable row level security;
 alter table public.courses enable row level security;

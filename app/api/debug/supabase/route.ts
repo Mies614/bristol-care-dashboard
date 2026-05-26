@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type Check = {
   name: string;
   ok: boolean;
+  detail?: string;
 };
 
 function keyLooksLikeSecretKey(value?: string) {
@@ -15,12 +16,17 @@ async function runDebugChecks() {
   const checks: Check[] = [
     { name: "NEXT_PUBLIC_SUPABASE_URL exists", ok: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) },
     { name: "SUPABASE_SERVICE_ROLE_KEY exists", ok: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) },
-    { name: "service key looks like secret key", ok: keyLooksLikeSecretKey(process.env.SUPABASE_SERVICE_ROLE_KEY) }
+    { name: "NEXT_PUBLIC_DEFAULT_SPACE_CODE exists", ok: Boolean(process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE) },
+    { name: "service key configured", ok: keyLooksLikeSecretKey(process.env.SUPABASE_SERVICE_ROLE_KEY) }
   ];
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     checks.push({ name: "can query couple_spaces", ok: false });
-    checks.push({ name: "can insert and delete test love_note with server client", ok: false });
+    checks.push({ name: "BRISTOL2026 space exists", ok: false });
+    checks.push({ name: "love_notes readable", ok: false });
+    checks.push({ name: "album_items readable", ok: false });
+    checks.push({ name: "love-notes bucket accessible", ok: false });
+    checks.push({ name: "couple-albums bucket accessible", ok: false });
     return checks;
   }
 
@@ -32,11 +38,24 @@ async function runDebugChecks() {
     .maybeSingle();
 
   checks.push({ name: "can query couple_spaces", ok: !spaceError && Boolean(space?.id) });
+  checks.push({ name: "BRISTOL2026 space exists", ok: Boolean(space?.id) });
 
   if (!space?.id) {
-    checks.push({ name: "can insert and delete test love_note with server client", ok: false });
+    checks.push({ name: "love_notes readable", ok: false });
+    checks.push({ name: "album_items readable", ok: false });
+    checks.push({ name: "love-notes bucket accessible", ok: false });
+    checks.push({ name: "couple-albums bucket accessible", ok: false });
     return checks;
   }
+
+  const { error: notesError } = await supabase.from("love_notes").select("id").eq("space_id", space.id).limit(1);
+  const { error: albumsError } = await supabase.from("album_items").select("id").eq("space_id", space.id).limit(1);
+  checks.push({ name: "love_notes readable", ok: !notesError, detail: notesError?.message });
+  checks.push({ name: "album_items readable", ok: !albumsError, detail: albumsError?.message });
+
+  const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+  checks.push({ name: "love-notes bucket accessible", ok: !bucketError && Boolean(buckets?.some((bucket) => bucket.name === "love-notes")), detail: bucketError?.message });
+  checks.push({ name: "couple-albums bucket accessible", ok: !bucketError && Boolean(buckets?.some((bucket) => bucket.name === "couple-albums")), detail: bucketError?.message });
 
   const { data: inserted, error: insertError } = await supabase
     .from("love_notes")
@@ -62,22 +81,17 @@ async function runDebugChecks() {
 }
 
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ ok: false, error: "Debug endpoint is disabled in production." }, { status: 404 });
-  }
-
   try {
     const checks = await runDebugChecks();
-    return NextResponse.json({ ok: checks.every((check) => check.ok), checks });
+    return NextResponse.json({ ok: checks.every((check) => check.ok), environment: process.env.NODE_ENV, checks });
   } catch {
     return NextResponse.json({
       ok: false,
       checks: [
         { name: "NEXT_PUBLIC_SUPABASE_URL exists", ok: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) },
         { name: "SUPABASE_SERVICE_ROLE_KEY exists", ok: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) },
-        { name: "service key looks like secret key", ok: keyLooksLikeSecretKey(process.env.SUPABASE_SERVICE_ROLE_KEY) },
-        { name: "can query couple_spaces", ok: false },
-        { name: "can insert and delete test love_note with server client", ok: false }
+        { name: "service key configured", ok: keyLooksLikeSecretKey(process.env.SUPABASE_SERVICE_ROLE_KEY) },
+        { name: "can query couple_spaces", ok: false }
       ]
     });
   }

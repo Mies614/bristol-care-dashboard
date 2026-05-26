@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { NoteComposer } from "@/components/NoteComposer";
 import { NoteWall } from "@/components/NoteWall";
+import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { LoveNote } from "@/lib/types";
 
@@ -79,6 +80,7 @@ export default function NotesPage() {
   }
 
   return (
+    <SharedAccessGate>
     <AppShell>
       <section className="mb-4 rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
         <p className="section-kicker mb-1">Note Wall</p>
@@ -124,10 +126,8 @@ export default function NotesPage() {
           {message ? <p className="notice">{message}</p> : null}
         </section>
         <NoteWall notes={notes} onPatch={patchNote} />
-        <p className="rounded-[1.35rem] border border-white/70 bg-white/55 px-4 py-3 text-xs leading-5 text-cocoa/55 shadow-sm">
-          这里是你们共享的小纸条墙，拥有链接的人可以查看、上传和编辑内容。请不要公开分享链接。
-        </p>
       </div>
     </AppShell>
+    </SharedAccessGate>
   );
 }

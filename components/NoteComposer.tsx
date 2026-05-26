@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getCurrentIdentity } from "@/lib/identity";
+import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUpload";
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
 import { VoiceRecorder } from "./VoiceRecorder";
@@ -27,6 +29,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const cancelRef = useRef(false);
+  useEffect(() => setDraft((value) => ({ ...value, author: getCurrentIdentity() })), []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -56,21 +59,21 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
     let uploadedAudio: UploadedNoteMedia | null = null;
     try {
       if (image) {
-        setMessage("正在上传图片...");
+        setMessage(`${createUploadStageMessage("upload_image")}${isLargeMediaFile(image, "image") ? "，文件较大，可能较慢" : ""}`);
         uploadedImage = await uploadNoteMediaDirectly(image, "images", code);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (audio) {
-        setMessage("正在上传语音...");
+        setMessage(createUploadStageMessage("upload_audio"));
         uploadedAudio = await uploadNoteMediaDirectly(audio, "audio", code);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (video) {
-        setMessage("正在上传视频...");
+        setMessage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
         uploadedVideo = await uploadNoteMediaDirectly(video, "videos", code);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
-      setMessage("正在贴到小纸条墙...");
+      setMessage(createUploadStageMessage("save"));
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,14 +94,14 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage([payload.error || "相册保存失败。", payload.code ? `code: ${payload.code}` : "", payload.step ? `step: ${payload.step}` : "", payload.detail ? `detail: ${payload.detail}` : ""].filter(Boolean).join(" · "));
+        setMessage([payload.error || "文件已上传，但记录保存失败，请重试保存。", payload.code ? `code: ${payload.code}` : "", payload.step ? `step: ${payload.step}` : "", payload.detail ? `detail: ${payload.detail}` : ""].filter(Boolean).join(" · "));
         return;
       }
       setDraft({ author: "xiaoguai", content: "", displayStyle: "sticky", mood: "" });
       setImage(null);
       setVideo(null);
       setAudio(null);
-      setMessage("已经贴到小纸条墙。");
+      setMessage(createUploadStageMessage("done"));
       await onCreated();
     } catch (error) {
       setMessage(formatError("upload_or_save_note", error));

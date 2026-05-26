@@ -1,5 +1,5 @@
 export const MAX_ALBUM_IMAGE_SIZE = 30 * 1024 * 1024;
-export const MAX_ALBUM_VIDEO_SIZE = 50 * 1024 * 1024;
+export const MAX_ALBUM_VIDEO_SIZE = 100 * 1024 * 1024;
 export const MAX_ALBUM_FILES_PER_BATCH = 10;
 
 export const ALLOWED_ALBUM_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
@@ -32,7 +32,7 @@ export function validateAlbumVideoFile(file: AlbumFileLike): { ok: boolean; erro
   if (!isSupportedMime && !isOctetVideo) {
     return { ok: false, error: "只支持 MP4、MOV 或 WebM 视频。" };
   }
-  if (file.size > MAX_ALBUM_VIDEO_SIZE) return { ok: false, error: "视频不能超过 50MB。" };
+  if (file.size > MAX_ALBUM_VIDEO_SIZE) return { ok: false, error: "视频不能超过 100MB。" };
   return { ok: true };
 }
 

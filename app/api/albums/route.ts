@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       videoPath: optionalString(body.video_path),
       fileSize: optionalNumber(body.file_size),
       isFavorite: Boolean(body.is_favorite),
-      createdBy: "admin"
+      createdBy: optionalString(body.created_by) || "xiaoguai"
     };
     const row = albumItemToRow(item, space.id);
     const { data, error } = await createSupabaseServerClient()

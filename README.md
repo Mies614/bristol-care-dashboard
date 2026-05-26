@@ -97,7 +97,7 @@ girlfriend_name = 小乖
 love-notes
 ```
 
-建议设为 Public bucket。首页和小纸条墙需要直接显示图片、语音和视频，Public bucket 可以通过 public URL 加载媒体。路径格式类似：
+首页和小纸条墙会通过生成的媒体 URL 加载图片、语音和视频。路径格式类似：
 
 ```text
 BRISTOL2026/images/1700000000000-a1b2c3d4.webp
@@ -135,7 +135,7 @@ using (bucket_id = 'love-notes');
 4. 选择展示样式：便签、明信片、聊天气泡、照片卡或时间线。
 5. 点击“贴到小纸条墙”。
 
-每张小纸条都可以在 `/notes` 直接编辑文字、作者、心情标签和展示样式，也可以置顶、隐藏、恢复展示或软删除。录音使用浏览器 MediaRecorder API。若当前浏览器不支持网页录音，可以上传已有音频文件。`/notes` 是免登录共享页面，拥有链接的人可以查看、上传和编辑内容，请不要公开分享链接，也不要上传特别敏感的照片、视频或语音。
+每张小纸条都可以在 `/notes` 直接编辑文字、作者、心情标签和展示样式，也可以置顶、隐藏、恢复展示或软删除。录音使用浏览器 MediaRecorder API。若当前浏览器不支持网页录音，可以上传已有音频文件。
 
 ## 使用 /settings 云同步
 
@@ -187,7 +187,7 @@ using (bucket_id = 'love-notes');
 如果图片不显示，优先检查：
 
 - `love-notes` bucket 是否存在
-- bucket 是否为 Public
+- bucket 读取策略是否已配置
 - 图片文件是否超过 5MB
 - MIME 类型是否为 jpg/png/webp
 
@@ -212,9 +212,8 @@ using (bucket_id = 'love-notes');
 需要在 Supabase Storage 手动创建 bucket：
 
 - bucket name: `couple-albums`
-- 建议 Public bucket: On
 - 图片最大 30MB
-- 视频最大 50MB
+- 视频最大 100MB
 - 允许 MIME：`image/jpeg`、`image/png`、`image/webp`、`image/heic`、`image/heif`、`video/mp4`、`video/quicktime`、`video/webm`
 - iPhone 有时会把 `.mov` / `.mp4` / `.webm` 标记为 `application/octet-stream`，项目会按文件扩展名兼容这些视频
 
@@ -244,7 +243,6 @@ Storage policy 说明：
 
 - 相册文件上传使用浏览器端 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 直传 `couple-albums` bucket。
 - `album_items` 数据库写入仍然必须走 `/api/albums`，由服务端 `SUPABASE_SERVICE_ROLE_KEY` 写入，前端不会直接写数据库。
-- `/albums` 当前为免登录模式，默认使用 `NEXT_PUBLIC_DEFAULT_SPACE_CODE` 或 `BRISTOL2026`，不需要输入后台密码。
 - 如果前端直传报 `permission denied` 或 `new row violates row-level security policy`，请在 Supabase Storage policies 中允许 `anon` 对 `couple-albums` 执行 `insert`。
 
 可选 SQL 示例：
@@ -259,29 +257,12 @@ on storage.objects for select to anon
 using (bucket_id = 'couple-albums');
 ```
 
-隐私说明：相册当前为免登录模式，拥有链接的人可以查看和上传相册内容，请不要公开分享链接，也不要上传特别敏感的照片。如果 `couple-albums` bucket 设为 Public，相册图片和视频会通过公开 URL 展示。若未来需要更私密，可以改为 private bucket + signed URL。
-
 Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变量正确即可。
-
-## 隐私说明
-
-未开启云同步时：
-
-- 课程表、deadline、小纸条、倒数日和常用链接只保存在当前浏览器 localStorage。
-- 不上传到服务器。
-
-开启云同步后：
-
-- 课程表、deadline、设置、小纸条、常用链接会保存到 Supabase。
-- 小纸条图片、语音和视频会上传到 `love-notes` Storage bucket。
-- 相册图片和视频会上传到 `couple-albums` Storage bucket。
-- `SUPABASE_SERVICE_ROLE_KEY` 和 `ADMIN_PASSWORD` 不会进入浏览器 bundle。
-- 小纸条墙和相册为免登录共享页面，拥有链接的人可以上传内容；数据库 metadata 仍通过 Next.js API Route Handler 写入。
 
 ## 常见问题
 
 **图片不显示**  
-检查 `love-notes` bucket 是否创建并设为 Public。
+检查 `love-notes` bucket 是否创建，以及读取策略是否已配置。
 
 **首页没有显示最新小纸条**  
 点击首页“小纸条”卡片上的“刷新小纸条”。如果修改了表结构，请在 Supabase SQL Editor 重新运行 `supabase/schema.sql`，确保 `love_notes.deleted_at` 字段存在。

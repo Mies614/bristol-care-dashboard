@@ -18,6 +18,7 @@ import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
+import { getCurrentIdentity } from "@/lib/identity";
 
 function safeBristolDate() {
   try {
@@ -52,6 +53,7 @@ export default function HomePage() {
   const [syncMessage, setSyncMessage] = useState("");
   const [initError, setInitError] = useState("");
   const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
+  const [identity, setIdentity] = useState<"me" | "xiaoguai">("xiaoguai");
   const { weather, error } = useWeather();
 
   useEffect(() => {
@@ -77,10 +79,14 @@ export default function HomePage() {
         }
       }
     };
+    const refreshIdentity = () => setIdentity(getCurrentIdentity());
     refresh();
+    refreshIdentity();
     window.addEventListener("bristol-care-data", refresh);
+    window.addEventListener("bristol-care-identity", refreshIdentity);
     return () => {
       window.removeEventListener("bristol-care-data", refresh);
+      window.removeEventListener("bristol-care-identity", refreshIdentity);
     };
   }, []);
 
@@ -181,7 +187,7 @@ export default function HomePage() {
           <div>
             <p className="section-kicker">Bristol Care</p>
             <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
-              小乖，今天也好
+              {identity === "me" ? "今天也照顾好她" : "小乖，今天也好"}
             </h1>
           </div>
           <div className="rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-2 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
