@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { courseToRow, deadlineToRow, loveNoteToRow, quickLinkToRow } from "@/lib/mappers";
-import { getSpaceByCode } from "@/lib/api/cloud";
+import { courseToRow, deadlineToRow, quickLinkToRow } from "@/lib/mappers";
+import { getDefaultSpaceCode, getSpaceByCode } from "@/lib/api/cloud";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildSettingsRows, normalizeLocalData } from "@/lib/uploadNormalize";
 
@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
   let step = "parse_body";
   try {
     const body = await request.json();
-    const code = String(body.code || "");
-    if (!code) return fail("缺少访问码。", "SPACE_CODE_MISSING", "parse_body", 400);
+    const code = String(body.code || getDefaultSpaceCode());
     if (body.mode !== "uploadLocalToCloud") return fail("不支持的上传模式。", "INVALID_UPLOAD_MODE", "parse_body", 400);
 
     step = "normalize_local_data";
@@ -89,11 +88,6 @@ export async function POST(request: NextRequest) {
     if (normalized.quickLinks.length) {
       step = "insert_quick_links";
       await assertNoError(await supabase.from("quick_links").insert(normalized.quickLinks.map((link) => quickLinkToRow(link, space.id))), step);
-    }
-
-    if (normalized.loveNotes.length) {
-      step = "insert_love_notes";
-      await assertNoError(await supabase.from("love_notes").insert(normalized.loveNotes.map((note) => loveNoteToRow(note, space.id))), step);
     }
 
     return NextResponse.json({ ok: true, data: normalized });

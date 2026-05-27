@@ -16,6 +16,12 @@ describe("cloud sync", () => {
     vi.restoreAllMocks();
   });
 
+  it("uses xiaoguai520 as the default space code", async () => {
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_SPACE_CODE", "");
+    const mod = await import("@/lib/cloudSync");
+    expect(mod.getDefaultSpaceCode()).toBe("xiaoguai520");
+  });
+
   it("reports fallback when Supabase env is missing", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");

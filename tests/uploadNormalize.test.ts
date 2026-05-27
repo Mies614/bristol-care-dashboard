@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { courseToRow, deadlineToRow, loveNoteToRow, quickLinkToRow } from "@/lib/mappers";
 import { buildSettingsRows, isUuid, normalizeLocalData, omitInvalidUuidId } from "@/lib/uploadNormalize";
 
@@ -85,5 +86,13 @@ describe("normalizeLocalData", () => {
     expect(quickLinkToRow(normalized.quickLinks[0], "space").sort_order).toBe(2);
     expect(loveNoteToRow(normalized.loveNotes[0], "space").visible_from).toBe("2026-05-25T00:00:00Z");
     expect(loveNoteToRow(normalized.loveNotes[0], "space").image_url).toBe("https://example.com/a.jpg");
+  });
+
+  it("cloud upload route does not batch insert love notes or album media", () => {
+    const source = readFileSync(new URL("../app/api/cloud/upload/route.ts", import.meta.url), "utf8");
+    expect(source).not.toContain("loveNoteToRow");
+    expect(source).not.toContain(".from(\"love_notes\").insert");
+    expect(source).not.toContain("album_items");
+    expect(source).not.toContain("storage.from");
   });
 });

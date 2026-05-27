@@ -11,6 +11,7 @@ import {
   saveBackgroundSettings,
   sanitizeBackgroundSettingsForCloud
 } from "@/lib/background";
+import { buildBackgroundImagePath } from "@/lib/backgroundUpload";
 import { validateAppData } from "@/lib/validation";
 
 const localStorageMock = () => {
@@ -114,6 +115,10 @@ describe("background settings", () => {
     expect(sanitized.cloudImageUrl).toBe("https://example.com/bg.webp");
     expect(sanitized.cloudImagePath).toBe("xiaoguai520/backgrounds/bg.webp");
     expect(sanitized.imageDataUrl).toBeUndefined();
+  });
+
+  it("builds background upload paths under the default code folder", () => {
+    expect(buildBackgroundImagePath("xiaoguai520", "webp", 123, "abcd")).toBe("xiaoguai520/backgrounds/123-abcd.webp");
   });
 
   it("exports the uppercase default constant", () => {

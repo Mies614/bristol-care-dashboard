@@ -12,6 +12,10 @@ function randomId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+export function buildBackgroundImagePath(code: string, extension: string, timestamp = Date.now(), random = randomId()) {
+  return `${code}/backgrounds/${timestamp}-${random}.${extension}`;
+}
+
 export function validateBackgroundImageFile(file: File | Blob) {
   if (!ALLOWED_BACKGROUND_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_BACKGROUND_IMAGE_TYPES)[number])) {
     return { ok: false, error: "只支持 JPG、PNG、WebP、HEIC 或 HEIF 图片。" };
@@ -36,7 +40,7 @@ export async function uploadBackgroundImageDirectly(file: File, code: string) {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) throw new Error("Supabase publishable client 未配置，无法上传背景图片。");
   const ext = getBackgroundImageExtension(file);
-  const path = `${code}/backgrounds/${Date.now()}-${randomId()}.${ext}`;
+  const path = buildBackgroundImagePath(code, ext);
   const upload = supabase.storage.from(BACKGROUND_BUCKET).upload(path, file, {
     contentType: file.type || "application/octet-stream",
     upsert: false

@@ -6,6 +6,7 @@ const updateMock = vi.fn();
 const getSpaceByCodeMock = vi.fn(async () => ({ id: "space-id", code: "xiaoguai520" }));
 
 vi.mock("@/lib/api/cloud", () => ({
+  getDefaultSpaceCode: () => "xiaoguai520",
   getSpaceByCode: (...args: unknown[]) => getSpaceByCodeMock(...args)
 }));
 
