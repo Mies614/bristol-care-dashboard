@@ -2,6 +2,7 @@ import { defaultAppData } from "./sampleData";
 import { DAYS, type AppData, type CommonLink, type Course, type Deadline, type LoveNote, type PeriodRecord } from "./types";
 import { normalizeBackgroundSettings } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
+import { normalizeThemeSettings } from "./theme";
 
 const LEGACY_DEFAULT_NICKNAME = "\u5b9d\u5b9d";
 
@@ -82,6 +83,7 @@ export function validateAppData(value: unknown): AppData {
     links,
     loveNotes,
     backgroundSettings: normalizeBackgroundSettings(value.backgroundSettings),
+    themeSettings: normalizeThemeSettings(value.themeSettings),
     periodRecords,
     periodSettings: normalizePeriodSettings(value.periodSettings || DEFAULT_PERIOD_SETTINGS)
   };

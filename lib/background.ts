@@ -68,7 +68,7 @@ function isHttpsUrl(value: unknown): value is string {
 
 export function normalizeBackgroundSettings(value: unknown): BackgroundSettings {
   if (!isRecord(value)) return { ...defaultBackgroundSettings };
-  const mode = ["preset", "color", "image", "url"].includes(String(value.mode))
+  const mode = ["preset", "color", "image", "url", "cloudImage"].includes(String(value.mode))
     ? value.mode as BackgroundSettings["mode"]
     : defaultBackgroundSettings.mode;
   const preset = ["cream", "pink", "lavender", "blue", "green", "dark"].includes(String(value.preset))
@@ -90,6 +90,8 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
     color: isHexColor(value.color) ? value.color.trim() : undefined,
     imageDataUrl: typeof value.imageDataUrl === "string" && value.imageDataUrl.startsWith("data:image/") ? value.imageDataUrl : undefined,
     imageUrl: isHttpsUrl(value.imageUrl) ? value.imageUrl.trim() : undefined,
+    cloudImageUrl: isHttpsUrl(value.cloudImageUrl) ? value.cloudImageUrl.trim() : undefined,
+    cloudImagePath: typeof value.cloudImagePath === "string" ? value.cloudImagePath.trim() : undefined,
     imageFit,
     imagePosition,
     focalPoint: normalizeFocalPoint(value.focalPoint),
@@ -217,6 +219,15 @@ export function getBackgroundStyle(settings: BackgroundSettings): CSSProperties 
       backgroundAttachment: "fixed"
     };
   }
+  if (normalized.mode === "cloudImage" && normalized.cloudImageUrl) {
+    return {
+      backgroundImage: `url("${normalized.cloudImageUrl}")`,
+      backgroundSize: getImageBackgroundSize(normalized),
+      backgroundPosition: getImageBackgroundPosition(normalized),
+      backgroundRepeat: "no-repeat",
+      backgroundAttachment: "fixed"
+    };
+  }
   return { background: presetBackgrounds[normalized.preset || "cream"] };
 }
 
@@ -227,7 +238,7 @@ export function getOverlayClass(settings: BackgroundSettings) {
 
 export function getBackgroundOverlayStyle(settings: BackgroundSettings): CSSProperties {
   const normalized = normalizeBackgroundSettings(settings);
-  const hasPhotoBackground = normalized.mode === "image" || normalized.mode === "url";
+  const hasPhotoBackground = normalized.mode === "image" || normalized.mode === "url" || normalized.mode === "cloudImage";
   if (hasPhotoBackground) {
     const minimumDim = normalized.imageFit === "softPortrait" || normalized.portraitEnhance ? 36 : 0;
     const opacity = Math.min(0.82, Math.max(minimumDim, normalized.dim || 0) / 100);

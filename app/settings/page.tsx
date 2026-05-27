@@ -13,6 +13,7 @@ import {
   getBackgroundStyle,
   saveBackgroundSettings
 } from "@/lib/background";
+import { uploadBackgroundImageDirectly, validateBackgroundImageFile } from "@/lib/backgroundUpload";
 import {
   clearCloudConnection,
   getCloudConnection,
@@ -26,10 +27,11 @@ import {
   setLastSyncTime,
   uploadLocalDataToCloud
 } from "@/lib/cloudSync";
+import { markLocalChange, runAutoSyncNow, scheduleAutoSync } from "@/lib/autoSync";
 import { loadAppData, resetAppData, saveAppData } from "@/lib/storage";
-import type { AppData, BackgroundSettings } from "@/lib/types";
+import { DEFAULT_THEME_SETTINGS, getThemeDefaultsForStyle, getThemeSettings, saveThemeSettings } from "@/lib/theme";
+import type { AppData, AppThemeStyle, BackgroundSettings, ThemeSettings } from "@/lib/types";
 import { validateAppData } from "@/lib/validation";
-import { validateImageFile } from "@/lib/imageValidation";
 
 export default function SettingsPage() {
   const [data, setData] = useState<AppData | null>(null);
@@ -44,7 +46,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const current = loadAppData();
     const background = getBackgroundSettings();
-    setData({ ...current, backgroundSettings: background });
+    const theme = getThemeSettings();
+    setData({ ...current, backgroundSettings: background, themeSettings: theme });
     setColorDraft(background.color || "#fff8f0");
     setImageUrlDraft(background.imageUrl || "");
     const connection = getCloudConnection();
@@ -71,18 +74,20 @@ export default function SettingsPage() {
     update({ ...data, backgroundSettings: saved });
   }
 
+  function updateTheme(next: ThemeSettings) {
+    if (!data) return;
+    const saved = saveThemeSettings(next);
+    update({ ...data, themeSettings: saved });
+  }
+
+  function updateThemePartial(partial: Partial<ThemeSettings>) {
+    if (!data) return;
+    updateTheme({ ...data.themeSettings, ...partial });
+  }
+
   function updateBackgroundPartial(partial: Partial<BackgroundSettings>) {
     if (!data) return;
     updateBackground({ ...data.backgroundSettings, ...partial });
-  }
-
-  function fileToDataUrl(file: File) {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("图片读取失败。"));
-      reader.readAsDataURL(file);
-    });
   }
 
   async function connectCloud() {
@@ -166,7 +171,7 @@ export default function SettingsPage() {
           <div>
             <p className="section-kicker mb-1">Appearance</p>
             <h2 className="font-semibold text-cocoa">背景设置</h2>
-            <p className="mt-2 text-sm leading-6 text-cocoa/65">背景图片仅保存在当前浏览器；如果图片太大，请先压缩或换一张小图。</p>
+            <p className="mt-2 text-sm leading-6 text-cocoa/65">上传背景图后会同步到云端，切换页面也会保持同一张背景。</p>
             <div className="mt-2"><AutoSyncStatusBadge /></div>
           </div>
 
@@ -232,27 +237,31 @@ export default function SettingsPage() {
           </div>
 
           <label className="file-panel">
-            <span className="font-medium text-cocoa">上传本地背景图片</span>
-            <span className="mt-1 block text-xs text-cocoa/52">JPG / PNG / WebP，最大 5MB，仅保存在当前浏览器</span>
+            <span className="font-medium text-cocoa">上传云端背景图片</span>
+            <span className="mt-1 block text-xs text-cocoa/52">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
             <input
               className="mt-3 block w-full text-sm"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               onChange={async (e) => {
                 const input = e.currentTarget;
                 const file = input.files?.[0];
                 if (!file) return;
-                const validation = validateImageFile(file);
+                const validation = validateBackgroundImageFile(file);
                 if (!validation.ok) {
                   setImportMessage(validation.error || "图片不符合要求。");
                   input.value = "";
                   return;
                 }
                 try {
+                  setImportMessage("正在上传背景图片...");
+                  const upload = await uploadBackgroundImageDirectly(file, cloudCode.trim() || getDefaultSpaceCode());
                   updateBackground({
                     ...data.backgroundSettings,
-                    mode: "image",
-                    imageDataUrl: await fileToDataUrl(file),
+                    mode: "cloudImage",
+                    imageDataUrl: undefined,
+                    cloudImageUrl: upload.url,
+                    cloudImagePath: upload.path,
                     imageFit: "softPortrait",
                     imagePosition: "top",
                     focalPoint: { x: 50, y: 35 },
@@ -262,8 +271,13 @@ export default function SettingsPage() {
                     blur: false,
                     portraitEnhance: true
                   });
+                  setImportMessage("背景图片已上传并应用。");
+                  runAutoSyncNow("background_cloud_image").catch(() => {
+                    markLocalChange("background");
+                    scheduleAutoSync("background_cloud_image");
+                  });
                 } catch (error) {
-                  setImportMessage(error instanceof Error ? error.message : "图片读取失败。");
+                  setImportMessage(error instanceof Error ? error.message : "背景图片上传失败。");
                 } finally {
                   input.value = "";
                 }
@@ -283,12 +297,12 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {(data.backgroundSettings.imageDataUrl || data.backgroundSettings.imageUrl) ? (
+          {(data.backgroundSettings.imageDataUrl || data.backgroundSettings.imageUrl || data.backgroundSettings.cloudImageUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               alt="背景预览"
               className="max-h-48 w-full rounded-[1.5rem] border border-white/80 bg-white/60 object-cover shadow-sm"
-              src={data.backgroundSettings.imageDataUrl || data.backgroundSettings.imageUrl}
+              src={data.backgroundSettings.cloudImageUrl || data.backgroundSettings.imageDataUrl || data.backgroundSettings.imageUrl}
             />
           ) : null}
 
@@ -412,6 +426,81 @@ export default function SettingsPage() {
           <button className="btn-secondary w-full" onClick={() => { setColorDraft("#fff8f0"); setImageUrlDraft(""); updateBackground(DEFAULT_BACKGROUND_SETTINGS); }} type="button">
             恢复默认背景
           </button>
+        </section>
+
+        <section className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-blush/40">
+          <div>
+            <p className="section-kicker mb-1">Theme</p>
+            <h2 className="font-semibold text-cocoa">整体风格</h2>
+            <p className="mt-2 text-sm leading-6 text-cocoa/65">切换后会影响卡片、边框、按钮、底部导航和轻装饰。</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              ["soft", "温柔奶油"],
+              ["romantic", "浪漫粉紫"],
+              ["minimal", "极简清爽"],
+              ["study", "学习清爽"],
+              ["night", "夜间柔和"],
+              ["photo", "照片背景优先"]
+            ].map(([style, label]) => (
+              <button
+                className={`rounded-2xl border px-3 py-3 text-sm shadow-sm transition ${data.themeSettings.style === style ? "border-roseSoft bg-blush/75 text-cocoa" : "border-white/75 bg-white/65 text-cocoa/70"}`}
+                key={style}
+                onClick={() => updateTheme(getThemeDefaultsForStyle(style as AppThemeStyle))}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-sm text-cocoa/70">
+              卡片样式
+              <select className="field mt-1" value={data.themeSettings.cardStyle} onChange={(e) => updateThemePartial({ cardStyle: e.target.value as ThemeSettings["cardStyle"] })}>
+                <option value="glass">玻璃</option>
+                <option value="solid">实色</option>
+                <option value="paper">纸张</option>
+                <option value="flat">扁平</option>
+              </select>
+            </label>
+            <label className="block text-sm text-cocoa/70">
+              底部导航
+              <select className="field mt-1" value={data.themeSettings.navStyle} onChange={(e) => updateThemePartial({ navStyle: e.target.value as ThemeSettings["navStyle"] })}>
+                <option value="glass">玻璃</option>
+                <option value="pill">胶囊</option>
+                <option value="paper">纸张</option>
+                <option value="minimal">极简</option>
+              </select>
+            </label>
+            <label className="block text-sm text-cocoa/70">
+              圆角
+              <select className="field mt-1" value={data.themeSettings.radius} onChange={(e) => updateThemePartial({ radius: e.target.value as ThemeSettings["radius"] })}>
+                <option value="medium">中</option>
+                <option value="large">大</option>
+                <option value="extra">超大</option>
+              </select>
+            </label>
+            <label className="block text-sm text-cocoa/70">
+              装饰
+              <select className="field mt-1" value={data.themeSettings.decoration} onChange={(e) => updateThemePartial({ decoration: e.target.value as ThemeSettings["decoration"] })}>
+                <option value="none">无</option>
+                <option value="stars">星星</option>
+                <option value="hearts">爱心</option>
+                <option value="tape">胶带</option>
+                <option value="moon">月亮</option>
+              </select>
+            </label>
+          </div>
+          <div className="rounded-[1.5rem] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
+            <p className="section-kicker mb-2">Preview</p>
+            <div className="soft-card p-3">
+              <p className="font-semibold text-cocoa">示例卡片</p>
+              <p className="mt-1 text-sm text-cocoa/65">风格会同步影响全站组件。</p>
+              <button className="btn-primary btn-small mt-3">示例按钮</button>
+            </div>
+            <div className="app-bottom-nav mt-3 rounded-2xl border p-2 text-center text-sm text-cocoa/70">底部导航预览 · 首页 / 记录 / 回忆</div>
+          </div>
+          <button className="btn-secondary w-full" onClick={() => updateTheme(DEFAULT_THEME_SETTINGS)} type="button">恢复默认风格</button>
         </section>
 
         <section className="soft-card bg-gradient-to-br from-white/80 to-skySoft/55">

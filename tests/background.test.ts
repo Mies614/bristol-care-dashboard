@@ -55,6 +55,7 @@ describe("background settings", () => {
   it("generates image and url background styles", () => {
     expect(getBackgroundStyle({ mode: "image", imageDataUrl: "data:image/png;base64,abc" }).backgroundImage).toContain("data:image/png");
     expect(getBackgroundStyle({ mode: "url", imageUrl: "https://example.com/bg.webp" }).backgroundImage).toContain("https://example.com/bg.webp");
+    expect(getBackgroundStyle({ mode: "cloudImage", cloudImageUrl: "https://example.com/cloud.webp" }).backgroundImage).toContain("https://example.com/cloud.webp");
   });
 
   it("saves and reads background settings from localStorage", () => {
@@ -99,6 +100,20 @@ describe("background settings", () => {
 
     expect(sanitized.imageDataUrl).toBeUndefined();
     expect(sanitized.mode).toBe("preset");
+  });
+
+  it("keeps cloud image metadata for cloud settings", () => {
+    const sanitized = sanitizeBackgroundSettingsForCloud({
+      mode: "cloudImage",
+      cloudImageUrl: "https://example.com/bg.webp",
+      cloudImagePath: "xiaoguai520/backgrounds/bg.webp",
+      imageDataUrl: "data:image/png;base64,abc"
+    });
+
+    expect(sanitized.mode).toBe("cloudImage");
+    expect(sanitized.cloudImageUrl).toBe("https://example.com/bg.webp");
+    expect(sanitized.cloudImagePath).toBe("xiaoguai520/backgrounds/bg.webp");
+    expect(sanitized.imageDataUrl).toBeUndefined();
   });
 
   it("exports the uppercase default constant", () => {

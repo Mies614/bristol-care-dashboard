@@ -5,6 +5,7 @@ import type { AppData } from "./types";
 import { validateAppData } from "./validation";
 import { getBackgroundSettings, saveBackgroundSettings } from "./background";
 import { markLocalChange, scheduleAutoSync } from "./autoSync";
+import { getThemeSettings, saveThemeSettings } from "./theme";
 
 export const STORAGE_KEY = "bristol-care-data-v1";
 
@@ -16,7 +17,7 @@ export function loadAppData(): AppData {
       saveAppData(defaultAppData, { suppressAutoSync: true });
       return defaultAppData;
     }
-    return { ...validateAppData(JSON.parse(raw)), backgroundSettings: getBackgroundSettings() };
+    return { ...validateAppData(JSON.parse(raw)), backgroundSettings: getBackgroundSettings(), themeSettings: getThemeSettings() };
   } catch {
     return defaultAppData;
   }
@@ -26,7 +27,8 @@ export function saveAppData(data: AppData, options: { suppressAutoSync?: boolean
   if (typeof window === "undefined") return;
   try {
     const backgroundSettings = saveBackgroundSettings(data.backgroundSettings);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backgroundSettings }));
+    const themeSettings = saveThemeSettings(data.themeSettings);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backgroundSettings, themeSettings }));
     window.dispatchEvent(new Event("bristol-care-data"));
     if (!options.suppressAutoSync) {
       markLocalChange(options.syncReason || "app_data");

@@ -157,6 +157,40 @@ using (bucket_id = 'love-notes');
 
 如果 Supabase 未配置、网络失败或云同步关闭，应用会保留 localStorage 数据并继续本地使用。
 
+## 背景图片和整体风格
+
+`/settings` 里可以上传云端背景图片，也可以切换整体风格。背景图片使用 Supabase Storage 的 `backgrounds` bucket，保存后会把 `background_settings` 写入 settings 表；整体风格会把 `theme_settings` 写入 settings 表。
+
+需要在 Supabase Storage 手动创建 bucket：
+
+```text
+backgrounds
+```
+
+建议设置为 Public bucket。背景图片路径类似：
+
+```text
+xiaoguai520/backgrounds/1700000000000-a1b2c3d4.webp
+```
+
+前端直传需要 Storage policy 允许 anon insert/select：
+
+```sql
+create policy "Allow public uploads to backgrounds"
+on storage.objects
+for insert
+to anon
+with check (bucket_id = 'backgrounds');
+
+create policy "Allow public reads from backgrounds"
+on storage.objects
+for select
+to anon
+using (bucket_id = 'backgrounds');
+```
+
+可选整体风格：温柔奶油、浪漫粉紫、极简清爽、学习清爽、夜间柔和、照片背景优先。
+
 ## 自动同步
 
 `/settings` 的数据管理中心可以开启或关闭“自动同步到云端”。开启后，课程、DDL、背景和基础设置会在本地修改后自动排队同步；当前自动同步采用本地修改覆盖云端。小纸条和相册媒体通过各自 API/Storage 直接保存，不会通过自动同步重复上传。

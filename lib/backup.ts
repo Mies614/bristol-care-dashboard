@@ -1,7 +1,8 @@
 "use client";
 
-import { getBackgroundSettings } from "./background";
+import { getBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 import { loadAppData, saveAppData } from "./storage";
+import { getThemeSettings } from "./theme";
 import { validateAppData } from "./validation";
 
 export function createBackupPayload() {
@@ -14,7 +15,8 @@ export function createBackupPayload() {
       nextMeetDate: data.nextMeetDate,
       semesterEndDate: data.semesterEndDate
     },
-    backgroundSettings: getBackgroundSettings()
+    backgroundSettings: sanitizeBackgroundSettingsForCloud(getBackgroundSettings()),
+    themeSettings: getThemeSettings()
   };
 }
 

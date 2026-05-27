@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BACKGROUND_SETTINGS_CHANGED_EVENT,
   DEFAULT_BACKGROUND_SETTINGS,
@@ -8,17 +8,32 @@ import {
   getBackgroundSettings,
   getBackgroundStyle,
   isDarkBackground,
-  normalizeBackgroundSettings
+  normalizeBackgroundSettings,
+  saveBackgroundSettings
 } from "@/lib/background";
+import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullCloudData } from "@/lib/cloudSync";
 import type { BackgroundSettings } from "@/lib/types";
 
 export function AppBackground({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
+  const [settings, setSettings] = useState<BackgroundSettings>(() => getBackgroundSettings());
+
+  const applySettings = useCallback((next: BackgroundSettings) => {
+    const normalized = normalizeBackgroundSettings(next);
+    const imageUrl = normalized.mode === "cloudImage" ? normalized.cloudImageUrl : normalized.mode === "url" ? normalized.imageUrl : undefined;
+    if (!imageUrl || typeof window === "undefined") {
+      setSettings(normalized);
+      return;
+    }
+    const image = new Image();
+    image.onload = () => setSettings(normalized);
+    image.onerror = () => setSettings({ ...DEFAULT_BACKGROUND_SETTINGS });
+    image.src = imageUrl;
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
       try {
-        setSettings(getBackgroundSettings());
+        applySettings(getBackgroundSettings());
       } catch {
         setSettings(DEFAULT_BACKGROUND_SETTINGS);
       }
@@ -26,23 +41,34 @@ export function AppBackground({ children }: { children: React.ReactNode }) {
     const onBackgroundChange = (event: Event) => {
       try {
         const customEvent = event as CustomEvent<BackgroundSettings>;
-        setSettings(customEvent.detail ? normalizeBackgroundSettings(customEvent.detail) : getBackgroundSettings());
+        applySettings(customEvent.detail ? normalizeBackgroundSettings(customEvent.detail) : getBackgroundSettings());
       } catch {
         setSettings(DEFAULT_BACKGROUND_SETTINGS);
       }
     };
     refresh();
+    if (isCloudConfigured()) {
+      const code = getCloudConnection()?.code || getDefaultSpaceCode();
+      pullCloudData(code).then((result) => {
+        if (result.ok && result.data?.backgroundSettings) {
+          saveBackgroundSettings(result.data.backgroundSettings);
+          applySettings(result.data.backgroundSettings);
+        }
+      }).catch(() => {
+        // Local cached background remains active.
+      });
+    }
     window.addEventListener("bristol-care-data", refresh);
     window.addEventListener(BACKGROUND_SETTINGS_CHANGED_EVENT, onBackgroundChange);
     return () => {
       window.removeEventListener("bristol-care-data", refresh);
       window.removeEventListener(BACKGROUND_SETTINGS_CHANGED_EVENT, onBackgroundChange);
     };
-  }, []);
+  }, [applySettings]);
 
   const safeSettings = normalizeBackgroundSettings(settings);
   const dark = isDarkBackground(safeSettings);
-  const hasPhotoBackground = safeSettings.mode === "image" || safeSettings.mode === "url";
+  const hasPhotoBackground = safeSettings.mode === "image" || safeSettings.mode === "url" || safeSettings.mode === "cloudImage";
   const portraitMode = hasPhotoBackground && (safeSettings.imageFit === "softPortrait" || safeSettings.portraitEnhance);
   const scale = Math.max(safeSettings.blur || safeSettings.imageFit === "softPortrait" ? 105 : 100, safeSettings.scale || 100);
   const backgroundFilter = safeSettings.blur || safeSettings.imageFit === "softPortrait" ? "blur(8px)" : undefined;

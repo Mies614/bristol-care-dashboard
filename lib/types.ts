@@ -114,15 +114,18 @@ export type CloudSettings = {
   nextMeetingDate?: string | null;
   semesterEndDate?: string | null;
   backgroundSettings?: BackgroundSettings;
+  themeSettings?: ThemeSettings;
   periodSettings?: PeriodSettings;
 };
 
 export type BackgroundSettings = {
-  mode: "preset" | "color" | "image" | "url";
+  mode: "preset" | "color" | "image" | "url" | "cloudImage";
   preset?: "cream" | "pink" | "lavender" | "blue" | "green" | "dark";
   color?: string;
   imageDataUrl?: string;
   imageUrl?: string;
+  cloudImageUrl?: string;
+  cloudImagePath?: string;
   imageFit?: "cover" | "contain" | "portrait" | "softPortrait";
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
   focalPoint?: {
@@ -136,6 +139,16 @@ export type BackgroundSettings = {
   scale?: number;
 };
 
+export type AppThemeStyle = "soft" | "romantic" | "minimal" | "study" | "night" | "photo";
+
+export type ThemeSettings = {
+  style: AppThemeStyle;
+  cardStyle: "glass" | "solid" | "paper" | "flat";
+  navStyle: "glass" | "pill" | "paper" | "minimal";
+  radius: "medium" | "large" | "extra";
+  decoration: "none" | "stars" | "hearts" | "tape" | "moon";
+};
+
 export type AppData = {
   nickname: string;
   nextMeetDate: string;
@@ -146,6 +159,7 @@ export type AppData = {
   links: CommonLink[];
   loveNotes: LoveNote[];
   backgroundSettings: BackgroundSettings;
+  themeSettings: ThemeSettings;
   periodRecords?: PeriodRecord[];
   periodSettings?: PeriodSettings;
 };

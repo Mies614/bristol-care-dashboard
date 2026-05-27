@@ -1,6 +1,7 @@
 import type { AppData, Course, Deadline, CommonLink, LoveNote } from "./types";
 import { defaultBackgroundSettings } from "./background";
 import { DEFAULT_PERIOD_SETTINGS } from "./period";
+import { DEFAULT_THEME_SETTINGS } from "./theme";
 
 export const sampleCourses: Course[] = [
   {
@@ -94,6 +95,7 @@ export const defaultAppData: AppData = {
   links: sampleLinks,
   loveNotes: sampleLoveNotes,
   backgroundSettings: defaultBackgroundSettings,
+  themeSettings: DEFAULT_THEME_SETTINGS,
   periodRecords: [],
   periodSettings: DEFAULT_PERIOD_SETTINGS
 };

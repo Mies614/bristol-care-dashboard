@@ -219,9 +219,23 @@ select id, 'period_settings', jsonb_build_object(
 ) from space
 on conflict (space_id, key) do update set value = excluded.value, updated_at = now();
 
+with space as (
+  select id from public.couple_spaces where code = 'xiaoguai520'
+)
+insert into public.settings (space_id, key, value)
+select id, 'theme_settings', jsonb_build_object(
+  'style', 'soft',
+  'cardStyle', 'glass',
+  'navStyle', 'glass',
+  'radius', 'extra',
+  'decoration', 'stars'
+) from space
+on conflict (space_id, key) do update set value = excluded.value, updated_at = now();
+
 -- Supabase Storage:
 -- Create a public bucket named "love-notes" in the Supabase dashboard.
 -- Create another public bucket named "couple-albums" for album photos and videos.
+-- Create another public bucket named "backgrounds" for synced background images.
 -- Image paths should look like: xiaoguai520/1700000000000-random.webp
 -- Album paths should look like: xiaoguai520/images/1700000000000-random.webp
 -- or xiaoguai520/videos/1700000000000-random.mp4
@@ -247,3 +261,10 @@ on conflict (space_id, key) do update set value = excluded.value, updated_at = n
 -- create policy "Allow public reads from love notes"
 -- on storage.objects for select to anon
 -- using (bucket_id = 'love-notes');
+-- Background image uploads use browser direct uploads to backgrounds:
+-- create policy "Allow public uploads to backgrounds"
+-- on storage.objects for insert to anon
+-- with check (bucket_id = 'backgrounds');
+-- create policy "Allow public reads from backgrounds"
+-- on storage.objects for select to anon
+-- using (bucket_id = 'backgrounds');

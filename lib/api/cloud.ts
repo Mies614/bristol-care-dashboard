@@ -16,6 +16,7 @@ import {
 import type { AppData, CloudSettings, CommonLink, Course, Deadline } from "@/lib/types";
 import { defaultBackgroundSettings } from "@/lib/background";
 import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
+import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 
 export function cloudUnavailableResponse() {
   return NextResponse.json({ error: "云同步未配置，本地模式可继续使用。" }, { status: 503 });
@@ -73,6 +74,7 @@ export async function fetchCloudDataByCode(code: string) {
     links: (quickLinks.data || []).map(quickLinkFromRow),
     loveNotes: (loveNotes.data || []).map(loveNoteFromRow),
     backgroundSettings: cloudSettings.backgroundSettings || defaultBackgroundSettings,
+    themeSettings: cloudSettings.themeSettings || DEFAULT_THEME_SETTINGS,
     periodRecords: [],
     periodSettings: cloudSettings.periodSettings || DEFAULT_PERIOD_SETTINGS
   };
@@ -89,6 +91,7 @@ export async function replaceCloudData(code: string, data: AppData) {
     nextMeetingDate: data.nextMeetDate || null,
     semesterEndDate: data.semesterEndDate || null,
     backgroundSettings: data.backgroundSettings,
+    themeSettings: data.themeSettings,
     periodSettings: data.periodSettings
   };
 

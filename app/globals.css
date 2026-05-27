@@ -5,6 +5,17 @@
 :root {
   color: #5f4b44;
   background: #fff8f0;
+  --app-accent: #8c6a60;
+  --app-accent-soft: rgba(255, 226, 219, 0.72);
+  --app-card-bg: rgba(255, 255, 255, 0.76);
+  --app-card-border: rgba(255, 255, 255, 0.78);
+  --app-text: #5f4b44;
+  --app-muted: rgba(95, 75, 68, 0.66);
+  --app-shadow: 0 16px 45px rgba(120, 90, 80, 0.14);
+  --app-radius: 1.75rem;
+  --app-nav-bg: rgba(255, 255, 255, 0.74);
+  --app-nav-active: rgba(255, 226, 219, 0.72);
+  --app-decoration-opacity: 0.42;
 }
 
 * {
@@ -32,7 +43,12 @@ select {
 
 @layer components {
   .soft-card {
-    @apply rounded-[1.75rem] border border-white/75 bg-white/75 p-4 shadow-soft ring-1 ring-white/60 backdrop-blur-xl sm:p-5;
+    border-radius: var(--app-radius);
+    border: 1px solid var(--app-card-border);
+    background: var(--app-card-bg);
+    box-shadow: var(--app-shadow);
+    color: var(--app-text);
+    @apply p-4 ring-1 ring-white/40 backdrop-blur-xl sm:p-5;
   }
 
   .portrait-background .soft-card {
@@ -51,15 +67,23 @@ select {
   }
 
   .field {
-    @apply w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-base text-cocoa shadow-inner outline-none transition placeholder:text-cocoa/35 focus:border-roseSoft focus:bg-white focus:ring-2 focus:ring-roseSoft/25 sm:text-sm;
+    @apply w-full rounded-2xl border px-4 py-3 text-base shadow-inner outline-none transition placeholder:text-cocoa/35 focus:bg-white focus:ring-2 sm:text-sm;
+    border-color: var(--app-card-border);
+    background: color-mix(in srgb, var(--app-card-bg) 82%, white);
+    color: var(--app-text);
+    --tw-ring-color: color-mix(in srgb, var(--app-accent) 24%, transparent);
   }
 
   .btn-primary {
-    @apply min-h-11 rounded-full bg-gradient-to-r from-cocoa to-[#7c5d54] px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:shadow-float active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
+    @apply min-h-11 rounded-full px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:shadow-float active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
+    background: linear-gradient(135deg, var(--app-accent), color-mix(in srgb, var(--app-accent) 72%, #3d2f2a));
   }
 
   .btn-secondary {
-    @apply min-h-11 rounded-full border border-white/80 bg-white/75 px-4 py-2 text-sm font-medium text-cocoa shadow-sm transition hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
+    @apply min-h-11 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
+    border-color: var(--app-card-border);
+    background: color-mix(in srgb, var(--app-card-bg) 82%, white);
+    color: var(--app-text);
   }
 
   .btn-danger {
@@ -71,7 +95,10 @@ select {
   }
 
   .notice {
-    @apply rounded-[1.35rem] border border-white/75 bg-white/70 px-4 py-3 text-sm leading-6 text-cocoa/70 shadow-sm backdrop-blur-xl;
+    @apply rounded-[1.35rem] border px-4 py-3 text-sm leading-6 shadow-sm backdrop-blur-xl;
+    border-color: var(--app-card-border);
+    background: var(--app-card-bg);
+    color: var(--app-muted);
   }
 
   .notice-error {
@@ -83,7 +110,10 @@ select {
   }
 
   .empty-state {
-    @apply rounded-[1.35rem] border border-white/75 bg-white/55 px-4 py-5 text-center text-sm leading-6 text-cocoa/60 shadow-sm;
+    @apply rounded-[1.35rem] border px-4 py-5 text-center text-sm leading-6 shadow-sm;
+    border-color: var(--app-card-border);
+    background: color-mix(in srgb, var(--app-card-bg) 72%, transparent);
+    color: var(--app-muted);
   }
 
   .check-card {
@@ -100,5 +130,54 @@ select {
 
   .section-kicker {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-sage;
+  }
+
+  .app-bottom-nav {
+    border-color: var(--app-card-border);
+    background: var(--app-nav-bg);
+  }
+
+  .app-nav-active {
+    background: var(--app-nav-active);
+    color: var(--app-text);
+  }
+
+  [data-nav-style="pill"] .app-bottom-nav {
+    @apply rounded-full;
+  }
+
+  [data-nav-style="pill"] .app-nav-active {
+    @apply rounded-full;
+  }
+
+  [data-nav-style="paper"] .app-bottom-nav {
+    background: color-mix(in srgb, var(--app-nav-bg) 86%, #fff8ec);
+    box-shadow: 0 12px 28px rgba(95, 75, 68, 0.16);
+  }
+
+  [data-nav-style="minimal"] .app-bottom-nav {
+    @apply border-transparent bg-transparent shadow-none ring-0 backdrop-blur-none;
+  }
+
+  [data-nav-style="minimal"] .app-nav-active {
+    background: transparent;
+    color: var(--app-accent);
+    box-shadow: inset 0 -3px 0 var(--app-accent);
+  }
+
+  [data-theme="night"] .soft-card,
+  [data-theme="night"] .notice,
+  [data-theme="night"] .empty-state {
+    @apply ring-white/10;
+  }
+
+  [data-card-style="paper"] .soft-card {
+    background: color-mix(in srgb, var(--app-card-bg) 92%, #fff7e8);
+    box-shadow: 0 10px 24px rgba(90, 65, 52, 0.12);
+  }
+
+  [data-card-style="flat"] .soft-card {
+    @apply backdrop-blur-none;
+    box-shadow: var(--app-shadow);
   }
 }

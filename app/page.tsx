@@ -22,6 +22,7 @@ import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { PriorityReminderList } from "@/components/PriorityReminderList";
 import { getDailyCare } from "@/lib/dailyCare";
 import { DailyCareCard } from "@/components/DailyCareCard";
+import { DualTimeCard } from "@/components/DualTimeCard";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 
 function safeBristolDate() {
@@ -29,14 +30,6 @@ function safeBristolDate() {
     return new Date().toLocaleDateString("zh-CN", { timeZone: "Europe/London", month: "long", day: "numeric", weekday: "long" });
   } catch {
     return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
-  }
-}
-
-function safeBristolTime() {
-  try {
-    return new Date().toLocaleTimeString("zh-CN", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   }
 }
 
@@ -160,7 +153,6 @@ export default function HomePage() {
   const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const daysUntilPeriod = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const todayLabel = useMemo(safeBristolDate, []);
-  const bristolTime = useMemo(safeBristolTime, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
 
   async function refreshLoveNote() {
@@ -224,9 +216,10 @@ export default function HomePage() {
           </div>
           <div className="rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-2 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
             <div>{todayLabel}</div>
-            <div className="font-semibold text-cocoa">{bristolTime}</div>
+            <div className="font-semibold text-cocoa">今日总览</div>
           </div>
         </div>
+        <DualTimeCard />
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
           <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-cocoa/70 shadow-sm">为 {data.nickname || "小乖"} 准备的小首页</span>
