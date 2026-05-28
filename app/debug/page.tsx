@@ -5,9 +5,17 @@ import Link from "next/link";
 
 type Check = { name: string; ok: boolean; detail?: string };
 
+interface FetchError {
+  status?: number;
+  statusText?: string;
+  message?: string;
+}
+
 export default function DebugPage() {
   const [client, setClient] = useState({ userAgent: "", storage: false, keyCount: 0, env: process.env.NODE_ENV || "unknown" });
-  const [checks, setChecks] = useState<Check[]>([]);
+  const [checks, setChecks] = useState<Check[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<FetchError | null>(null);
   const [message, setMessage] = useState("");
 
   function collectClient() {
@@ -27,10 +35,29 @@ export default function DebugPage() {
   }
 
   async function refresh() {
+    setLoading(true);
+    setFetchError(null);
+    setChecks(null);
     collectClient();
-    const response = await fetch("/api/debug/supabase");
-    const payload = await response.json().catch(() => ({}));
-    setChecks(payload.checks || []);
+
+    try {
+      const response = await fetch("/api/debug/supabase");
+      if (!response.ok) {
+        setFetchError({ status: response.status, statusText: response.statusText });
+        setLoading(false);
+        return;
+      }
+      const payload = await response.json();
+      if (payload.ok && Array.isArray(payload.checks)) {
+        setChecks(payload.checks);
+      } else {
+        setFetchError({ message: payload.error || "诊断响应格式不正确" });
+      }
+    } catch (err) {
+      setFetchError({ message: err instanceof Error ? err.message : "诊断请求失败" });
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -67,14 +94,43 @@ export default function DebugPage() {
         </div>
         {message ? <p className="mt-3 text-sm">{message}</p> : null}
       </section>
+
       <section className="mt-4 rounded-3xl border bg-white p-5 shadow-sm">
         <h2 className="font-semibold">Supabase checks</h2>
         <div className="mt-3 space-y-2 text-sm">
-          {checks.map((check) => (
-            <p className={check.ok ? "text-emerald-700" : "text-rose-700"} key={check.name}>
-              {check.ok ? "✓" : "×"} {check.name}{check.detail ? `：${check.detail}` : ""}
-            </p>
-          ))}
+          {/* Loading state */}
+          {loading && (
+            <p className="text-zinc-500">正在检查...</p>
+          )}
+
+          {/* Error state */}
+          {!loading && fetchError && (
+            <div className="space-y-1">
+              <p className="text-rose-700 font-medium">诊断请求失败</p>
+              {fetchError.status ? (
+                <p className="text-rose-600">status: {fetchError.status} {fetchError.statusText}</p>
+              ) : null}
+              {fetchError.message ? (
+                <p className="text-rose-600">{fetchError.message}</p>
+              ) : null}
+            </div>
+          )}
+
+          {/* Success state */}
+          {!loading && !fetchError && checks !== null && checks.length === 0 && (
+            <p className="text-zinc-500">没有检查项。</p>
+          )}
+
+          {!loading && !fetchError && checks !== null && checks.length > 0 && (
+            <div className="space-y-2">
+              {checks.map((check) => (
+                <p className={check.ok ? "text-emerald-700" : "text-rose-700"} key={check.name}>
+                  {check.ok ? "✓" : "×"} {check.name}
+                  {check.detail ? <span className="text-zinc-500">：{check.detail}</span> : null}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </main>
