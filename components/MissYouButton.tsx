@@ -35,7 +35,7 @@ function getLocalDateKey(): string {
 
 function getMissYouFeedback(count: number): string {
   if (count >= 5) return "今天的想念有点满。";
-  if (count >= 3) return "她又想你了。";
+  if (count >= 3) return "你又想他了。";
   if (count === 0) return "点一下，就把这一刻收起来。";
   return FEEDBACK_MESSAGES[Math.floor(Math.random() * FEEDBACK_MESSAGES.length)];
 }
