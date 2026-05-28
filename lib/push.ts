@@ -60,6 +60,7 @@ export interface MissYouEvent {
   id: string;
   space_id: string;
   author: string;
+  recipient?: string;
   message: string;
   local_date: string;
   created_at: string;
@@ -71,9 +72,63 @@ export interface PushResult {
   failed: number;
 }
 
-export async function sendMissYouPushToAdmins(
+/**
+ * Get the opposite author(s) for a given viewer.
+ */
+export function getOppositeAuthors(viewer: string): string[] {
+  if (viewer === "admin") return ["xiaoguai"];
+  if (viewer === "xiaoguai") return ["admin", "me"];
+  return [];
+}
+
+/**
+ * Get the recipient for a given author.
+ */
+export function getRecipientForAuthor(author: string): string {
+  if (author === "xiaoguai") return "admin";
+  return "xiaoguai";
+}
+
+/**
+ * Get the display title/body for a push notification based on author.
+ */
+export function getPushNotificationContent(
+  author: string,
+  todayCount: number
+): { title: string; body: string } {
+  if (author === "xiaoguai" || author === "小乖") {
+    const body =
+      todayCount === 1
+        ? `她刚刚点了一下"想你一下"。`
+        : todayCount <= 4
+        ? `今天第 ${todayCount} 次想你。`
+        : `今天的想念有点满。`;
+    return { title: "小乖想你啦", body };
+  }
+  // admin/me
+  const body =
+    todayCount === 1
+      ? `他也点了一下"想你一下"。`
+      : `也想你 ${todayCount} 次了。`;
+  return { title: "他也想你啦", body };
+}
+
+/**
+ * Get the push notification URL based on recipient role.
+ */
+export function getPushUrlForRecipient(recipient: string): string {
+  if (recipient === "xiaoguai") return "/";
+  return "/admin";
+}
+
+/**
+ * Send push notifications to all subscriptions for a given role in a space.
+ * Generic version that supports any role (admin, xiaoguai).
+ */
+export async function sendMissYouPushToRole(
   supabase: ReturnType<typeof import("./supabase/server").createSupabaseServerClient>,
   spaceId: string,
+  role: string,
   event: MissYouEvent,
   todayCount: number
 ): Promise<PushResult> {
@@ -87,7 +142,7 @@ export async function sendMissYouPushToAdmins(
       .from("push_subscriptions")
       .select("subscription, endpoint, id")
       .eq("space_id", spaceId)
-      .eq("role", "admin")
+      .eq("role", role)
       .eq("enabled", true)
       .is("deleted_at", null);
 
@@ -101,25 +156,20 @@ export async function sendMissYouPushToAdmins(
       config.privateKey!
     );
 
-    let sent = 0;
-    let failed = 0;
-
-    const body =
-      todayCount === 1
-        ? `她刚刚点了一下\u201C想你一下\u201D。`
-        : todayCount <= 4
-        ? `今天第 ${todayCount} 次想你。`
-        : `今天的想念有点满。`;
+    const { title, body } = getPushNotificationContent(event.author, todayCount);
+    const url = getPushUrlForRecipient(event.recipient || getRecipientForAuthor(event.author));
 
     const payload: PushPayload = {
-      title: "小乖想你啦",
+      title,
       body,
-      url: "/admin",
+      url,
       eventId: event.id,
       createdAt: event.created_at
     };
 
     const payloadStr = JSON.stringify(payload);
+    let sent = 0;
+    let failed = 0;
 
     for (const sub of subscriptions) {
       try {
@@ -129,7 +179,6 @@ export async function sendMissYouPushToAdmins(
       } catch (error: unknown) {
         const err = error as { statusCode?: number; message?: string };
         if (err.statusCode === 410 || err.statusCode === 404) {
-          // Mark subscription as disabled
           await supabase
             .from("push_subscriptions")
             .update({ enabled: false, updated_at: new Date().toISOString() })
@@ -143,4 +192,16 @@ export async function sendMissYouPushToAdmins(
   } catch {
     return { attempted: true, sent: 0, failed: 1 };
   }
+}
+
+/**
+ * Send push notifications to admin subscribers (backwards compatible).
+ */
+export async function sendMissYouPushToAdmins(
+  supabase: ReturnType<typeof import("./supabase/server").createSupabaseServerClient>,
+  spaceId: string,
+  event: MissYouEvent,
+  todayCount: number
+): Promise<PushResult> {
+  return sendMissYouPushToRole(supabase, spaceId, "admin", event, todayCount);
 }

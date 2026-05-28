@@ -122,15 +122,27 @@ create table if not exists public.album_items (
   deleted_at timestamptz
 );
 
+-- ================================================================
+-- Miss You Events
+-- ================================================================
 create table if not exists public.miss_you_events (
   id uuid primary key default gen_random_uuid(),
   space_id uuid references public.couple_spaces(id) on delete cascade,
   author text default 'xiaoguai',
+  recipient text default 'admin',
   message text default '想你一下',
   local_date text,
+  source text default 'button',
+  metadata jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   deleted_at timestamptz
 );
+
+-- Add new columns if upgrading from old schema
+alter table public.miss_you_events
+add column if not exists recipient text default 'admin',
+add column if not exists source text default 'button',
+add column if not exists metadata jsonb default '{}'::jsonb;
 
 create index if not exists miss_you_events_space_created_idx
 on public.miss_you_events(space_id, created_at desc);
@@ -138,6 +150,30 @@ on public.miss_you_events(space_id, created_at desc);
 create index if not exists miss_you_events_space_local_date_idx
 on public.miss_you_events(space_id, local_date);
 
+create index if not exists miss_you_events_recipient_created_idx
+on public.miss_you_events(space_id, recipient, created_at desc);
+
+-- ================================================================
+-- Miss You Seen State
+-- ================================================================
+create table if not exists public.miss_you_seen_state (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  viewer text not null,
+  last_seen_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists miss_you_seen_state_space_viewer_unique
+on public.miss_you_seen_state(space_id, viewer);
+
+create index if not exists miss_you_seen_state_space_updated_idx
+on public.miss_you_seen_state(space_id, updated_at desc);
+
+-- ================================================================
+-- Push Subscriptions
+-- ================================================================
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   space_id uuid references public.couple_spaces(id) on delete cascade,
@@ -197,6 +233,7 @@ alter table public.quick_links enable row level security;
 alter table public.album_items enable row level security;
 alter table public.period_records enable row level security;
 alter table public.miss_you_events enable row level security;
+alter table public.miss_you_seen_state enable row level security;
 alter table public.push_subscriptions enable row level security;
 
 drop policy if exists "anon can read couple space by code" on public.couple_spaces;
