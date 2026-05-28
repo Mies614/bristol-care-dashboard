@@ -2,26 +2,27 @@
 
 import { useEffect } from "react";
 
-/**
- * Sets CSS custom properties for Safari safe areas and dynamic viewport height.
- * Call once in the root layout.
- */
 export function useAppSafeArea() {
   useEffect(() => {
-    function updateVH() {
+    function setVar() {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+      // Also set safe area variables
+      document.documentElement.style.setProperty(
+        "--sat",
+        getComputedStyle(document.documentElement).getPropertyValue("--sat") || "0px"
+      );
+      document.documentElement.style.setProperty(
+        "--sab",
+        getComputedStyle(document.documentElement).getPropertyValue("--sab") || "0px"
+      );
     }
-
-    updateVH();
-    window.addEventListener("resize", updateVH);
-    window.addEventListener("orientationchange", () => {
-      setTimeout(updateVH, 150);
-    });
-
+    setVar();
+    window.addEventListener("resize", setVar);
+    window.addEventListener("orientationchange", () => setTimeout(setVar, 100));
     return () => {
-      window.removeEventListener("resize", updateVH);
-      window.removeEventListener("orientationchange", updateVH);
+      window.removeEventListener("resize", setVar);
+      window.removeEventListener("orientationchange", () => setTimeout(setVar, 100));
     };
   }, []);
 }

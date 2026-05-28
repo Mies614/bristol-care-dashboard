@@ -99,7 +99,7 @@ export default function DeadlinesPage() {
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Calendar</p>
         <h2 className="mb-3 font-semibold text-cocoa">日历提醒</h2>
-        <button className="btn-secondary" onClick={exportAllDeadlines}>导出全部 DDL 提醒</button>
+        <button className="btn-secondary w-full sm:w-auto" onClick={exportAllDeadlines}>导出全部 DDL 提醒</button>
         {message ? <p className="notice mt-3">{message}</p> : null}
       </section>
 
@@ -110,7 +110,7 @@ export default function DeadlinesPage() {
         </div>
         <input className="field" placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
         <input className="field" placeholder="课程名，可选" value={draft.courseName} onChange={(e) => setDraft({ ...draft, courseName: e.target.value })} />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input className="field" type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
           <input className="field" type="time" value={draft.dueTime} onChange={(e) => setDraft({ ...draft, dueTime: e.target.value })} />
           <select className="field" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value as Deadline["priority"] })}>
@@ -130,7 +130,8 @@ export default function DeadlinesPage() {
         </div>
       </form>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      {/* Active deadlines - single column on mobile */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {activeDeadlines.length ? activeDeadlines.map((deadline) => (
           <DeadlineCard
             deadline={deadline}
@@ -144,7 +145,7 @@ export default function DeadlinesPage() {
               ))
             }
           />
-        )) : <div className="empty-state">暂时没有 deadline。</div>}
+        )) : <div className="empty-state sm:col-span-2">暂时没有 deadline。</div>}
       </div>
       {completedDeadlines.length ? (
         <section className="soft-card mt-4">
@@ -156,7 +157,7 @@ export default function DeadlinesPage() {
             <span className="btn-secondary btn-small">{showDone ? "收起" : "展开"}</span>
           </button>
           <div className={`grid transition-all duration-300 ${showDone ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-            <div className="grid gap-3 overflow-hidden md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2">
               {completedDeadlines.map((deadline) => (
                 <DeadlineCard
                   deadline={deadline}

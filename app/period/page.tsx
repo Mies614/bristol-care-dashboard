@@ -192,7 +192,7 @@ export default function PeriodPage() {
                 <p className="mt-1 font-semibold text-cocoa">{daysUntil === null ? "待记录" : daysUntil >= 0 ? `${daysUntil} 天` : `已过 ${Math.abs(daysUntil)} 天`}</p>
               </div>
             </div>
-            <button className="btn-secondary mt-4 w-full" onClick={exportReminder}>导出日历提醒</button>
+            <button className="btn-secondary mt-4 w-full sm:w-auto" onClick={exportReminder}>导出日历提醒</button>
           </section>
 
           <form className="soft-card space-y-3" onSubmit={saveRecord}>
@@ -203,7 +203,7 @@ export default function PeriodPage() {
               </div>
               {editingId ? <button className="btn-secondary btn-small" type="button" onClick={() => { setEditingId(""); setDraft(emptyDraft); }}>取消编辑</button> : null}
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label className="text-sm text-cocoa/70">开始日期<input className="field mt-1" required type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} /></label>
               <label className="text-sm text-cocoa/70">结束日期<input className="field mt-1" type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} /></label>
             </div>
@@ -228,10 +228,10 @@ export default function PeriodPage() {
               <p className="section-kicker mb-1">Settings</p>
               <h2 className="font-semibold text-cocoa">周期设置</h2>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <label className="text-xs text-cocoa/65">周期<input className="field mt-1" min={1} type="number" value={settings.averageCycleLength} onChange={(e) => setSettings({ ...settings, averageCycleLength: Number(e.target.value) })} /></label>
-              <label className="text-xs text-cocoa/65">经期<input className="field mt-1" min={1} type="number" value={settings.averagePeriodLength} onChange={(e) => setSettings({ ...settings, averagePeriodLength: Number(e.target.value) })} /></label>
-              <label className="text-xs text-cocoa/65">提前<input className="field mt-1" min={0} type="number" value={settings.reminderDaysBefore} onChange={(e) => setSettings({ ...settings, reminderDaysBefore: Number(e.target.value) })} /></label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label className="text-xs text-cocoa/65">周期（天）<input className="field mt-1" min={1} type="number" value={settings.averageCycleLength} onChange={(e) => setSettings({ ...settings, averageCycleLength: Number(e.target.value) })} /></label>
+              <label className="text-xs text-cocoa/65">经期（天）<input className="field mt-1" min={1} type="number" value={settings.averagePeriodLength} onChange={(e) => setSettings({ ...settings, averagePeriodLength: Number(e.target.value) })} /></label>
+              <label className="text-xs text-cocoa/65">提前提醒（天）<input className="field mt-1" min={0} type="number" value={settings.reminderDaysBefore} onChange={(e) => setSettings({ ...settings, reminderDaysBefore: Number(e.target.value) })} /></label>
             </div>
             <button className="btn-secondary w-full" onClick={saveSettings}>保存周期设置</button>
           </section>
@@ -250,11 +250,11 @@ export default function PeriodPage() {
                 {visibleRecords.map((record) => (
                   <article className="rounded-[1.35rem] border border-white/70 bg-white/58 p-3 text-sm text-cocoa/72 shadow-sm" key={record.id}>
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-cocoa">{record.startDate}{record.endDate ? ` - ${record.endDate}` : ""}</p>
                         <p className="mt-1 text-xs">持续 {calculatePeriodLength(record.startDate, record.endDate)} 天</p>
                         {record.symptoms?.length ? <p className="mt-2">{record.symptoms.join("、")}</p> : null}
-                        {record.note ? <p className="mt-2 leading-6">{record.note}</p> : null}
+                        {record.note ? <p className="mt-2 leading-6 break-words">{record.note}</p> : null}
                       </div>
                       <div className="flex shrink-0 gap-1">
                         <button className="btn-secondary btn-small" onClick={() => editRecord(record)}>编辑</button>

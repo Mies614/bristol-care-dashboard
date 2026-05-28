@@ -2,268 +2,139 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color: #5f4b44;
-  background: #fff8f0;
-  --app-accent: #8c6a60;
-  --app-accent-soft: rgba(255, 226, 219, 0.72);
-  --app-card-bg: rgba(255, 255, 255, 0.76);
-  --app-card-border: rgba(255, 255, 255, 0.78);
-  --app-text: #5f4b44;
-  --app-muted: rgba(95, 75, 68, 0.66);
-  --app-shadow: 0 16px 45px rgba(120, 90, 80, 0.14);
-  --app-radius: 1.75rem;
-  --app-nav-bg: rgba(255, 255, 255, 0.74);
-  --app-nav-active: rgba(255, 226, 219, 0.72);
-  --app-decoration-opacity: 0.42;
-  /* Safari safe area + vh fallback */
-  --app-vh: 1vh;
-  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --app-safe-top: env(safe-area-inset-top, 0px);
+::selection {
+  background: #e8c4b8;
+  color: #3d2c26;
 }
 
-* {
-  box-sizing: border-box;
+:root {
+  --app-vh: 1vh;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --app-text: #3d2c26;
+  --app-muted: #8c6a60;
+  --app-accent: #e8a99b;
+  --app-accent-soft: #f5e1da;
+  --app-danger: #d66b5d;
+  --app-radius: 1.15rem;
+  --app-card-bg: rgba(255, 255, 255, 0.72);
+  --app-card-border: rgba(255, 255, 255, 0.75);
+  --app-nav-bg: rgba(255, 252, 248, 0.88);
+  --app-nav-border: rgba(230, 210, 200, 0.4);
+  --app-bg-soft: rgba(255, 248, 240, 0.55);
+  --app-bg: #fff8f0;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
 body {
-  min-height: 100vh;
-  min-height: calc(var(--app-vh, 1vh) * 100);
-  min-height: 100dvh;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-feature-settings: "rlig" 1, "cv05" 1;
   -webkit-font-smoothing: antialiased;
-  margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(255, 232, 226, 0.95), transparent 30rem),
-    radial-gradient(circle at 88% 8%, rgba(233, 245, 255, 0.95), transparent 26rem),
-    radial-gradient(circle at 50% 45%, rgba(238, 231, 255, 0.7), transparent 34rem),
-    linear-gradient(180deg, #fff8f0 0%, #fffdf9 46%, #f7fbff 100%);
-  background-attachment: fixed;
-  color: #5f4b44;
-  /* Prevent Safari from auto-zooming on input focus */
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Prevent Safari elastic overscroll on main content */
-html {
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
   overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-  /* Prevent Safari zoom on input focus */
-  font-size: 16px;
-}
-
-input, textarea, select {
-  font-size: 16px !important;
-}
-
-/* Safari scrollbar fix for dialogs/sheets */
-* {
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Reset overscroll for scrollable containers */
-.scrollable {
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* dvh utility for Safari full-screen elements */
-.min-h-app {
-  min-height: calc(var(--app-vh, 1vh) * 100);
-  min-height: 100dvh;
-}
-
-.max-h-app {
-  max-height: calc(var(--app-vh, 1vh) * 100 - 2rem);
-  max-height: calc(100dvh - 2rem);
-}
-
-/* Full-screen modal backdrop bottom padding */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
+html {
+  scrollbar-gutter: stable both-edges;
 }
 
 @layer components {
-  .soft-card {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    border-radius: var(--app-radius);
-    border: 1px solid var(--app-card-border);
-    background: var(--app-card-bg);
-    box-shadow: var(--app-shadow);
-    color: var(--app-text);
-    @apply p-4 ring-1 ring-white/40 backdrop-blur-xl sm:p-5;
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2;
   }
-
-  /* Reduce blur on mobile for performance */
-  @media (max-width: 640px) {
-    .soft-card {
-      @apply backdrop-blur-lg;
-    }
+  .grid-responsive-3 {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3;
   }
-
-  .portrait-background .soft-card {
-    @apply bg-white/85 ring-white/75;
+  .grid-responsive-4 {
+    @apply grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4;
   }
-
-  .portrait-background .notice,
-  .portrait-background .empty-state,
-  .portrait-background .check-card,
-  .portrait-background .file-panel {
-    @apply bg-white/80;
+  .full-bleed {
+    @apply -mx-4 w-[calc(100%+2rem)] md:-mx-5 md:w-[calc(100%+2.5rem)];
   }
-
-  .portrait-background nav > div {
-    @apply bg-white/80 ring-white/75;
+  .flex-responsive {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center;
   }
-
-  .field {
-    @apply w-full rounded-2xl border px-4 py-3 text-base shadow-inner outline-none transition placeholder:text-cocoa/35 focus:bg-white focus:ring-2;
-    font-size: 16px !important;
-    border-color: var(--app-card-border);
-    background: color-mix(in srgb, var(--app-card-bg) 82%, white);
-    color: var(--app-text);
-    --tw-ring-color: color-mix(in srgb, var(--app-accent) 24%, transparent);
-  }
-
   .btn-primary {
-    @apply min-h-11 rounded-full px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:shadow-float active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
-    background: linear-gradient(135deg, var(--app-accent), color-mix(in srgb, var(--app-accent) 72%, #3d2f2a));
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-[var(--app-radius)] bg-[var(--app-accent)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 active:scale-[0.97];
   }
-
   .btn-secondary {
-    @apply min-h-11 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
-    border-color: var(--app-card-border);
-    background: color-mix(in srgb, var(--app-card-bg) 82%, white);
-    color: var(--app-text);
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-[var(--app-radius)] border border-white/75 bg-white/70 px-5 py-2.5 text-sm font-medium text-cocoa shadow-sm backdrop-blur transition-all duration-200 hover:bg-white/90 active:scale-[0.97];
   }
-
   .btn-danger {
-    @apply min-h-11 rounded-full border border-[#efb6b1]/70 bg-[#ffe1dd]/85 px-4 py-2 text-sm font-medium text-[#9f4d45] shadow-sm transition hover:bg-[#ffd6d0] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-[var(--app-radius)] border border-rose-300/30 bg-rose-500/85 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 active:scale-[0.97];
   }
-
   .btn-small {
-    @apply min-h-0 px-3 py-1.5 text-xs;
+    @apply px-3 py-1.5 text-xs;
   }
-
-  /* Consistent button group layout  equal widths on small screens */
-  .btn-group {
-    @apply flex w-full flex-wrap gap-2;
+  .field {
+    @apply w-full min-w-0 rounded-[var(--app-radius)] border border-white/80 bg-white/70 px-3 py-2.5 text-sm text-cocoa placeholder-cocoa/40 shadow-sm backdrop-blur transition-all duration-200 focus:border-roseSoft/60 focus:outline-none focus:ring-2 focus:ring-roseSoft/20;
   }
-
-  .btn-group > * {
-    @apply flex-1 min-w-0;
+  .soft-card {
+    @apply rounded-[1.35rem] border border-white/75 bg-[var(--app-card-bg)] p-4 shadow-soft backdrop-blur-md ring-1 ring-white/60 md:p-5;
   }
-
-  @media (min-width: 640px) {
-    .btn-group-auto > * {
-      @apply flex-none;
-    }
-  }
-
-  .notice {
-    @apply rounded-[1.35rem] border px-4 py-3 text-sm leading-6 shadow-sm backdrop-blur-xl;
-    border-color: var(--app-card-border);
-    background: var(--app-card-bg);
-    color: var(--app-muted);
-  }
-
-  .notice-error {
-    @apply border-[#efb6b1]/75 bg-[#fff0ef]/85 text-[#7d463f];
-  }
-
-  .notice-success {
-    @apply border-sage/25 bg-white/70 text-cocoa/75;
-  }
-
   .empty-state {
-    @apply rounded-[1.35rem] border px-4 py-5 text-center text-sm leading-6 shadow-sm;
-    border-color: var(--app-card-border);
-    background: color-mix(in srgb, var(--app-card-bg) 72%, transparent);
-    color: var(--app-muted);
+    @apply p-6 text-center text-sm leading-6 text-[var(--app-muted)];
   }
-
-  .check-card {
-    @apply flex items-center gap-2 rounded-2xl border border-white/75 bg-white/60 px-4 py-3 text-sm text-cocoa/70 shadow-sm;
+  .notice {
+    @apply rounded-[var(--app-radius)] border border-white/70 bg-white/60 px-3 py-2 text-sm leading-6 text-[var(--app-muted)] shadow-sm backdrop-blur;
   }
-
-  .file-panel {
-    @apply block rounded-[1.35rem] border border-dashed border-roseSoft/50 bg-white/50 px-4 py-4 text-sm text-cocoa/70 shadow-sm;
+  .notice-error {
+    @apply border-rose-300/30 bg-rose-50 text-rose-700;
   }
-
-  .pill {
-    @apply rounded-full border border-white/70 bg-blush/70 px-3 py-1 text-xs font-medium text-cocoa shadow-sm;
-  }
-
   .section-kicker {
-    @apply text-xs font-semibold uppercase tracking-[0.18em] text-sage;
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--app-muted)];
   }
+  .file-panel {
+    @apply block rounded-[var(--app-radius)] border border-dashed border-white/70 bg-white/40 px-4 py-5 text-sm text-[var(--app-muted)] shadow-sm backdrop-blur transition hover:border-roseSoft/60;
+  }
+  .check-card {
+    @apply flex cursor-pointer items-center gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/50 px-3 py-2.5 text-sm text-[var(--app-muted)] shadow-sm backdrop-blur transition hover:bg-white/70;
+  }
+  .btn-group {
+    @apply flex flex-wrap gap-2;
+  }
+}
 
-  .app-bottom-nav {
-    border-color: var(--app-card-border);
-    background: var(--app-nav-bg);
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
   }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
 
-  .app-nav-active {
-    background: var(--app-nav-active);
-    color: var(--app-text);
+@media (max-width: 374px) {
+  .soft-card {
+    @apply p-3;
   }
+  .full-bleed {
+    @apply -mx-3 w-[calc(100%+1.5rem)];
+  }
+}
 
-  [data-nav-style="pill"] .app-bottom-nav {
-    @apply rounded-full;
-  }
+.collapsible-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+.collapsible-grid.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
 
-  [data-nav-style="pill"] .app-nav-active {
-    @apply rounded-full;
-  }
-
-  [data-nav-style="paper"] .app-bottom-nav {
-    background: color-mix(in srgb, var(--app-nav-bg) 86%, #fff8ec);
-    box-shadow: 0 12px 28px rgba(95, 75, 68, 0.16);
-  }
-
-  [data-nav-style="minimal"] .app-bottom-nav {
-    @apply border-transparent bg-transparent shadow-none ring-0 backdrop-blur-none;
-  }
-
-  [data-nav-style="minimal"] .app-nav-active {
-    background: transparent;
-    color: var(--app-accent);
-    box-shadow: inset 0 -3px 0 var(--app-accent);
-  }
-
-  [data-theme="night"] .soft-card,
-  [data-theme="night"] .notice,
-  [data-theme="night"] .empty-state {
-    @apply ring-white/10;
-  }
-
-  [data-card-style="paper"] .soft-card {
-    background: color-mix(in srgb, var(--app-card-bg) 92%, #fff7e8);
-    box-shadow: 0 10px 24px rgba(90, 65, 52, 0.12);
-  }
-
-  [data-card-style="flat"] .soft-card {
-    @apply backdrop-blur-none;
-    box-shadow: var(--app-shadow);
-  }
+.tab-bar {
+  @apply flex flex-wrap gap-2;
+}
+.tab-bar button {
+  @apply whitespace-nowrap;
 }

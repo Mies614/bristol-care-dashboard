@@ -91,20 +91,23 @@ export default function SchedulePage() {
         <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
         <AutoSyncStatusBadge />
       </div>
+
+      {/* Today summary */}
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Today</p>
         <h2 className="font-semibold text-cocoa">今日课程</h2>
         <p className="mt-2 text-sm text-cocoa/65">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
-        <button className="btn-secondary mt-3" onClick={exportAllCourses}>导出课程日历提醒</button>
+        <button className="btn-secondary mt-3 w-full sm:w-auto" onClick={exportAllCourses}>导出课程日历提醒</button>
       </section>
 
+      {/* Add/Edit form */}
       <form className="soft-card mb-4 space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={submit}>
         <div>
           <p className="section-kicker mb-1">Course</p>
           <h2 className="font-semibold text-cocoa">{editingId ? "编辑课程" : "添加课程"}</h2>
         </div>
         <input className="field" placeholder="课程名称" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <select className="field" value={draft.day} onChange={(e) => setDraft({ ...draft, day: e.target.value as DayName })}>
             {DAYS.map((day) => <option key={day}>{day}</option>)}
           </select>
@@ -121,15 +124,16 @@ export default function SchedulePage() {
         </div>
       </form>
 
+      {/* Tools */}
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Tools</p>
         <h2 className="mb-3 font-semibold text-cocoa">课程表工具</h2>
-        <div className="btn-group">
-          <button className="btn-secondary" onClick={() => persist(sampleCourses)}>导入示例课程表</button>
-          <button className="btn-danger" onClick={() => persist([])}>清空课程表</button>
-          <button className="btn-secondary" onClick={exportAllCourses}>导出整周课程提醒</button>
-          <button className="btn-secondary" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</button>
-          <label className="btn-secondary cursor-pointer">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button className="btn-secondary w-full" onClick={() => persist(sampleCourses)}>导入示例课程表</button>
+          <button className="btn-danger w-full" onClick={() => persist([])}>清空课程表</button>
+          <button className="btn-secondary w-full" onClick={exportAllCourses}>导出整周课程提醒</button>
+          <button className="btn-secondary w-full" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</button>
+          <label className="btn-secondary w-full cursor-pointer sm:col-span-2">
             导入 JSON
             <input
               className="hidden"
@@ -153,7 +157,8 @@ export default function SchedulePage() {
         {importMessage ? <p className="notice mt-3">{importMessage}</p> : null}
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Courses by day - single column on mobile */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {DAYS.map((day) => (
           <section className="soft-card" key={day}>
             <div className="mb-3 flex items-center justify-between">
@@ -165,10 +170,10 @@ export default function SchedulePage() {
                 {grouped[day].map((course) => (
                   <div key={course.id}>
                     <CourseCard course={course} />
-                    <div className="btn-group mt-2">
-                      <button className="btn-secondary btn-small" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</button>
-                      <button className="btn-secondary btn-small" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</button>
-                      <button className="btn-danger btn-small" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</button>
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <button className="btn-secondary btn-small w-full" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</button>
+                      <button className="btn-secondary btn-small w-full" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</button>
+                      <button className="btn-danger btn-small w-full" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</button>
                     </div>
                   </div>
                 ))}
