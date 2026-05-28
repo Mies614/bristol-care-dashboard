@@ -122,6 +122,41 @@ create table if not exists public.album_items (
   deleted_at timestamptz
 );
 
+create table if not exists public.miss_you_events (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  author text default 'xiaoguai',
+  message text default '想你一下',
+  local_date text,
+  created_at timestamptz default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists miss_you_events_space_created_idx
+on public.miss_you_events(space_id, created_at desc);
+
+create index if not exists miss_you_events_space_local_date_idx
+on public.miss_you_events(space_id, local_date);
+
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  role text default 'admin',
+  endpoint text not null,
+  subscription jsonb not null,
+  user_agent text,
+  enabled boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  deleted_at timestamptz
+);
+
+create unique index if not exists push_subscriptions_endpoint_unique
+on public.push_subscriptions(endpoint);
+
+create index if not exists push_subscriptions_space_enabled_idx
+on public.push_subscriptions(space_id, enabled);
+
 create table if not exists public.period_records (
   id uuid primary key default gen_random_uuid(),
   space_id uuid references public.couple_spaces(id) on delete cascade,
@@ -161,6 +196,8 @@ alter table public.love_notes enable row level security;
 alter table public.quick_links enable row level security;
 alter table public.album_items enable row level security;
 alter table public.period_records enable row level security;
+alter table public.miss_you_events enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 drop policy if exists "anon can read couple space by code" on public.couple_spaces;
 create policy "anon can read couple space by code"

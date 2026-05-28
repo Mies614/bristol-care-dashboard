@@ -24,6 +24,7 @@ import { getDailyCare } from "@/lib/dailyCare";
 import { DailyCareCard } from "@/components/DailyCareCard";
 import { DualTimeCard } from "@/components/DualTimeCard";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
+import { MissYouButton } from "@/components/MissYouButton";
 
 function safeBristolDate() {
   try {
@@ -284,6 +285,7 @@ export default function HomePage() {
             <h2 className="font-semibold text-cocoa">下次见面</h2>
             <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
           </div>
+          <MissYouButton />
           <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
           <div className="grid grid-cols-2 gap-2">
             <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>

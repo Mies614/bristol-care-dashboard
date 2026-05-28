@@ -11,6 +11,7 @@ import { PriorityReminderList } from "@/components/PriorityReminderList";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
+import { MissYouAdminCard } from "@/components/MissYouAdminCard";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
 
@@ -355,6 +356,8 @@ export default function AdminPage() {
                 <a className="btn-secondary text-center" href="/records">查看记录中心</a>
               </div>
             </section>
+
+            <MissYouAdminCard />
 
             <div className="grid gap-4">
             <form className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-butter/45" id="publish-note" onSubmit={publish}>
