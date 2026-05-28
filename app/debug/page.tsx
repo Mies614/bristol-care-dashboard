@@ -9,6 +9,7 @@ interface FetchError {
   status?: number;
   statusText?: string;
   message?: string;
+  bodyPreview?: string;
 }
 
 export default function DebugPage() {
@@ -42,19 +43,54 @@ export default function DebugPage() {
 
     try {
       const response = await fetch("/api/debug/supabase");
-      if (!response.ok) {
-        setFetchError({ status: response.status, statusText: response.statusText });
+
+      // Check content type - if HTML, that's a problem
+      const contentType = response.headers.get("content-type") || "";
+      const bodyText = await response.text();
+
+      if (!response.ok && response.status === 404) {
+        setFetchError({
+          status: 404,
+          statusText: response.statusText || "Not Found",
+          message: "诊断接口返回 404，说明线上未部署 /api/debug/supabase。请确认 Vercel 部署包含了此路由。",
+          bodyPreview: bodyText.slice(0, 300)
+        });
         setLoading(false);
         return;
       }
-      const payload = await response.json();
+
+      if (contentType.includes("text/html")) {
+        setFetchError({
+          status: response.status,
+          statusText: response.statusText || "",
+          message: "诊断接口返回了 HTML，不是 JSON。说明 Next.js 没有识别此 API route，可能是部署问题。",
+          bodyPreview: bodyText.slice(0, 300)
+        });
+        setLoading(false);
+        return;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(bodyText);
+      } catch {
+        setFetchError({
+          status: response.status,
+          statusText: response.statusText || "",
+          message: "诊断接口返回了非 JSON 内容，无法解析。",
+          bodyPreview: bodyText.slice(0, 300)
+        });
+        setLoading(false);
+        return;
+      }
+
       if (payload.ok && Array.isArray(payload.checks)) {
         setChecks(payload.checks);
       } else {
         setFetchError({ message: payload.error || "诊断响应格式不正确" });
       }
     } catch (err) {
-      setFetchError({ message: err instanceof Error ? err.message : "诊断请求失败" });
+      setFetchError({ message: err instanceof Error ? err.message : "诊断请求失败（网络错误）" });
     } finally {
       setLoading(false);
     }
@@ -105,22 +141,29 @@ export default function DebugPage() {
 
           {/* Error state */}
           {!loading && fetchError && (
-            <div className="space-y-1">
-              <p className="text-rose-700 font-medium">诊断请求失败</p>
+            <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+              <p className="font-medium text-rose-700">诊断请求失败</p>
               {fetchError.status ? (
                 <p className="text-rose-600">status: {fetchError.status} {fetchError.statusText}</p>
               ) : null}
               {fetchError.message ? (
                 <p className="text-rose-600">{fetchError.message}</p>
               ) : null}
+              {fetchError.bodyPreview ? (
+                <details className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-xs leading-5">
+                  <summary className="cursor-pointer font-medium text-rose-500">查看返回内容预览</summary>
+                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words text-rose-600">{fetchError.bodyPreview}</pre>
+                </details>
+              ) : null}
             </div>
           )}
 
-          {/* Success state */}
+          {/* Success state - empty */}
           {!loading && !fetchError && checks !== null && checks.length === 0 && (
             <p className="text-zinc-500">没有检查项。</p>
           )}
 
+          {/* Success state - with checks */}
           {!loading && !fetchError && checks !== null && checks.length > 0 && (
             <div className="space-y-2">
               {checks.map((check) => (
