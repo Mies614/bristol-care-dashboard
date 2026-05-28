@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
 import { DataManagementCenter } from "@/components/DataManagementCenter";
+import { QuickActionsSettingsPanel } from "@/components/settings/QuickActionsSettingsPanel";
 import {
   DEFAULT_BACKGROUND_SETTINGS,
   getBackgroundOverlayStyle,
@@ -535,6 +536,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </SettingsSection>
+
+        {/* ──────────────────── Quick Actions ──────────────────── */}
+        <QuickActionsSettingsPanel />
 
         {/* ──────────────────── Local Data ──────────────────── */}
         <SettingsSection title="Local Data" subtitle="本地数据管理" className="bg-gradient-to-br from-white/85 to-lilac/35">

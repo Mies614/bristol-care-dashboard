@@ -116,6 +116,7 @@ export type CloudSettings = {
   backgroundSettings?: BackgroundSettings;
   themeSettings?: ThemeSettings;
   periodSettings?: PeriodSettings;
+  quickActions?: string; // JSON stringified QuickAction[]
 };
 
 export type BackgroundImageFit = "cover" | "contain" | "portrait" | "softPortrait" | "fullPhoto";

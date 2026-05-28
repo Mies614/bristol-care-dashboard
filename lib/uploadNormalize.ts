@@ -13,6 +13,12 @@ export type NormalizedLocalData = {
   quickLinks: CommonLink[];
 };
 
+function safeStringify(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  return JSON.stringify(value);
+}
+
 export function buildSettingsRows(settings: NormalizedLocalData["settings"], spaceId: string) {
   const updatedAt = new Date().toISOString();
   const rows = [
@@ -50,6 +56,12 @@ export function buildSettingsRows(settings: NormalizedLocalData["settings"], spa
       space_id: spaceId,
       key: "period_settings",
       value: safeSettingValue(normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS), DEFAULT_PERIOD_SETTINGS),
+      updated_at: updatedAt
+    },
+    {
+      space_id: spaceId,
+      key: "quick_actions",
+      value: safeSettingValue(safeStringify(settings.quickActions), ""),
       updated_at: updatedAt
     }
   ];
@@ -190,6 +202,17 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
     data.loveNote
   ].filter(Boolean);
 
+  // Extract quick_actions from the raw data (may be JSON string or already an object)
+  let quickActionsStr: string | undefined;
+  const rawQA = isRecord(data)
+    ? data.quickActions || data.quick_actions || (settings.quick_actions)
+    : undefined;
+  if (typeof rawQA === "string") {
+    quickActionsStr = rawQA;
+  } else if (rawQA !== undefined) {
+    quickActionsStr = JSON.stringify(rawQA);
+  }
+
   return {
     settings: {
       girlfriendName,
@@ -197,7 +220,8 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
       semesterEndDate,
       backgroundSettings,
       themeSettings,
-      periodSettings
+      periodSettings,
+      quickActions: quickActionsStr ?? ""
     },
     loveNotes: rawLoveNotes.map(normalizeLoveNote).filter((note): note is Omit<LoveNote, "id"> & { id?: string } => Boolean(note)),
     courses: [...asArray(data.courses), ...asArray(data.schedule), ...asArray(data.timetable)].map(normalizeCourse).filter((course): course is Course => Boolean(course)),

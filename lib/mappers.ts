@@ -264,6 +264,7 @@ export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: un
     if (row.key === "background_settings") result.backgroundSettings = normalizeBackgroundSettings(row.value);
     if (row.key === "theme_settings") result.themeSettings = normalizeThemeSettings(row.value);
     if (row.key === "period_settings") result.periodSettings = normalizePeriodSettings(row.value);
+    if (row.key === "quick_actions" && typeof row.value === "string") result.quickActions = row.value;
   }
   return result;
 }
@@ -275,7 +276,8 @@ export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
     { space_id: spaceId, key: "semester_end_date", value: settings.semesterEndDate || "" },
     { space_id: spaceId, key: "background_settings", value: sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings) },
     { space_id: spaceId, key: "theme_settings", value: normalizeThemeSettings(settings.themeSettings || DEFAULT_THEME_SETTINGS) },
-    { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) }
+    { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) },
+    { space_id: spaceId, key: "quick_actions", value: settings.quickActions || "" }
   ].map((row) => ({
     ...row,
     value: row.value === null || row.value === undefined ? "" : row.value
