@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
+import { getSpaceByCode } from "@/lib/supabase/spaces";
 
 interface Check {
   name: string;
@@ -59,22 +60,22 @@ export async function GET() {
     if (isSupabaseServerConfigured()) {
       try {
         const supabase = createSupabaseServerClient();
-        const spaceCode = defaultCode;
 
-        // 6) xiaoguai520 space exists
-        const { data: space, error: spaceErr } = await supabase
-          .from("spaces")
-          .select("id, code")
-          .eq("code", spaceCode)
-          .maybeSingle();
+        // 6) xiaoguai520 space exists  uses couple_spaces via getSpaceByCode
+        let space: { id: string; code: string } | null = null;
+        try {
+          const found = await getSpaceByCode(supabase, defaultCode);
+          if (found) {
+            space = { id: found.id, code: found.code };
+            checks.push({ name: "xiaoguai520 space exists", ok: true, detail: `found in couple_spaces (id=${found.id})` });
+          } else {
+            checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "no space found with this code in couple_spaces" });
+          }
+        } catch (err) {
+          checks.push({ name: "xiaoguai520 space exists", ok: false, detail: `couple_spaces query failed: ${err instanceof Error ? err.message : String(err)}` });
+        }
 
-        if (spaceErr) {
-          checks.push({ name: "xiaoguai520 space exists", ok: false, detail: spaceErr.message });
-        } else if (!space) {
-          checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "no space found with this code" });
-        } else {
-          checks.push({ name: "xiaoguai520 space exists", ok: true, detail: `id=${space.id}` });
-
+        if (space) {
           // 7) settings upsert test
           try {
             const { error: settingsErr } = await supabase
@@ -158,6 +159,13 @@ export async function GET() {
           } catch (err) {
             checks.push({ name: "push_subscriptions readable", ok: false, detail: String(err) });
           }
+        } else {
+          // Space not found, mark remaining checks as skipped
+          checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space found)" });
+          checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no space found)" });
+          checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space found)" });
+          checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space found)" });
+          checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space found)" });
         }
       } catch (err) {
         checks.push({ name: "DB connection", ok: false, detail: String(err) });
