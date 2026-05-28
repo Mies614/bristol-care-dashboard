@@ -165,6 +165,21 @@ input, textarea, select {
     @apply min-h-0 px-3 py-1.5 text-xs;
   }
 
+  /* Consistent button group layout  equal widths on small screens */
+  .btn-group {
+    @apply flex w-full flex-wrap gap-2;
+  }
+
+  .btn-group > * {
+    @apply flex-1 min-w-0;
+  }
+
+  @media (min-width: 640px) {
+    .btn-group-auto > * {
+      @apply flex-none;
+    }
+  }
+
   .notice {
     @apply rounded-[1.35rem] border px-4 py-3 text-sm leading-6 shadow-sm backdrop-blur-xl;
     border-color: var(--app-card-border);

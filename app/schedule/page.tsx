@@ -124,7 +124,7 @@ export default function SchedulePage() {
       <section className="soft-card mb-4">
         <p className="section-kicker mb-1">Tools</p>
         <h2 className="mb-3 font-semibold text-cocoa">课程表工具</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="btn-group">
           <button className="btn-secondary" onClick={() => persist(sampleCourses)}>导入示例课程表</button>
           <button className="btn-danger" onClick={() => persist([])}>清空课程表</button>
           <button className="btn-secondary" onClick={exportAllCourses}>导出整周课程提醒</button>
@@ -165,7 +165,7 @@ export default function SchedulePage() {
                 {grouped[day].map((course) => (
                   <div key={course.id}>
                     <CourseCard course={course} />
-                    <div className="mt-2 flex gap-2">
+                    <div className="btn-group mt-2">
                       <button className="btn-secondary btn-small" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</button>
                       <button className="btn-secondary btn-small" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</button>
                       <button className="btn-danger btn-small" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</button>

@@ -280,9 +280,9 @@ export default function SettingsPage() {
             />
           </label>
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/55 p-3 shadow-sm">
+          <div className="overflow-hidden rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
             <p className="mb-2 text-xs font-medium text-[var(--app-muted)]">实时预览</p>
-            <div className="relative h-32 overflow-hidden rounded-[1.2rem] border border-white/70" style={getBackgroundStyle(data.backgroundSettings)}>
+            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/70" style={getBackgroundStyle(data.backgroundSettings)}>
               <div className="absolute inset-0" style={getBackgroundOverlayStyle(data.backgroundSettings)} />
               <div className="relative z-10 flex h-full items-end p-3">
                 <div className="rounded-2xl bg-white/72 px-3 py-2 text-xs leading-5 text-[var(--app-text)] shadow-sm backdrop-blur">
@@ -296,12 +296,12 @@ export default function SettingsPage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               alt="背景预览"
-              className="max-h-48 w-full rounded-[1.5rem] border border-white/80 bg-white/60 object-cover shadow-sm"
+              className="max-h-48 w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] object-cover shadow-sm"
               src={data.backgroundSettings.cloudImageUrl || data.backgroundSettings.imageDataUrl || data.backgroundSettings.imageUrl}
             />
           ) : null}
 
-          <div className="space-y-4 rounded-[1.5rem] border border-white/80 bg-white/55 p-3 shadow-sm">
+          <div className="space-y-4 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
             <div>
               <p className="text-sm font-semibold text-[var(--app-text)]">人物照片优化</p>
               <p className="mt-1 text-xs leading-5 text-[var(--app-muted)]">如果用人物照片做背景，可以试试“人物照片”或“柔和人物背景”。</p>
@@ -468,14 +468,14 @@ export default function SettingsPage() {
               </select>
             </label>
           </div>
-          <div className="rounded-[1.5rem] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
+          <div className="rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
             <p className="section-kicker mb-2">Preview</p>
             <div className="soft-card p-3">
               <p className="font-semibold text-[var(--app-text)]">示例卡片</p>
               <p className="mt-1 text-sm text-[var(--app-muted)]">风格会同步影响全站组件。</p>
               <button className="btn-primary btn-small mt-3">示例按钮</button>
             </div>
-            <div className="app-bottom-nav mt-3 rounded-2xl border p-2 text-center text-sm text-[var(--app-muted)]">底部导航预览 · 首页 / 记录 / 回忆</div>
+            <div className="mt-3 rounded-2xl border bg-[var(--app-nav-bg)] p-2 text-center text-sm text-[var(--app-muted)]">底部导航预览 · 首页 / 记录 / 回忆</div>
           </div>
           <button className="btn-secondary w-full" onClick={() => updateTheme(DEFAULT_THEME_SETTINGS)} type="button">恢复默认风格</button>
         </SettingsSection>
@@ -486,7 +486,7 @@ export default function SettingsPage() {
             {isCloudConfigured() ? getCloudSyncStatus() : "云同步未配置，当前为本地模式。"}
           </p>
           {lastSync ? <p className="mb-3 text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : null}
-          <div className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-sm text-[var(--app-muted)] shadow-sm">
+          <div className="grid grid-cols-2 gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/55 p-3 text-sm text-[var(--app-muted)] shadow-sm">
             <span>课程 {counts.courses}</span>
             <span>Deadline {counts.deadlines}</span>
             <span>小纸条 {counts.loveNotes}</span>
@@ -496,15 +496,15 @@ export default function SettingsPage() {
             访问码
             <input className="field mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
           </label>
-              <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn-secondary w-full sm:w-auto" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</button>
+          <div className="mt-3 btn-group btn-group-auto">
+            <button className="btn-secondary" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</button>
             {isCloudConfigured() ? (
-              <div className="flex w-full min-w-0 flex-wrap gap-2 sm:grid sm:grid-cols-2">
+              <>
                 <button className="btn-secondary" onClick={manualSync}>手动同步</button>
                 <button className="btn-secondary" onClick={uploadCloud}>上传本地到云端</button>
                 <button className="btn-secondary" onClick={pullCloud}>从云端恢复</button>
                 <button className="btn-danger" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</button>
-              </div>
+              </>
             ) : null}
           </div>
           {cloudMessage ? <p className="notice mt-3 break-words whitespace-pre-wrap">{cloudMessage}</p> : null}
@@ -525,7 +525,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-3">
             {data.links.map((link) => (
-              <div className="rounded-[1.35rem] border border-white/75 bg-cream/70 p-3 shadow-sm" key={link.id}>
+              <div className="rounded-[var(--app-radius)] border border-white/75 bg-cream/70 p-3 shadow-sm" key={link.id}>
                 <input className="field mb-2" value={link.title} onChange={(e) => update({ ...data, links: data.links.map((item) => item.id === link.id ? { ...item, title: e.target.value } : item) })} />
                 <input className="field" value={link.url} onChange={(e) => update({ ...data, links: data.links.map((item) => item.id === link.id ? { ...item, url: e.target.value } : item) })} />
                 <button className="btn-danger btn-small mt-2" onClick={() => update({ ...data, links: data.links.filter((item) => item.id !== link.id) })}>
@@ -538,7 +538,7 @@ export default function SettingsPage() {
 
         {/* ──────────────────── Local Data ──────────────────── */}
         <SettingsSection title="Local Data" subtitle="本地数据管理" className="bg-gradient-to-br from-white/85 to-lilac/35">
-          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="btn-group">
             <button className="btn-secondary" onClick={() => downloadJson("bristol-care-data.json", data)}>导出全部 JSON</button>
             <label className="btn-secondary cursor-pointer">
               导入全部 JSON
@@ -560,7 +560,7 @@ export default function SettingsPage() {
                 }}
               />
             </label>
-            <button className="btn-danger sm:col-span-2" onClick={() => { resetAppData(); setData(loadAppData()); }}>
+            <button className="btn-danger" onClick={() => { resetAppData(); setData(loadAppData()); }}>
               重置所有本地数据
             </button>
           </div>

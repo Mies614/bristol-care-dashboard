@@ -427,7 +427,7 @@ export default function AdminPage() {
                       <div className="mt-3 border-t border-white/65 pt-3">
                         <details className="text-xs">
                           <summary className="cursor-pointer font-medium text-[var(--app-muted)]">操作</summary>
-                          <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="btn-group mt-2">
                             <button className="btn-secondary btn-small" disabled={updatingNoteId === note.id} onClick={() => patchNote({ id: note.id, action: "set_pinned", pinned: !note.pinned })}>
                               {note.pinned ? "取消置顶" : "设为置顶"}
                             </button>

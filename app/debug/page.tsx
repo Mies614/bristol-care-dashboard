@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
 
 type Check = { name: string; ok: boolean; detail?: string };
 
@@ -44,7 +45,6 @@ export default function DebugPage() {
     try {
       const response = await fetch("/api/debug/supabase");
 
-      // Check content type - if HTML, that's a problem
       const contentType = response.headers.get("content-type") || "";
       const bodyText = await response.text();
 
@@ -114,8 +114,8 @@ export default function DebugPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-6 text-zinc-800">
-      <section className="rounded-3xl border bg-white p-5 shadow-sm">
+    <AppShell>
+      <section className="soft-card">
         <h1 className="text-2xl font-semibold">Bristol Care Debug</h1>
         <div className="mt-4 grid gap-2 text-sm">
           <p>environment: {client.env}</p>
@@ -124,58 +124,54 @@ export default function DebugPage() {
           <p>project key count: {client.keyCount}</p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button className="rounded-full bg-zinc-900 px-4 py-2 text-sm text-white" onClick={refresh}>刷新诊断</button>
-          <button className="rounded-full bg-zinc-100 px-4 py-2 text-sm" onClick={clearProjectStorage}>清除本项目 localStorage</button>
-          <Link className="rounded-full bg-zinc-100 px-4 py-2 text-sm" href="/">返回首页</Link>
+          <button className="btn-primary btn-small" onClick={refresh}>刷新诊断</button>
+          <button className="btn-secondary btn-small" onClick={clearProjectStorage}>清除本项目 localStorage</button>
+          <Link className="btn-secondary btn-small" href="/">返回首页</Link>
         </div>
-        {message ? <p className="mt-3 text-sm">{message}</p> : null}
+        {message ? <p className="notice mt-3">{message}</p> : null}
       </section>
 
-      <section className="mt-4 rounded-3xl border bg-white p-5 shadow-sm">
+      <section className="soft-card mt-4">
         <h2 className="font-semibold">Supabase checks</h2>
         <div className="mt-3 space-y-2 text-sm">
-          {/* Loading state */}
           {loading && (
-            <p className="text-zinc-500">正在检查...</p>
+            <p className="text-[var(--app-muted)]">正在检查...</p>
           )}
 
-          {/* Error state */}
           {!loading && fetchError && (
-            <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
-              <p className="font-medium text-rose-700">诊断请求失败</p>
+            <div className="space-y-2 rounded-2xl border border-[var(--app-danger)]/30 bg-[var(--app-danger)]/8 p-3">
+              <p className="font-medium text-[var(--app-text)]">诊断请求失败</p>
               {fetchError.status ? (
-                <p className="text-rose-600">status: {fetchError.status} {fetchError.statusText}</p>
+                <p className="text-sm text-[var(--app-danger)]">status: {fetchError.status} {fetchError.statusText}</p>
               ) : null}
               {fetchError.message ? (
-                <p className="text-rose-600">{fetchError.message}</p>
+                <p className="text-sm text-[var(--app-danger)]">{fetchError.message}</p>
               ) : null}
               {fetchError.bodyPreview ? (
                 <details className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-xs leading-5">
-                  <summary className="cursor-pointer font-medium text-rose-500">查看返回内容预览</summary>
-                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words text-rose-600">{fetchError.bodyPreview}</pre>
+                  <summary className="cursor-pointer font-medium text-[var(--app-danger)]">查看返回内容预览</summary>
+                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words text-[var(--app-danger)]">{fetchError.bodyPreview}</pre>
                 </details>
               ) : null}
             </div>
           )}
 
-          {/* Success state - empty */}
           {!loading && !fetchError && checks !== null && checks.length === 0 && (
-            <p className="text-zinc-500">没有检查项。</p>
+            <p className="text-[var(--app-muted)]">没有检查项。</p>
           )}
 
-          {/* Success state - with checks */}
           {!loading && !fetchError && checks !== null && checks.length > 0 && (
             <div className="space-y-2">
               {checks.map((check) => (
                 <p className={check.ok ? "text-emerald-700" : "text-rose-700"} key={check.name}>
                   {check.ok ? "✓" : "×"} {check.name}
-                  {check.detail ? <span className="text-zinc-500">：{check.detail}</span> : null}
+                  {check.detail ? <span className="text-[var(--app-muted)]">：{check.detail}</span> : null}
                 </p>
               ))}
             </div>
           )}
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }
