@@ -62,110 +62,175 @@ export async function GET() {
         const supabase = createSupabaseServerClient();
 
         // 6) xiaoguai520 space exists  uses couple_spaces via getSpaceByCode
-        let space: { id: string; code: string } | null = null;
+        let spaceId: string | null = null;
         try {
           const found = await getSpaceByCode(supabase, defaultCode);
           if (found) {
-            space = { id: found.id, code: found.code };
-            checks.push({ name: "xiaoguai520 space exists", ok: true, detail: `found in couple_spaces (id=${found.id})` });
+            spaceId = found.id;
+            checks.push({
+              name: "xiaoguai520 space exists",
+              ok: true,
+              detail: `found in couple_spaces (id=${found.id})`
+            });
           } else {
-            checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "no space found with this code in couple_spaces" });
+            checks.push({
+              name: "xiaoguai520 space exists",
+              ok: false,
+              detail: "no space found with this code in couple_spaces"
+            });
           }
         } catch (err) {
-          checks.push({ name: "xiaoguai520 space exists", ok: false, detail: `couple_spaces query failed: ${err instanceof Error ? err.message : String(err)}` });
+          checks.push({
+            name: "xiaoguai520 space exists",
+            ok: false,
+            detail: `couple_spaces query failed: ${err instanceof Error ? err.message : String(err)}`
+          });
         }
 
-        if (space) {
-          // 7) settings upsert test
+        if (spaceId) {
+          // 7) settings upsert test  settings table uses key+value, NOT girlfriend_name column
           try {
+            const settingsPayload = {
+              space_id: spaceId,
+              key: "debug_settings_test",
+              value: { ok: true, source: "debug", timestamp: new Date().toISOString() },
+              updated_at: new Date().toISOString()
+            };
             const { error: settingsErr } = await supabase
               .from("settings")
-              .upsert({
-                space_id: space.id,
-                girlfriend_name: "xiao guai",
-                updated_at: new Date().toISOString()
-              }, { onConflict: "space_id" });
+              .upsert(settingsPayload, { onConflict: "space_id,key" });
             checks.push({
               name: "settings upsert test",
               ok: !settingsErr,
               detail: settingsErr ? settingsErr.message : "ok"
             });
+            // Clean up test record
+            await supabase
+              .from("settings")
+              .delete()
+              .eq("space_id", spaceId)
+              .eq("key", "debug_settings_test");
           } catch (err) {
             checks.push({ name: "settings upsert test", ok: false, detail: String(err) });
           }
 
-          // 8) background_settings upsert test
+          // 8) background_settings upsert test  stored as a settings key, NOT a separate table
           try {
+            const bgPayload = {
+              space_id: spaceId,
+              key: "debug_background_settings_test",
+              value: {
+                mode: "preset",
+                preset: "cream",
+                imageFit: "cover",
+                imagePosition: "center",
+                focalPoint: { x: 50, y: 38 },
+                overlay: "medium",
+                blur: false,
+                dim: 20,
+                scale: 100,
+                portraitEnhance: false
+              },
+              updated_at: new Date().toISOString()
+            };
             const { error: bgErr } = await supabase
-              .from("background_settings")
-              .upsert({
-                space_id: space.id,
-                updated_at: new Date().toISOString()
-              }, { onConflict: "space_id" });
+              .from("settings")
+              .upsert(bgPayload, { onConflict: "space_id,key" });
             checks.push({
               name: "background_settings upsert test",
               ok: !bgErr,
               detail: bgErr ? bgErr.message : "ok"
             });
+            // Clean up
+            await supabase
+              .from("settings")
+              .delete()
+              .eq("space_id", spaceId)
+              .eq("key", "debug_background_settings_test");
           } catch (err) {
             checks.push({ name: "background_settings upsert test", ok: false, detail: String(err) });
           }
 
-          // 9) theme_settings upsert test
+          // 9) theme_settings upsert test  stored as a settings key, NOT a separate table
           try {
+            const themePayload = {
+              space_id: spaceId,
+              key: "debug_theme_settings_test",
+              value: {
+                style: "soft",
+                cardStyle: "glass",
+                navStyle: "glass",
+                radius: "extra",
+                decoration: "stars"
+              },
+              updated_at: new Date().toISOString()
+            };
             const { error: themeErr } = await supabase
-              .from("theme_settings")
-              .upsert({
-                space_id: space.id,
-                updated_at: new Date().toISOString()
-              }, { onConflict: "space_id" });
+              .from("settings")
+              .upsert(themePayload, { onConflict: "space_id,key" });
             checks.push({
               name: "theme_settings upsert test",
               ok: !themeErr,
               detail: themeErr ? themeErr.message : "ok"
             });
+            // Clean up
+            await supabase
+              .from("settings")
+              .delete()
+              .eq("space_id", spaceId)
+              .eq("key", "debug_theme_settings_test");
           } catch (err) {
             checks.push({ name: "theme_settings upsert test", ok: false, detail: String(err) });
           }
 
           // 10) miss_you_events readable
           try {
-            const { data: missYouData, error: missYouErr } = await supabase
+            const { count, error: missYouErr } = await supabase
               .from("miss_you_events")
-              .select("id")
-              .eq("space_id", space.id)
-              .limit(1);
+              .select("id", { count: "exact", head: true })
+              .eq("space_id", spaceId);
             checks.push({
               name: "miss_you_events readable",
               ok: !missYouErr,
-              detail: missYouErr ? missYouErr.message : `table exists, ${missYouData?.length || 0} rows`
+              detail: missYouErr
+                ? `query failed: ${missYouErr.message}`
+                : `table exists, ${count ?? 0} rows`
             });
           } catch (err) {
-            checks.push({ name: "miss_you_events readable", ok: false, detail: String(err) });
+            checks.push({
+              name: "miss_you_events readable",
+              ok: false,
+              detail: `query failed: ${err instanceof Error ? err.message : String(err)}`
+            });
           }
 
           // 11) push_subscriptions readable
           try {
-            const { data: pushData, error: pushErr } = await supabase
+            const { count, error: pushErr } = await supabase
               .from("push_subscriptions")
-              .select("id")
-              .eq("space_id", space.id)
-              .limit(1);
+              .select("id", { count: "exact", head: true })
+              .eq("space_id", spaceId);
             checks.push({
               name: "push_subscriptions readable",
               ok: !pushErr,
-              detail: pushErr ? pushErr.message : `table exists, ${pushData?.length || 0} rows`
+              detail: pushErr
+                ? `query failed: ${pushErr.message}`
+                : `table exists, ${count ?? 0} rows`
             });
           } catch (err) {
-            checks.push({ name: "push_subscriptions readable", ok: false, detail: String(err) });
+            checks.push({
+              name: "push_subscriptions readable",
+              ok: false,
+              detail: `query failed: ${err instanceof Error ? err.message : String(err)}`
+            });
           }
         } else {
           // Space not found, mark remaining checks as skipped
-          checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space found)" });
-          checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no space found)" });
-          checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space found)" });
-          checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space found)" });
-          checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space found)" });
+          checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space)" });
         }
       } catch (err) {
         checks.push({ name: "DB connection", ok: false, detail: String(err) });
@@ -199,7 +264,6 @@ export async function GET() {
       }
     });
   } catch (err) {
-    // Top-level safety net - always return JSON, never 500
     return NextResponse.json({
       ok: false,
       error: err instanceof Error ? err.message : String(err),
