@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 
 interface Check {
   name: string;
@@ -14,7 +14,7 @@ interface Check {
 export async function GET() {
   try {
     const checks: Check[] = [];
-    const code = getDefaultSpaceCode();
+    const defaultCode = getDefaultSpaceCodeServer();
 
     // 1) NEXT_PUBLIC_SUPABASE_URL exists
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,8 +35,8 @@ export async function GET() {
     // 3) NEXT_PUBLIC_DEFAULT_SPACE_CODE
     checks.push({
       name: "NEXT_PUBLIC_DEFAULT_SPACE_CODE",
-      ok: !!code,
-      detail: code || "missing (defaults to 'xiaoguai520')"
+      ok: true,
+      detail: `default space code = ${defaultCode}`
     });
 
     // 4) VAPID public key exists
@@ -59,7 +59,7 @@ export async function GET() {
     if (isSupabaseServerConfigured()) {
       try {
         const supabase = createSupabaseServerClient();
-        const spaceCode = code || "xiaoguai520";
+        const spaceCode = defaultCode;
 
         // 6) xiaoguai520 space exists
         const { data: space, error: spaceErr } = await supabase
@@ -81,7 +81,7 @@ export async function GET() {
               .from("settings")
               .upsert({
                 space_id: space.id,
-                girlfriend_name: "V",
+                girlfriend_name: "xiao guai",
                 updated_at: new Date().toISOString()
               }, { onConflict: "space_id" });
             checks.push({
