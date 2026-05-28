@@ -25,7 +25,6 @@ import { DailyCareCard } from "@/components/DailyCareCard";
 import { DualTimeCard } from "@/components/DualTimeCard";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
-import { QuickActionsPanel } from "@/components/QuickActionsPanel";
 
 function safeBristolDate() {
   try {
@@ -333,7 +332,6 @@ export default function HomePage() {
             </div>
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
-        <QuickActionsPanel />
         <OnboardingCard />
       </div>
     </AppShell>

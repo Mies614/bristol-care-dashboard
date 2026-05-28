@@ -202,8 +202,9 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
     data.loveNote
   ].filter(Boolean);
 
-  // Extract quick_actions from the raw data (may be JSON string or already an object)
-  let quickActionsStr: string | undefined;
+  // Backward compatibility: parse quick_actions from old data but don't actively use them
+  // quickActions field is kept as empty string — no longer written to settings table
+  let quickActionsStr = "";
   const rawQA = isRecord(data)
     ? data.quickActions || data.quick_actions || (settings.quick_actions)
     : undefined;
@@ -221,7 +222,7 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
       backgroundSettings,
       themeSettings,
       periodSettings,
-      quickActions: quickActionsStr ?? ""
+      quickActions: quickActionsStr // kept for backward compat, not actively written to DB
     },
     loveNotes: rawLoveNotes.map(normalizeLoveNote).filter((note): note is Omit<LoveNote, "id"> & { id?: string } => Boolean(note)),
     courses: [...asArray(data.courses), ...asArray(data.schedule), ...asArray(data.timetable)].map(normalizeCourse).filter((course): course is Course => Boolean(course)),

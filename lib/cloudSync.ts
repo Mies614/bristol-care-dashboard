@@ -67,24 +67,8 @@ export async function pullCloudData(code: string): Promise<CloudResult<AppData>>
 }
 
 export async function uploadLocalDataToCloud(code: string, localData: AppData) {
-  // Include quick_actions from localStorage in the upload payload
-  let quickActions: unknown = undefined;
-  if (typeof window !== "undefined") {
-    try {
-      const raw = window.localStorage.getItem("bristol_dashboard_quick_actions");
-      if (raw) {
-        quickActions = JSON.parse(raw);
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  const dataWithQuickActions = quickActions
-    ? { ...localData, quickActions }
-    : localData;
-
-  return postJson<{ data: AppData }>("/api/cloud/upload", { code, data: dataWithQuickActions, mode: "uploadLocalToCloud" });
+  // quick_actions removed from active sync — kept for backward compatibility if old payloads still contain it
+  return postJson<{ data: AppData }>("/api/cloud/upload", { code, data: localData, mode: "uploadLocalToCloud" });
 }
 
 export async function syncLoveNotes(code: string): Promise<CloudResult<LoveNote[]>> {
@@ -157,20 +141,6 @@ export async function pullAndPersistCloudData(code: string): Promise<CloudResult
   if (!result.ok || !result.data) return result;
   try {
     await withAutoSyncSuppressedAsync(async () => saveAppData(result.data!, { suppressAutoSync: true }));
-
-    // Restore quick_actions from cloud settings if present
-    // The cloud data comes from fetchCloudDataByCode which includes settings with quick_actions
-    if (result.data && typeof result.data === "object") {
-      const dataObj = result.data as Record<string, unknown>;
-      if (dataObj.quickActions && typeof dataObj.quickActions === "string") {
-        try {
-          window.localStorage.setItem("bristol_dashboard_quick_actions", dataObj.quickActions);
-        } catch {
-          // localStorage unavailable
-        }
-      }
-    }
-
     setLastSyncTime();
   } catch {
     return { ok: false, error: "云端数据已拉取，但本地缓存写入失败。" };
