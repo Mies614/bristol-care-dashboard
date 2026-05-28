@@ -1,40 +1,87 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { Home, CalendarDays, Heart, CreditCard, Settings } from "lucide-react";
+import { appNavItems, getActiveNavHref, shouldShowBottomNav } from "@/lib/navigation";
+import {
+  getNavContainerClass,
+  normalizeNavStyle,
+  normalizeThemeStyle,
+} from "./navVariants";
+import { BottomNavItem } from "./BottomNavItem";
+import { getThemeSettings } from "@/lib/theme";
+import { cn } from "@/lib/design/tokens";
+import type { AppThemeStyle, ThemeNavStyle, ThemeDecoration } from "@/lib/types";
 
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/records", label: "Records" },
-  { href: "/notes", label: "Notes" },
-  { href: "/memories", label: "Memories" },
-  { href: "/settings", label: "Settings" }
-] as const;
+const ICON_MAP: Record<string, React.ReactNode> = {
+  Home: <Home size={20} strokeWidth={1.8} />,
+  CalendarDays: <CalendarDays size={20} strokeWidth={1.8} />,
+  Heart: <Heart size={20} strokeWidth={1.8} />,
+  CreditCard: <CreditCard size={20} strokeWidth={1.8} />,
+  Settings: <Settings size={20} strokeWidth={1.8} />,
+};
 
-export function BottomNav() {
+interface NavStatus {
+  records?: boolean;
+  memories?: boolean;
+  settings?: boolean;
+}
+
+export function BottomNav({ status }: { status?: NavStatus }) {
   const pathname = usePathname();
+  const [settings, setSettings] = useState(() => getThemeSettings());
+
+  useEffect(() => {
+    const handler = () => setSettings(getThemeSettings());
+    window.addEventListener("theme-settings-changed", handler);
+    return () => window.removeEventListener("theme-settings-changed", handler);
+  }, []);
+
+  if (!shouldShowBottomNav(pathname)) return null;
+
+  const activeHref = getActiveNavHref(pathname);
+  const navStyle: ThemeNavStyle = normalizeNavStyle(settings.navStyle);
+  const themeStyle: AppThemeStyle = normalizeThemeStyle(settings.style);
+  const decoration: ThemeDecoration = settings.decoration;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-white/30 bg-[var(--app-nav-bg)] px-2 py-2 backdrop-blur-2xl md:max-w-[520px]">
-      <ul className="flex items-center justify-around gap-1">
-        {navItems.map(({ href, label }) => {
-          const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
-          return (
-            <li key={href} className="flex-1">
-              <Link
-                className={`flex flex-col items-center gap-0.5 rounded-[1.15rem] px-2 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? "bg-[var(--app-accent-soft)] text-[var(--app-accent)]"
-                    : "text-[var(--app-muted)] hover:bg-white/40"
-                }`}
-                href={href}
-              >
-                <span>{label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <div
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-50 pointer-events-none",
+        "px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]",
+      )}
+    >
+      <nav
+        aria-label="main navigation"
+        className={getNavContainerClass(navStyle, themeStyle)}
+      >
+        <ul className="flex items-center justify-around gap-0.5">
+          {appNavItems.map((item) => {
+            const isActive = activeHref === item.href;
+            const icon = ICON_MAP[item.icon];
+
+            let hasStatusDot = false;
+            if (item.group === "records" && status?.records) hasStatusDot = true;
+            if (item.group === "memories" && status?.memories) hasStatusDot = true;
+            if (item.group === "settings" && status?.settings) hasStatusDot = true;
+
+            return (
+              <BottomNavItem
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={icon}
+                isActive={isActive}
+                navStyle={navStyle}
+                themeStyle={themeStyle}
+                decoration={decoration}
+                hasStatusDot={hasStatusDot}
+              />
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
   );
 }
