@@ -276,5 +276,8 @@ export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
     { space_id: spaceId, key: "background_settings", value: sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings) },
     { space_id: spaceId, key: "theme_settings", value: normalizeThemeSettings(settings.themeSettings || DEFAULT_THEME_SETTINGS) },
     { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) }
-  ];
+  ].map((row) => ({
+    ...row,
+    value: row.value === null || row.value === undefined ? "" : row.value
+  }));
 }

@@ -172,10 +172,13 @@ export function mergeBackgroundSettings(partial: Partial<BackgroundSettings>): B
 
 export function sanitizeBackgroundSettingsForCloud(settings: BackgroundSettings): BackgroundSettings {
   const normalized = normalizeBackgroundSettings(settings);
+  const mode = normalized.mode === "image" ? "preset"
+    : normalized.mode === "cloudImage" && !normalized.cloudImageUrl ? normalized.preset ? "preset" : "preset"
+    : normalized.mode;
   return {
     ...normalized,
     imageDataUrl: undefined,
-    mode: normalized.mode === "image" ? "preset" : normalized.mode
+    mode
   };
 }
 
