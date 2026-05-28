@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSpaceByCode } from "@/lib/api/cloud";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSpaceByCode } from "@/lib/supabase/spaces";
+import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import {
   sendMissYouPushToRole,
   getOppositeAuthors,
@@ -12,7 +13,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 function getDefaultCode(): string {
-  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
+  return getDefaultSpaceCodeServer();
 }
 
 function getLocalDateKey(): string {
@@ -26,8 +27,7 @@ function getLocalDateKey(): string {
 // ---------------------------------------------------------------------------
 // GET  /api/miss-you
 // Query params:
-//   code, localDate, limit, viewer
-// If viewer is provided, also returns unreadFromOtherCount and lastSeenAt
+//   code, localDate, limit, viewer, includeUnread
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
@@ -36,16 +36,17 @@ export async function GET(request: NextRequest) {
     const localDate = searchParams.get("localDate") || getLocalDateKey();
     const limit = Math.min(Number(searchParams.get("limit")) || 10, 50);
     const viewer = searchParams.get("viewer");
+    const includeUnread = searchParams.get("includeUnread") === "true";
 
-    const space = await getSpaceByCode(code);
+    const supabase = createSupabaseServerClient();
+
+    const space = await getSpaceByCode(supabase, code);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
         { status: 404 }
       );
     }
-
-    const supabase = createSupabaseServerClient();
 
     // ── todayCount ──────────────────────────────────────────────────
     const { count: todayCount, error: countError } = await supabase
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── latestEvents ────────────────────────────────────────────────
-    const { data: latestEvents, error: eventsError } = await supabase
+    const { data: latestEvents } = await supabase
       .from("miss_you_events")
       .select("*")
       .eq("space_id", space.id)
@@ -87,22 +88,19 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (eventsError) {
-      return NextResponse.json(
-        { ok: false, error: "查询失败。", code: "MISS_YOU_FETCH_FAILED" },
-        { status: 500 }
-      );
-    }
-
     const lastEvent = latestEvents && latestEvents.length > 0 ? latestEvents[0] : null;
 
     // ── viewer-specific unread ──────────────────────────────────────
     let lastSeenAt: string | null = null;
     let unreadFromOtherCount = 0;
     let unreadFromOtherEvents: unknown[] = [];
+    let oppositeAuthors: string[] = [];
+    let unreadQueryUsedCreatedAtFilter = false;
 
-    if (viewer && (viewer === "admin" || viewer === "xiaoguai")) {
-      // fetch last_seen_at
+    if (viewer && includeUnread) {
+      oppositeAuthors = getOppositeAuthors(viewer);
+
+      // fetch seen state
       const { data: seenState } = await supabase
         .from("miss_you_seen_state")
         .select("last_seen_at")
@@ -110,74 +108,53 @@ export async function GET(request: NextRequest) {
         .eq("viewer", viewer)
         .maybeSingle();
 
-      lastSeenAt = seenState?.last_seen_at || null;
-      const oppositeAuthors = getOppositeAuthors(viewer);
+      lastSeenAt = seenState?.last_seen_at ?? null;
+      unreadQueryUsedCreatedAtFilter = lastSeenAt !== null;
 
-      if (lastSeenAt) {
-        // Count unread from opposite authors after last_seen_at
-        let query = supabase
+      if (oppositeAuthors.length > 0) {
+        // Build base unread count query (with head:true for count-only)
+        let countQuery = supabase
           .from("miss_you_events")
           .select("*", { count: "exact", head: true })
           .eq("space_id", space.id)
           .is("deleted_at", null)
-          .gt("created_at", lastSeenAt);
+          .in("author", oppositeAuthors);
 
-        for (const author of oppositeAuthors) {
-          query = query.or(`author.eq.${author}`);
-        }
-
-        const { count: unreadCount } = await query;
-        unreadFromOtherCount = unreadCount || 0;
-
-        // Fetch actual unread events (limit 5)
-        let eventsQuery = supabase
+        // Build base unread data query (for fetching the actual events)
+        let dataQuery = supabase
           .from("miss_you_events")
           .select("*")
           .eq("space_id", space.id)
           .is("deleted_at", null)
-          .gt("created_at", lastSeenAt)
+          .in("author", oppositeAuthors)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(10);
 
-        for (const author of oppositeAuthors) {
-          eventsQuery = eventsQuery.or(`author.eq.${author}`);
+        // Only add time filter when lastSeenAt exists (not null)
+        if (lastSeenAt) {
+          countQuery = countQuery.gt("created_at", lastSeenAt);
+          dataQuery = dataQuery.gt("created_at", lastSeenAt);
         }
 
-        const { data: unreadEvents } = await eventsQuery;
-        unreadFromOtherEvents = unreadEvents || [];
-      } else {
-        // No last_seen_at → count all opposite author events
-        let query = supabase
-          .from("miss_you_events")
-          .select("*", { count: "exact", head: true })
-          .eq("space_id", space.id)
-          .is("deleted_at", null);
+        // Run count and data queries separately
+        const { count: unreadCount, error: unreadCountError } = await countQuery;
+        const { data: unreadEvents, error: unreadDataError } = await dataQuery;
 
-        for (const author of oppositeAuthors) {
-          query = query.or(`author.eq.${author}`);
+        if (unreadCountError) {
+          console.error("[miss-you GET] unread count error:", unreadCountError);
+        }
+        if (unreadDataError) {
+          console.error("[miss-you GET] unread data error:", unreadDataError);
         }
 
-        const { count: allCount } = await query;
-        unreadFromOtherCount = allCount || 0;
-
-        let eventsQuery = supabase
-          .from("miss_you_events")
-          .select("*")
-          .eq("space_id", space.id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        for (const author of oppositeAuthors) {
-          eventsQuery = eventsQuery.or(`author.eq.${author}`);
-        }
-
-        const { data: allEvents } = await eventsQuery;
-        unreadFromOtherEvents = allEvents || [];
+        // Explicitly compute count: prefer the count from the count query,
+        // fall back to events array length if count is null
+        unreadFromOtherCount = unreadCount ?? unreadEvents?.length ?? 0;
+        unreadFromOtherEvents = unreadEvents ?? [];
       }
     }
 
-    return NextResponse.json({
+    const response: Record<string, unknown> = {
       ok: true,
       todayCount: todayCount || 0,
       todayByAuthor,
@@ -185,12 +162,28 @@ export async function GET(request: NextRequest) {
       lastEvent,
       viewer: viewer || null,
       lastSeenAt,
+      oppositeAuthors,
       unreadFromOtherCount,
       unreadFromOtherEvents
-    });
-  } catch {
+    };
+
+    // ── Debug info (no secrets) ─────────────────────────────────────
+    response.debug = {
+      viewer,
+      includeUnread,
+      spaceCode: code,
+      spaceId: space.id,
+      lastSeenAt,
+      oppositeAuthors,
+      unreadFromOtherCount,
+      unreadEventsLength: unreadFromOtherEvents.length,
+      unreadQueryUsedCreatedAtFilter
+    };
+
+    return NextResponse.json(response);
+  } catch (err) {
     return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "MISS_YOU_FETCH_FAILED" },
+      { ok: false, error: "服务器错误。", code: "MISS_YOU_FETCH_FAILED", debug: String(err) },
       { status: 500 }
     );
   }
@@ -219,15 +212,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const space = await getSpaceByCode(code);
+    const supabase = createSupabaseServerClient();
+
+    const space = await getSpaceByCode(supabase, code);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
         { status: 404 }
       );
     }
-
-    const supabase = createSupabaseServerClient();
 
     const { data: event, error: insertError } = await supabase
       .from("miss_you_events")
@@ -340,7 +333,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const space = await getSpaceByCode(code);
+    const supabase = createSupabaseServerClient();
+
+    const space = await getSpaceByCode(supabase, code);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
@@ -348,7 +343,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
     const now = new Date().toISOString();
 
     const { error: upsertError } = await supabase

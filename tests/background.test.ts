@@ -6,7 +6,6 @@ import {
   getBackgroundSettings,
   getBackgroundOverlayStyle,
   getBackgroundStyle,
-  mergeBackgroundSettings,
   normalizeBackgroundSettings,
   saveBackgroundSettings,
   sanitizeBackgroundSettingsForCloud
@@ -68,10 +67,10 @@ describe("background settings", () => {
     expect(getBackgroundSettings()).toMatchObject({ mode: "color", color: "#FDF2F8" });
   });
 
-  it("mergeBackgroundSettings supports uploaded image data", () => {
+  it("saveBackgroundSettings handles uploaded image data", () => {
     const storage = localStorageMock();
     vi.stubGlobal("window", { localStorage: storage, dispatchEvent: vi.fn() });
-    const settings = mergeBackgroundSettings({ mode: "image", imageDataUrl: "data:image/webp;base64,abc" });
+    const settings = saveBackgroundSettings({ mode: "image", imageDataUrl: "data:image/webp;base64,abc" });
 
     expect(settings.mode).toBe("image");
     expect(settings.imageDataUrl).toBe("data:image/webp;base64,abc");

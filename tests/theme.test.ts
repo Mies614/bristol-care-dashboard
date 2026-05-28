@@ -32,7 +32,7 @@ describe("theme settings", () => {
   });
 
   it("normalizes all theme styles and creates variables", () => {
-    for (const style of ["soft", "romantic", "minimal", "study", "night", "photo"] as const) {
+    for (const style of ["soft", "romantic", "minimal", "study", "night", "photo", "playful", "elegant"] as const) {
       const settings = normalizeThemeSettings({ style });
       expect(settings.style).toBe(style);
       expect(getThemeCssVariables(settings)["--app-card-bg"]).toBeTruthy();
@@ -54,6 +54,6 @@ describe("theme settings", () => {
   });
 
   it("photo theme uses a stronger card background", () => {
-    expect(String(getThemeCssVariables(getThemeDefaultsForStyle("photo"))["--app-card-bg"])).toContain("0.88");
+    expect(String(getThemeCssVariables(getThemeDefaultsForStyle("photo"))["--app-card-bg"])).toContain("0.9");
   });
 });

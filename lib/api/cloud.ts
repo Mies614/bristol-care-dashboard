@@ -1,6 +1,8 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
+import { getSpaceByCode as getSpaceByCodeFromLib } from "@/lib/supabase/spaces";
+import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import {
   cloudSettingsToRows,
   courseFromRow,
@@ -14,7 +16,7 @@ import {
   settingsRowsToCloudSettings
 } from "@/lib/mappers";
 import type { AppData, CloudSettings, CommonLink, Course, Deadline } from "@/lib/types";
-import { defaultBackgroundSettings } from "@/lib/background";
+import { DEFAULT_BACKGROUND_SETTINGS } from "@/lib/supabase/settings";
 import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 
@@ -23,19 +25,13 @@ export function cloudUnavailableResponse() {
 }
 
 export function getDefaultSpaceCode() {
-  return process.env.NEXT_PUBLIC_DEFAULT_SPACE_CODE || "xiaoguai520";
+  return getDefaultSpaceCodeServer();
 }
 
 export async function getSpaceByCode(code: string) {
   if (!isSupabaseServerConfigured()) throw new Error("SUPABASE_NOT_CONFIGURED");
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("couple_spaces")
-    .select("id, code, name, girlfriend_name")
-    .eq("code", code)
-    .maybeSingle();
-  if (error) throw error;
-  return data as { id: string; code: string; name: string; girlfriend_name: string } | null;
+  return getSpaceByCodeFromLib(supabase, code);
 }
 
 export async function fetchCloudDataByCode(code: string) {
@@ -73,7 +69,7 @@ export async function fetchCloudDataByCode(code: string) {
     deadlines: (deadlines.data || []).map(deadlineFromRow),
     links: (quickLinks.data || []).map(quickLinkFromRow),
     loveNotes: (loveNotes.data || []).map(loveNoteFromRow),
-    backgroundSettings: cloudSettings.backgroundSettings || defaultBackgroundSettings,
+    backgroundSettings: cloudSettings.backgroundSettings || DEFAULT_BACKGROUND_SETTINGS,
     themeSettings: cloudSettings.themeSettings || DEFAULT_THEME_SETTINGS,
     periodRecords: [],
     periodSettings: cloudSettings.periodSettings || DEFAULT_PERIOD_SETTINGS

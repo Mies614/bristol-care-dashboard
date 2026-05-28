@@ -118,6 +118,12 @@ export type CloudSettings = {
   periodSettings?: PeriodSettings;
 };
 
+export type BackgroundImageFit = "cover" | "contain" | "portrait" | "softPortrait" | "fullPhoto";
+
+export type BackgroundOverlay = "none" | "light" | "medium" | "strong";
+
+export type ContentProtection = "none" | "softPanel" | "strongPanel" | "gradientMask";
+
 export type BackgroundSettings = {
   mode: "preset" | "color" | "image" | "url" | "cloudImage";
   preset?: "cream" | "pink" | "lavender" | "blue" | "green" | "dark";
@@ -126,27 +132,41 @@ export type BackgroundSettings = {
   imageUrl?: string;
   cloudImageUrl?: string;
   cloudImagePath?: string;
-  imageFit?: "cover" | "contain" | "portrait" | "softPortrait";
+  imageFit?: BackgroundImageFit;
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
   focalPoint?: {
     x: number;
     y: number;
   };
-  overlay?: "none" | "light" | "medium" | "strong";
+  overlay?: BackgroundOverlay;
   blur?: boolean;
+  blurAmount?: number;
   portraitEnhance?: boolean;
   dim?: number;
   scale?: number;
+  contentProtection?: ContentProtection;
+  photoVisibility?: number;
 };
 
-export type AppThemeStyle = "soft" | "romantic" | "minimal" | "study" | "night" | "photo";
+export type AppThemeStyle = "soft" | "romantic" | "minimal" | "study" | "night" | "photo" | "playful" | "elegant";
+
+export type ThemeCardStyle = "glass" | "solid" | "paper" | "flat" | "outline";
+
+export type ThemeNavStyle = "glass" | "pill" | "paper" | "minimal" | "floating";
+
+export type ThemeRadius = "medium" | "large" | "extra";
+
+export type ThemeDecoration = "none" | "stars" | "hearts" | "tape" | "moon" | "dots";
+
+export type BackgroundTreatment = "soft" | "clearPhoto" | "blurPhoto" | "dimPhoto" | "gradientPhoto";
 
 export type ThemeSettings = {
   style: AppThemeStyle;
-  cardStyle: "glass" | "solid" | "paper" | "flat";
-  navStyle: "glass" | "pill" | "paper" | "minimal";
-  radius: "medium" | "large" | "extra";
-  decoration: "none" | "stars" | "hearts" | "tape" | "moon";
+  cardStyle: ThemeCardStyle;
+  navStyle: ThemeNavStyle;
+  radius: ThemeRadius;
+  decoration: ThemeDecoration;
+  backgroundTreatment?: BackgroundTreatment;
 };
 
 export type AppData = {

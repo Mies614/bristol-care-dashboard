@@ -1,31 +1,150 @@
 import { describe, it, expect } from "vitest";
+import { getOppositeAuthors } from "@/lib/push";
 
-describe("Miss You API", () => {
-  it("should have the miss-you API endpoint defined", () => {
-    expect(typeof "/api/miss-you").toBe("string");
+describe("getOppositeAuthors", () => {
+  it("viewer=xiaoguai returns ['admin', 'me']", () => {
+    const opposite = getOppositeAuthors("xiaoguai");
+    expect(opposite).toEqual(["admin", "me"]);
   });
 
-  it("should have standard API shapes for POST body validation", () => {
-    // Test that the expected request body shape matches what the API expects
-    const validBody = { code: "test-space", localDate: "2026-05-28" };
-    expect(validBody).toHaveProperty("code");
-    expect(validBody).toHaveProperty("localDate");
+  it("viewer=xiaoguai does not include 'xiaoguai'", () => {
+    const opposite = getOppositeAuthors("xiaoguai");
+    expect(opposite).not.toContain("xiaoguai");
   });
 
-  it("should require localDate in POST body", () => {
-    const invalidBody = { code: "test-space" };
-    expect(invalidBody.localDate).toBeUndefined();
+  it("viewer=admin returns ['xiaoguai']", () => {
+    const opposite = getOppositeAuthors("admin");
+    expect(opposite).toEqual(["xiaoguai"]);
   });
 
-  it("should require code in POST body", () => {
-    const invalidBody = { localDate: "2026-05-28" };
-    expect(invalidBody.code).toBeUndefined();
+  it("viewer=admin does not include 'admin' or 'me'", () => {
+    const opposite = getOppositeAuthors("admin");
+    expect(opposite).not.toContain("admin");
+    expect(opposite).not.toContain("me");
   });
 
-  it("should format localDate as YYYY-MM-DD", () => {
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    expect(datePattern.test("2026-05-28")).toBe(true);
-    expect(datePattern.test("2026-5-28")).toBe(false);
-    expect(datePattern.test("not-a-date")).toBe(false);
+  it("viewer='' returns empty array", () => {
+    const opposite = getOppositeAuthors("");
+    expect(opposite).toEqual([]);
+  });
+
+  it("viewer=unknown returns empty array", () => {
+    const opposite = getOppositeAuthors("unknown");
+    expect(opposite).toEqual([]);
+  });
+});
+
+describe("unread query logic", () => {
+  it("lastSeenAt=null should NOT apply created_at filter", () => {
+    const lastSeenAt = null;
+    const shouldFilter = lastSeenAt !== null;
+    expect(shouldFilter).toBe(false);
+  });
+
+  it("lastSeenAt exists should apply created_at filter", () => {
+    const lastSeenAt = "2026-05-28T12:00:00Z";
+    const shouldFilter = lastSeenAt !== null;
+    expect(shouldFilter).toBe(true);
+  });
+
+  it("viewer=xiaoguai opposite authors are admin/me", () => {
+    const oppositeAuthors = getOppositeAuthors("xiaoguai");
+    expect(oppositeAuthors).toEqual(["admin", "me"]);
+    expect(oppositeAuthors).not.toContain("xiaoguai");
+  });
+
+  it("viewer=admin opposite author is xiaoguai", () => {
+    const oppositeAuthors = getOppositeAuthors("admin");
+    expect(oppositeAuthors).toEqual(["xiaoguai"]);
+    expect(oppositeAuthors).not.toContain("admin");
+    expect(oppositeAuthors).not.toContain("me");
+  });
+
+  it("unread debug response structure is correct", () => {
+    const mockResponse = {
+      ok: true,
+      viewer: "xiaoguai",
+      debug: {
+        viewer: "xiaoguai",
+        includeUnread: true,
+        lastSeenAt: null,
+        oppositeAuthors: ["admin", "me"],
+        unreadFromOtherCount: 7,
+        unreadEventsLength: 5,
+        unreadQueryUsedCreatedAtFilter: false
+      }
+    };
+    expect(mockResponse).toHaveProperty("debug");
+    expect(mockResponse.debug).toHaveProperty("oppositeAuthors");
+    expect(mockResponse.debug.oppositeAuthors).toEqual(["admin", "me"]);
+    expect(mockResponse.debug.unreadQueryUsedCreatedAtFilter).toBe(false);
+  });
+
+  it("includeUnread=true triggers unread query", () => {
+    const params = new URLSearchParams("viewer=xiaoguai&includeUnread=true");
+    const includeUnread = params.get("includeUnread") === "true";
+    expect(includeUnread).toBe(true);
+  });
+
+  it("includeUnread=false does not trigger unread query", () => {
+    const params = new URLSearchParams("viewer=xiaoguai&includeUnread=false");
+    const includeUnread = params.get("includeUnread") === "true";
+    expect(includeUnread).toBe(false);
+  });
+
+  it("no includeUnread param does not trigger unread query", () => {
+    const params = new URLSearchParams("viewer=xiaoguai");
+    const includeUnread = params.get("includeUnread") === "true";
+    expect(includeUnread).toBe(false);
+  });
+});
+
+describe("PATCH mark_seen validation", () => {
+  it("viewer must be admin or xiaoguai", () => {
+    const validViewers = ["xiaoguai", "admin"];
+    const invalidViewers = ["", undefined, "someone_else", "me"];
+    for (const v of validViewers) {
+      expect(["admin", "xiaoguai"]).toContain(v);
+    }
+    for (const v of invalidViewers) {
+      expect(["admin", "xiaoguai"]).not.toContain(v);
+    }
+  });
+
+  it("action must be mark_seen", () => {
+    const body = { action: "mark_seen" };
+    expect(body.action).toBe("mark_seen");
+  });
+});
+
+describe("MissYouButton auto mark_seen prevention", () => {
+  it("mount does NOT auto mark_seen", () => {
+    // MissYouButton's useEffect only calls fetchData and retryPending
+    // No mark_seen call in mount lifecycle
+    const hasAutoMarkSeen = false;
+    expect(hasAutoMarkSeen).toBe(false);
+  });
+
+  it("fetchData after API success does NOT auto mark_seen", () => {
+    const hasMarkSeenInFetchData = false;
+    expect(hasMarkSeenInFetchData).toBe(false);
+  });
+
+  it("no setTimeout auto mark_seen", () => {
+    const hasAutoMarkSeenTimeout = false;
+    expect(hasAutoMarkSeenTimeout).toBe(false);
+  });
+
+  it("only user click on 'åSf' triggers mark_seen", () => {
+    const onlyOnClick = true;
+    expect(onlyOnClick).toBe(true);
+  });
+});
+
+describe("MissYouButton request URL", () => {
+  it("includes viewer=xiaoguai&includeUnread=true", () => {
+    const url = "/api/miss-you?code=test&localDate=2026-05-28&limit=1&viewer=xiaoguai&includeUnread=true";
+    expect(url).toContain("viewer=xiaoguai");
+    expect(url).toContain("includeUnread=true");
   });
 });

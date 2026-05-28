@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { DataManagementCenter } from "@/components/DataManagementCenter";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { PageHeader } from "@/components/PageHeader";
+import { SettingsSection } from "@/components/settings/SettingsSection";
+import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
+import { DataManagementCenter } from "@/components/DataManagementCenter";
 import {
   DEFAULT_BACKGROUND_SETTINGS,
   getBackgroundOverlayStyle,
@@ -30,7 +32,7 @@ import {
 import { markLocalChange, runAutoSyncNow, scheduleAutoSync } from "@/lib/autoSync";
 import { loadAppData, resetAppData, saveAppData } from "@/lib/storage";
 import { DEFAULT_THEME_SETTINGS, getThemeDefaultsForStyle, getThemeSettings, saveThemeSettings } from "@/lib/theme";
-import type { AppData, AppThemeStyle, BackgroundSettings, ThemeSettings } from "@/lib/types";
+import type { AppData, BackgroundSettings, ThemeSettings } from "@/lib/types";
 import { validateAppData } from "@/lib/validation";
 
 export default function SettingsPage() {
@@ -41,7 +43,6 @@ export default function SettingsPage() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [colorDraft, setColorDraft] = useState("#fff8f0");
   const [imageUrlDraft, setImageUrlDraft] = useState("");
-  const [dataCenterOpen, setDataCenterOpen] = useState(false);
 
   useEffect(() => {
     const current = loadAppData();
@@ -143,41 +144,35 @@ export default function SettingsPage() {
     <AppShell>
       <PageHeader title="设置" subtitle="这里管理昵称、见面日期、小纸条、常用链接、本地数据和云同步。" />
 
-      <div className="space-y-4">
-        <section className="soft-card space-y-3">
-          <div>
-            <p className="section-kicker mb-1">Profile</p>
-            <h2 className="font-semibold text-cocoa">基础信息</h2>
-            <div className="mt-2"><AutoSyncStatusBadge /></div>
-          </div>
-          <label className="block text-sm text-cocoa/70">
+      <div className="flex w-full min-w-0 flex-col gap-4">
+        {/* ──────────────────── Profile ──────────────────── */}
+        <SettingsSection title="Profile" subtitle="基础信息" className="bg-gradient-to-br from-white/85 to-blush/45">
+          <div className="mt-2"><AutoSyncStatusBadge /></div>
+          <label className="block text-sm text-[var(--app-muted)]">
             昵称
             <input className="field mt-1" value={data.nickname || "小乖"} onChange={(e) => update({ ...data, nickname: e.target.value || "小乖" })} />
           </label>
-          <label className="block text-sm text-cocoa/70">
+          <label className="block text-sm text-[var(--app-muted)]">
             下次见面日期
             <input className="field mt-1" type="date" value={data.nextMeetDate} onChange={(e) => update({ ...data, nextMeetDate: e.target.value })} />
           </label>
-          <label className="block text-sm text-cocoa/70">
+          <label className="block text-sm text-[var(--app-muted)]">
             学期结束日期
             <input className="field mt-1" type="date" value={data.semesterEndDate || ""} onChange={(e) => update({ ...data, semesterEndDate: e.target.value })} />
           </label>
-          <label className="block text-sm text-cocoa/70">
+          <label className="block text-sm text-[var(--app-muted)]">
             本地小纸条 fallback
             <textarea className="field mt-1 min-h-28" value={data.note} onChange={(e) => update({ ...data, note: e.target.value })} />
           </label>
-        </section>
-        <section className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-lilac/45">
-          <div>
-            <p className="section-kicker mb-1">Appearance</p>
-            <h2 className="font-semibold text-cocoa">背景设置</h2>
-            <p className="mt-2 text-sm leading-6 text-cocoa/65">上传背景图后会同步到云端，切换页面也会保持同一张背景。</p>
-            <div className="mt-2"><AutoSyncStatusBadge /></div>
-          </div>
+        </SettingsSection>
+
+        {/* ──────────────────── Background ──────────────────── */}
+        <SettingsSection title="Appearance" subtitle="背景设置 — 上传背景图后会同步到云端" className="bg-gradient-to-br from-white/85 to-lilac/45">
+          <div className="mt-2"><AutoSyncStatusBadge /></div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-cocoa/75">预设背景</p>
-            <div className="grid grid-cols-3 gap-2">
+            <p className="mb-2 text-sm font-medium text-[var(--app-muted)]">预设背景</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[
                 ["cream", "奶油白"],
                 ["pink", "淡粉"],
@@ -189,8 +184,8 @@ export default function SettingsPage() {
                 <button
                   className={`rounded-2xl border px-3 py-3 text-sm shadow-sm transition ${
                     data.backgroundSettings.preset === preset && data.backgroundSettings.mode === "preset"
-                      ? "border-roseSoft bg-blush/75 text-cocoa"
-                      : "border-white/75 bg-white/65 text-cocoa/70"
+                      ? "border-roseSoft bg-blush/75 text-[var(--app-text)]"
+                      : "border-white/75 bg-white/65 text-[var(--app-muted)]"
                   }`}
                   key={preset}
                   onClick={() => updateBackground({ ...data.backgroundSettings, mode: "preset", preset: preset as BackgroundSettings["preset"] })}
@@ -203,7 +198,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               自定义颜色
               <div className="mt-1 flex gap-2">
                 <input
@@ -222,7 +217,7 @@ export default function SettingsPage() {
                 应用颜色
               </button>
             </label>
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               远程图片 URL
               <input
                 className="field mt-1"
@@ -237,8 +232,8 @@ export default function SettingsPage() {
           </div>
 
           <label className="file-panel">
-            <span className="font-medium text-cocoa">上传云端背景图片</span>
-            <span className="mt-1 block text-xs text-cocoa/52">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
+            <span className="font-medium text-[var(--app-text)]">上传云端背景图片</span>
+            <span className="mt-1 block text-xs text-[var(--app-muted)]">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
             <input
               className="mt-3 block w-full text-sm"
               type="file"
@@ -286,11 +281,11 @@ export default function SettingsPage() {
           </label>
 
           <div className="overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/55 p-3 shadow-sm">
-            <p className="mb-2 text-xs font-medium text-cocoa/60">实时预览</p>
+            <p className="mb-2 text-xs font-medium text-[var(--app-muted)]">实时预览</p>
             <div className="relative h-32 overflow-hidden rounded-[1.2rem] border border-white/70" style={getBackgroundStyle(data.backgroundSettings)}>
               <div className="absolute inset-0" style={getBackgroundOverlayStyle(data.backgroundSettings)} />
               <div className="relative z-10 flex h-full items-end p-3">
-                <div className="rounded-2xl bg-white/72 px-3 py-2 text-xs leading-5 text-cocoa shadow-sm backdrop-blur">
+                <div className="rounded-2xl bg-white/72 px-3 py-2 text-xs leading-5 text-[var(--app-text)] shadow-sm backdrop-blur">
                   Bristol Care<br />背景预览
                 </div>
               </div>
@@ -308,10 +303,10 @@ export default function SettingsPage() {
 
           <div className="space-y-4 rounded-[1.5rem] border border-white/80 bg-white/55 p-3 shadow-sm">
             <div>
-              <p className="text-sm font-semibold text-cocoa">人物照片优化</p>
-              <p className="mt-1 text-xs leading-5 text-cocoa/55">如果用人物照片做背景，可以试试“人物照片”或“柔和人物背景”。</p>
+              <p className="text-sm font-semibold text-[var(--app-text)]">人物照片优化</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--app-muted)]">如果用人物照片做背景，可以试试“人物照片”或“柔和人物背景”。</p>
             </div>
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               背景显示模式
               <select
                 className="field mt-1"
@@ -336,8 +331,8 @@ export default function SettingsPage() {
               </select>
             </label>
             <div>
-              <p className="mb-2 text-sm text-cocoa/70">焦点位置</p>
-              <div className="grid grid-cols-5 gap-2">
+              <p className="mb-2 text-sm text-[var(--app-muted)]">焦点位置</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
                   ["居中", { x: 50, y: 50 }, "center"],
                   ["靠上", { x: 50, y: 28 }, "top"],
@@ -357,7 +352,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="block text-sm text-cocoa/70">
+              <label className="block text-sm text-[var(--app-muted)]">
                 焦点 X：{data.backgroundSettings.focalPoint?.x ?? 50}%
                 <input
                   className="mt-2 w-full accent-[#8c6a60]"
@@ -368,7 +363,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateBackgroundPartial({ focalPoint: { x: Number(e.target.value), y: data.backgroundSettings.focalPoint?.y ?? 38 } })}
                 />
               </label>
-              <label className="block text-sm text-cocoa/70">
+              <label className="block text-sm text-[var(--app-muted)]">
                 焦点 Y：{data.backgroundSettings.focalPoint?.y ?? 38}%
                 <input
                   className="mt-2 w-full accent-[#8c6a60]"
@@ -379,7 +374,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateBackgroundPartial({ focalPoint: { x: data.backgroundSettings.focalPoint?.x ?? 50, y: Number(e.target.value) } })}
                 />
               </label>
-              <label className="block text-sm text-cocoa/70">
+              <label className="block text-sm text-[var(--app-muted)]">
                 背景遮罩：{data.backgroundSettings.dim ?? 20}%
                 <input
                   className="mt-2 w-full accent-[#8c6a60]"
@@ -390,7 +385,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateBackgroundPartial({ dim: Number(e.target.value) })}
                 />
               </label>
-              <label className="block text-sm text-cocoa/70">
+              <label className="block text-sm text-[var(--app-muted)]">
                 背景缩放：{data.backgroundSettings.scale ?? 100}%
                 <input
                   className="mt-2 w-full accent-[#8c6a60]"
@@ -403,7 +398,7 @@ export default function SettingsPage() {
               </label>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="block text-sm text-cocoa/70">
+              <label className="block text-sm text-[var(--app-muted)]">
                 兼容遮罩
                 <select className="field mt-1" value={data.backgroundSettings.overlay || "light"} onChange={(e) => updateBackgroundPartial({ overlay: e.target.value as BackgroundSettings["overlay"] })}>
                   <option value="none">无</option>
@@ -426,35 +421,16 @@ export default function SettingsPage() {
           <button className="btn-secondary w-full" onClick={() => { setColorDraft("#fff8f0"); setImageUrlDraft(""); updateBackground(DEFAULT_BACKGROUND_SETTINGS); }} type="button">
             恢复默认背景
           </button>
-        </section>
+        </SettingsSection>
 
-        <section className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-blush/40">
-          <div>
-            <p className="section-kicker mb-1">Theme</p>
-            <h2 className="font-semibold text-cocoa">整体风格</h2>
-            <p className="mt-2 text-sm leading-6 text-cocoa/65">切换后会影响卡片、边框、按钮、底部导航和轻装饰。</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              ["soft", "温柔奶油"],
-              ["romantic", "浪漫粉紫"],
-              ["minimal", "极简清爽"],
-              ["study", "学习清爽"],
-              ["night", "夜间柔和"],
-              ["photo", "照片背景优先"]
-            ].map(([style, label]) => (
-              <button
-                className={`rounded-2xl border px-3 py-3 text-sm shadow-sm transition ${data.themeSettings.style === style ? "border-roseSoft bg-blush/75 text-cocoa" : "border-white/75 bg-white/65 text-cocoa/70"}`}
-                key={style}
-                onClick={() => updateTheme(getThemeDefaultsForStyle(style as AppThemeStyle))}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        {/* ──────────────────── Theme ──────────────────── */}
+        <SettingsSection title="Theme" subtitle="切换后会影响卡片、边框、按钮、底部导航和轻装饰" className="bg-gradient-to-br from-white/85 to-blush/40">
+          <ThemeStylePicker
+            currentStyle={data.themeSettings.style}
+            onSelect={(style) => updateTheme(getThemeDefaultsForStyle(style))}
+          />
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               卡片样式
               <select className="field mt-1" value={data.themeSettings.cardStyle} onChange={(e) => updateThemePartial({ cardStyle: e.target.value as ThemeSettings["cardStyle"] })}>
                 <option value="glass">玻璃</option>
@@ -463,16 +439,17 @@ export default function SettingsPage() {
                 <option value="flat">扁平</option>
               </select>
             </label>
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               底部导航
               <select className="field mt-1" value={data.themeSettings.navStyle} onChange={(e) => updateThemePartial({ navStyle: e.target.value as ThemeSettings["navStyle"] })}>
                 <option value="glass">玻璃</option>
                 <option value="pill">胶囊</option>
                 <option value="paper">纸张</option>
                 <option value="minimal">极简</option>
+                <option value="floating">浮动</option>
               </select>
             </label>
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               圆角
               <select className="field mt-1" value={data.themeSettings.radius} onChange={(e) => updateThemePartial({ radius: e.target.value as ThemeSettings["radius"] })}>
                 <option value="medium">中</option>
@@ -480,7 +457,7 @@ export default function SettingsPage() {
                 <option value="extra">超大</option>
               </select>
             </label>
-            <label className="block text-sm text-cocoa/70">
+            <label className="block text-sm text-[var(--app-muted)]">
               装饰
               <select className="field mt-1" value={data.themeSettings.decoration} onChange={(e) => updateThemePartial({ decoration: e.target.value as ThemeSettings["decoration"] })}>
                 <option value="none">无</option>
@@ -494,51 +471,50 @@ export default function SettingsPage() {
           <div className="rounded-[1.5rem] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-3 shadow-sm">
             <p className="section-kicker mb-2">Preview</p>
             <div className="soft-card p-3">
-              <p className="font-semibold text-cocoa">示例卡片</p>
-              <p className="mt-1 text-sm text-cocoa/65">风格会同步影响全站组件。</p>
+              <p className="font-semibold text-[var(--app-text)]">示例卡片</p>
+              <p className="mt-1 text-sm text-[var(--app-muted)]">风格会同步影响全站组件。</p>
               <button className="btn-primary btn-small mt-3">示例按钮</button>
             </div>
-            <div className="app-bottom-nav mt-3 rounded-2xl border p-2 text-center text-sm text-cocoa/70">底部导航预览 · 首页 / 记录 / 回忆</div>
+            <div className="app-bottom-nav mt-3 rounded-2xl border p-2 text-center text-sm text-[var(--app-muted)]">底部导航预览 · 首页 / 记录 / 回忆</div>
           </div>
           <button className="btn-secondary w-full" onClick={() => updateTheme(DEFAULT_THEME_SETTINGS)} type="button">恢复默认风格</button>
-        </section>
+        </SettingsSection>
 
-        <section className="soft-card bg-gradient-to-br from-white/80 to-skySoft/55">
-          <p className="section-kicker mb-1">Cloud</p>
-          <h2 className="mb-3 font-semibold text-cocoa">云同步</h2>
-          <p className="mb-3 rounded-2xl border border-white/70 bg-white/60 px-3 py-2 text-sm text-cocoa/70 shadow-sm">
+        {/* ──────────────────── Cloud Sync ──────────────────── */}
+        <SettingsSection title="Cloud" subtitle="云同步" className="bg-gradient-to-br from-white/80 to-skySoft/55" defaultOpen={true}>
+          <p className="mb-3 rounded-2xl border border-white/70 bg-white/60 px-3 py-2 text-sm text-[var(--app-muted)] shadow-sm">
             {isCloudConfigured() ? getCloudSyncStatus() : "云同步未配置，当前为本地模式。"}
           </p>
-          {lastSync ? <p className="mb-3 text-xs text-cocoa/55">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : null}
-          <div className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-sm text-cocoa/70 shadow-sm">
+          {lastSync ? <p className="mb-3 text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : null}
+          <div className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-sm text-[var(--app-muted)] shadow-sm">
             <span>课程 {counts.courses}</span>
             <span>Deadline {counts.deadlines}</span>
             <span>小纸条 {counts.loveNotes}</span>
             <span>常用链接 {counts.links}</span>
           </div>
-          <label className="mt-3 block text-sm text-cocoa/70">
+          <label className="mt-3 block text-sm text-[var(--app-muted)]">
             访问码
             <input className="field mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
           </label>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn-secondary" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</button>
+              <div className="mt-3 flex flex-wrap gap-2">
+            <button className="btn-secondary w-full sm:w-auto" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</button>
             {isCloudConfigured() ? (
-              <>
+              <div className="flex w-full min-w-0 flex-wrap gap-2 sm:grid sm:grid-cols-2">
                 <button className="btn-secondary" onClick={manualSync}>手动同步</button>
-                <button className="btn-secondary" onClick={uploadCloud}>上传本地数据到云端</button>
-                <button className="btn-secondary" onClick={pullCloud}>从云端恢复到本地</button>
-                <button className="btn-secondary" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</button>
-              </>
+                <button className="btn-secondary" onClick={uploadCloud}>上传本地到云端</button>
+                <button className="btn-secondary" onClick={pullCloud}>从云端恢复</button>
+                <button className="btn-danger" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</button>
+              </div>
             ) : null}
           </div>
-          {cloudMessage ? <p className="notice mt-3">{cloudMessage}</p> : null}
-        </section>
+          {cloudMessage ? <p className="notice mt-3 break-words whitespace-pre-wrap">{cloudMessage}</p> : null}
+        </SettingsSection>
 
-        <section className="soft-card">
-          <div className="mb-3 flex items-center justify-between">
+        {/* ──────────────────── Links ──────────────────── */}
+        <SettingsSection title="Links" subtitle="常用链接" className="bg-gradient-to-br from-white/85 to-butter/35">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Links</p>
-              <h2 className="font-semibold text-cocoa">常用链接</h2>
+              <h2 className="font-semibold text-[var(--app-text)]">常用链接</h2>
             </div>
             <button
               className="btn-secondary btn-small"
@@ -558,15 +534,14 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-        </section>
+        </SettingsSection>
 
-        <section className="soft-card">
-          <p className="section-kicker mb-1">Local Data</p>
-          <h2 className="mb-3 font-semibold text-cocoa">本地数据</h2>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-secondary" onClick={() => downloadJson("bristol-care-data.json", data)}>导出全部数据 JSON</button>
+        {/* ──────────────────── Local Data ──────────────────── */}
+        <SettingsSection title="Local Data" subtitle="本地数据管理" className="bg-gradient-to-br from-white/85 to-lilac/35">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <button className="btn-secondary" onClick={() => downloadJson("bristol-care-data.json", data)}>导出全部 JSON</button>
             <label className="btn-secondary cursor-pointer">
-              导入全部数据 JSON
+              导入全部 JSON
               <input
                 className="hidden"
                 type="file"
@@ -585,26 +560,17 @@ export default function SettingsPage() {
                 }}
               />
             </label>
-            <button className="btn-danger" onClick={() => { resetAppData(); setData(loadAppData()); }}>
+            <button className="btn-danger sm:col-span-2" onClick={() => { resetAppData(); setData(loadAppData()); }}>
               重置所有本地数据
             </button>
           </div>
           {importMessage ? <p className="notice mt-3">{importMessage}</p> : null}
-        </section>
-        <section className="soft-card">
-          <button className="flex w-full items-center justify-between text-left" onClick={() => setDataCenterOpen((value) => !value)} type="button">
-            <span>
-              <span className="section-kicker mb-1 block">Advanced</span>
-              <span className="font-semibold text-cocoa">高级数据管理</span>
-            </span>
-            <span className="btn-secondary btn-small">{dataCenterOpen ? "收起" : "展开"}</span>
-          </button>
-          <div className={`grid transition-all duration-300 ${dataCenterOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-            <div className="overflow-hidden">
-              <DataManagementCenter data={data} onData={setData} onUploadCloud={uploadCloud} onPullCloud={pullCloud} />
-            </div>
-          </div>
-        </section>
+        </SettingsSection>
+
+        {/* ──────────────────── Advanced ──────────────────── */}
+        <SettingsSection title="Advanced" subtitle="高级数据管理" className="bg-gradient-to-br from-white/85 to-skySoft/40" defaultOpen={false}>
+          <DataManagementCenter data={data} onData={setData} onUploadCloud={uploadCloud} onPullCloud={pullCloud} />
+        </SettingsSection>
       </div>
     </AppShell>
   );

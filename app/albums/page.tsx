@@ -255,17 +255,17 @@ export default function AlbumsPage() {
       </div>
 
       {selected ? (
-        <div className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
-          <div className="mx-auto max-h-[92vh] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)} style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float" onClick={(e) => e.stopPropagation()}>
             {selected.videoUrl && (playing || !selected.imageUrl) ? (
-              <video className="max-h-[60vh] w-full rounded-[1.35rem] bg-black" src={selected.videoUrl} controls autoPlay onEnded={() => setPlaying(false)} />
+              <video className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black" src={selected.videoUrl} controls autoPlay onEnded={() => setPlaying(false)} />
             ) : selected.imageUrl ? (
-              <img className="max-h-[60vh] w-full rounded-[1.35rem] object-contain" src={selected.imageUrl} alt={selected.title || "相册照片"} />
+              <img className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain" src={selected.imageUrl} alt={selected.title || "相册照片"} />
             ) : null}
             {selected.videoUrl ? (
               <button className="btn-secondary mt-3 w-full" onClick={() => setPlaying((value) => !value)}>{playing ? "回到封面" : "播放实况/视频"}</button>
             ) : null}
-            {selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov") ? <p className="notice mt-3">如果 MOV 无法播放，请在浏览器中打开或下载查看。</p> : null}
+              {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? <p className="notice mt-3 break-words">如果 MOV 无法播放，请在浏览器中打开或下载查看。</p> : null}
             <div className="mt-4 space-y-2 text-sm text-cocoa/75">
               <h2 className="text-lg font-semibold text-cocoa">{selected.title || "未命名回忆"}</h2>
               {selected.takenAt ? <p>{selected.takenAt.slice(0, 10)}</p> : null}

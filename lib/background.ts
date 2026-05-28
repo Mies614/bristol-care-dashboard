@@ -9,33 +9,30 @@ export const defaultBackgroundSettings: BackgroundSettings = {
   focalPoint: { x: 50, y: 38 },
   overlay: "light",
   blur: false,
+  blurAmount: 0,
   portraitEnhance: false,
   dim: 20,
-  scale: 100
+  scale: 100,
+  contentProtection: "none",
+  photoVisibility: 80
 };
 
 export const DEFAULT_BACKGROUND_SETTINGS = defaultBackgroundSettings;
 export const BACKGROUND_SETTINGS_KEY = "bristol_dashboard_background_settings";
 export const BACKGROUND_SETTINGS_CHANGED_EVENT = "background-settings-changed";
 
-const presetBackgrounds: Record<NonNullable<BackgroundSettings["preset"]>, string> = {
-  cream:
-    "radial-gradient(circle at top left, rgba(255,232,226,0.95), transparent 30rem), radial-gradient(circle at 88% 8%, rgba(233,245,255,0.95), transparent 26rem), linear-gradient(180deg, #fff8f0 0%, #fffdf9 46%, #f7fbff 100%)",
-  pink:
-    "radial-gradient(circle at top left, rgba(255,214,226,0.95), transparent 28rem), radial-gradient(circle at 85% 12%, rgba(255,239,246,0.9), transparent 26rem), linear-gradient(180deg, #fff5f8 0%, #fffafb 52%, #fff7f0 100%)",
-  lavender:
-    "radial-gradient(circle at top left, rgba(231,220,255,0.95), transparent 30rem), radial-gradient(circle at 85% 12%, rgba(235,245,255,0.9), transparent 28rem), linear-gradient(180deg, #fbf8ff 0%, #fffdfb 52%, #f4f0ff 100%)",
-  blue:
-    "radial-gradient(circle at top left, rgba(217,239,255,0.95), transparent 30rem), radial-gradient(circle at 85% 10%, rgba(246,232,255,0.75), transparent 28rem), linear-gradient(180deg, #f3fbff 0%, #fffdf9 52%, #edf7ff 100%)",
-  green:
-    "radial-gradient(circle at top left, rgba(218,244,230,0.95), transparent 30rem), radial-gradient(circle at 85% 12%, rgba(255,236,218,0.75), transparent 28rem), linear-gradient(180deg, #f6fff8 0%, #fffdf9 52%, #eefbf4 100%)",
-  dark:
-    "radial-gradient(circle at top left, rgba(110,84,130,0.55), transparent 28rem), radial-gradient(circle at 85% 12%, rgba(72,101,130,0.55), transparent 28rem), linear-gradient(180deg, #26202d 0%, #332a37 52%, #1f2933 100%)"
+const presetBackgrounds: Record<string, string> = {
+  cream:    "radial-gradient(circle at top left, rgba(255,232,226,0.95), transparent 30rem), radial-gradient(circle at 88% 8%, rgba(233,245,255,0.95), transparent 26rem), linear-gradient(180deg, #fff8f0 0%, #fffdf9 46%, #f7fbff 100%)",
+  pink:     "radial-gradient(circle at top left, rgba(255,214,226,0.95), transparent 28rem), radial-gradient(circle at 85% 12%, rgba(255,239,246,0.9), transparent 26rem), linear-gradient(180deg, #fff5f8 0%, #fffafb 52%, #fff7f0 100%)",
+  lavender: "radial-gradient(circle at top left, rgba(231,220,255,0.95), transparent 30rem), radial-gradient(circle at 85% 12%, rgba(235,245,255,0.9), transparent 28rem), linear-gradient(180deg, #fbf8ff 0%, #fffdfb 52%, #f4f0ff 100%)",
+  blue:     "radial-gradient(circle at top left, rgba(217,239,255,0.95), transparent 30rem), radial-gradient(circle at 85% 10%, rgba(246,232,255,0.75), transparent 28rem), linear-gradient(180deg, #f3fbff 0%, #fffdf9 52%, #edf7ff 100%)",
+  green:    "radial-gradient(circle at top left, rgba(218,244,230,0.95), transparent 30rem), radial-gradient(circle at 85% 12%, rgba(255,236,218,0.75), transparent 28rem), linear-gradient(180deg, #f6fff8 0%, #fffdf9 52%, #eefbf4 100%)",
+  dark:     "radial-gradient(circle at top left, rgba(110,84,130,0.55), transparent 28rem), radial-gradient(circle at 85% 12%, rgba(72,101,130,0.55), transparent 28rem), linear-gradient(180deg, #26202d 0%, #332a37 52%, #1f2933 100%)"
 };
 
-const overlayBackgrounds: Record<NonNullable<BackgroundSettings["overlay"]>, string> = {
-  none: "transparent",
-  light: "rgba(255, 250, 246, 0.34)",
+const overlayBackgrounds: Record<string, string> = {
+  none:   "transparent",
+  light:  "rgba(255, 250, 246, 0.34)",
   medium: "rgba(255, 250, 246, 0.52)",
   strong: "rgba(255, 250, 246, 0.72)"
 };
@@ -74,7 +71,7 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
   const preset = ["cream", "pink", "lavender", "blue", "green", "dark"].includes(String(value.preset))
     ? value.preset as BackgroundSettings["preset"]
     : defaultBackgroundSettings.preset;
-  const imageFit = ["cover", "contain", "portrait", "softPortrait"].includes(String(value.imageFit))
+  const imageFit = ["cover", "contain", "portrait", "softPortrait", "fullPhoto"].includes(String(value.imageFit))
     ? value.imageFit as BackgroundSettings["imageFit"]
     : defaultBackgroundSettings.imageFit;
   const imagePosition = ["center", "top", "bottom", "left", "right"].includes(String(value.imagePosition))
@@ -83,6 +80,9 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
   const overlay = ["none", "light", "medium", "strong"].includes(String(value.overlay))
     ? value.overlay as BackgroundSettings["overlay"]
     : defaultBackgroundSettings.overlay;
+  const contentProtection = ["none", "softPanel", "strongPanel", "gradientMask"].includes(String(value.contentProtection))
+    ? value.contentProtection as BackgroundSettings["contentProtection"]
+    : defaultBackgroundSettings.contentProtection;
 
   return {
     mode,
@@ -97,9 +97,12 @@ export function normalizeBackgroundSettings(value: unknown): BackgroundSettings 
     focalPoint: normalizeFocalPoint(value.focalPoint),
     overlay,
     blur: typeof value.blur === "boolean" ? value.blur : defaultBackgroundSettings.blur,
+    blurAmount: clampNumber(value.blurAmount, 0, 20, defaultBackgroundSettings.blurAmount || 0),
     portraitEnhance: typeof value.portraitEnhance === "boolean" ? value.portraitEnhance : defaultBackgroundSettings.portraitEnhance,
     dim: clampNumber(value.dim, 0, 80, defaultBackgroundSettings.dim || 20),
-    scale: clampNumber(value.scale, 90, 130, defaultBackgroundSettings.scale || 100)
+    scale: clampNumber(value.scale, 90, 130, defaultBackgroundSettings.scale || 100),
+    contentProtection,
+    photoVisibility: clampNumber(value.photoVisibility, 20, 100, defaultBackgroundSettings.photoVisibility || 80)
   };
 }
 
@@ -123,23 +126,9 @@ export function getBackgroundSettings(): BackgroundSettings {
   } catch {
     try {
       window.localStorage.removeItem(BACKGROUND_SETTINGS_KEY);
-    } catch {
-      // Ignore unavailable storage.
-    }
+    } catch {}
   }
   return readStoredAppBackground() || { ...DEFAULT_BACKGROUND_SETTINGS };
-}
-
-function dispatchBackgroundChanged(settings: BackgroundSettings) {
-  if (typeof window === "undefined") return;
-  try {
-    const event = typeof CustomEvent === "function"
-      ? new CustomEvent(BACKGROUND_SETTINGS_CHANGED_EVENT, { detail: settings })
-      : new Event(BACKGROUND_SETTINGS_CHANGED_EVENT);
-    window.dispatchEvent(event);
-  } catch {
-    // Some older webviews can fail event construction; background still falls back on next render.
-  }
 }
 
 export function saveBackgroundSettings(settings: BackgroundSettings): BackgroundSettings {
@@ -147,54 +136,41 @@ export function saveBackgroundSettings(settings: BackgroundSettings): Background
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(normalized));
-      dispatchBackgroundChanged(normalized);
+      window.dispatchEvent(new CustomEvent(BACKGROUND_SETTINGS_CHANGED_EVENT, { detail: normalized }));
     } catch {
-      const fallback = { ...DEFAULT_BACKGROUND_SETTINGS };
       try {
         window.localStorage.removeItem(BACKGROUND_SETTINGS_KEY);
-        window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(fallback));
-      } catch {
-        // Storage can be unavailable in private mode; still keep the page usable.
-      }
-      dispatchBackgroundChanged(fallback);
-      return fallback;
+        window.localStorage.setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify({ ...DEFAULT_BACKGROUND_SETTINGS }));
+      } catch {}
+      window.dispatchEvent(new CustomEvent(BACKGROUND_SETTINGS_CHANGED_EVENT, { detail: { ...DEFAULT_BACKGROUND_SETTINGS } }));
+      return { ...DEFAULT_BACKGROUND_SETTINGS };
     }
   }
   return normalized;
 }
 
-export function mergeBackgroundSettings(partial: Partial<BackgroundSettings>): BackgroundSettings {
-  return saveBackgroundSettings({
-    ...getBackgroundSettings(),
-    ...partial
-  });
-}
-
 export function sanitizeBackgroundSettingsForCloud(settings: BackgroundSettings): BackgroundSettings {
   const normalized = normalizeBackgroundSettings(settings);
-  const mode = normalized.mode === "image" ? "preset"
-    : normalized.mode === "cloudImage" && !normalized.cloudImageUrl ? normalized.preset ? "preset" : "preset"
-    : normalized.mode;
   return {
     ...normalized,
     imageDataUrl: undefined,
-    mode
+    mode: normalized.mode === "image" ? "preset" : normalized.mode
   };
 }
 
-function getImageBackgroundSize(settings: BackgroundSettings) {
-  if (settings.imageFit === "contain") return "contain";
+function getImageBackgroundSize(settings: BackgroundSettings): string {
+  if (settings.imageFit === "contain" || settings.imageFit === "fullPhoto") return "contain";
   return "cover";
 }
 
-function getImageBackgroundPosition(settings: BackgroundSettings) {
+function getImageBackgroundPosition(settings: BackgroundSettings): string {
   if (settings.focalPoint) return `${settings.focalPoint.x}% ${settings.focalPoint.y}%`;
-  const positions: Record<NonNullable<BackgroundSettings["imagePosition"]>, string> = {
+  const positions: Record<string, string> = {
     center: "50% 50%",
-    top: "50% 22%",
+    top:    "50% 22%",
     bottom: "50% 82%",
-    left: "22% 50%",
-    right: "78% 50%"
+    left:   "22% 50%",
+    right:  "78% 50%"
   };
   return positions[settings.imagePosition || "center"];
 }
@@ -234,21 +210,36 @@ export function getBackgroundStyle(settings: BackgroundSettings): CSSProperties 
   return { background: presetBackgrounds[normalized.preset || "cream"] };
 }
 
-export function getOverlayClass(settings: BackgroundSettings) {
-  const normalized = normalizeBackgroundSettings(settings);
-  return `background-overlay-${normalized.overlay || "light"}`;
-}
-
 export function getBackgroundOverlayStyle(settings: BackgroundSettings): CSSProperties {
   const normalized = normalizeBackgroundSettings(settings);
   const hasPhotoBackground = normalized.mode === "image" || normalized.mode === "url" || normalized.mode === "cloudImage";
+
   if (hasPhotoBackground) {
-    const minimumDim = normalized.imageFit === "softPortrait" || normalized.portraitEnhance ? 36 : 0;
-    const opacity = Math.min(0.82, Math.max(minimumDim, normalized.dim || 0) / 100);
+    const minimumDim = ["portrait", "softPortrait"].includes(normalized.imageFit || "") ? 28 : 0;
+    const dimValue = Math.max(minimumDim, normalized.dim || 0);
+    const opacity = Math.min(0.85, dimValue / 100);
+    
+    // Content protection overlay
+    if (normalized.contentProtection === "strongPanel") {
+      return {
+        background: `linear-gradient(180deg, rgba(255,250,246,${opacity + 0.15}) 0%, rgba(255,252,250,${opacity + 0.2}) 50%, rgba(255,250,246,${opacity + 0.15}) 100%)`
+      };
+    }
+    if (normalized.contentProtection === "gradientMask") {
+      return {
+        background: `linear-gradient(180deg, rgba(255,250,246,${opacity + 0.2}) 0%, rgba(255,250,246,${Math.max(0.3, opacity - 0.1)}) 40%, rgba(255,250,246,${Math.max(0.3, opacity - 0.1)}) 60%, rgba(255,250,246,${opacity + 0.2}) 100%)`
+      };
+    }
+    if (normalized.contentProtection === "softPanel") {
+      return {
+        background: `linear-gradient(180deg, rgba(255,250,246,${opacity}) 0%, rgba(255,252,250,${opacity + 0.05}) 50%, rgba(255,250,246,${opacity}) 100%)`
+      };
+    }
     return {
       background: `linear-gradient(180deg, rgba(255,250,246,${opacity}) 0%, rgba(255,250,246,${Math.min(0.9, opacity + 0.08)}) 100%)`
     };
   }
+
   const overlay = normalized.preset === "dark" && normalized.overlay !== "none"
     ? "rgba(18, 18, 24, 0.36)"
     : overlayBackgrounds[normalized.overlay || "light"];

@@ -16,14 +16,27 @@
   --app-nav-bg: rgba(255, 255, 255, 0.74);
   --app-nav-active: rgba(255, 226, 219, 0.72);
   --app-decoration-opacity: 0.42;
+  /* Safari safe area + vh fallback */
+  --app-vh: 1vh;
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100vh;
+  min-height: calc(var(--app-vh, 1vh) * 100);
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   margin: 0;
   background:
@@ -31,7 +44,17 @@ body {
     radial-gradient(circle at 88% 8%, rgba(233, 245, 255, 0.95), transparent 26rem),
     radial-gradient(circle at 50% 45%, rgba(238, 231, 255, 0.7), transparent 34rem),
     linear-gradient(180deg, #fff8f0 0%, #fffdf9 46%, #f7fbff 100%);
+  background-attachment: fixed;
   color: #5f4b44;
+  /* Prevent Safari from auto-zooming on input focus */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent Safari elastic overscroll on main content */
+html {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 button,
@@ -39,16 +62,63 @@ input,
 textarea,
 select {
   font: inherit;
+  /* Prevent Safari zoom on input focus */
+  font-size: 16px;
+}
+
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Safari scrollbar fix for dialogs/sheets */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reset overscroll for scrollable containers */
+.scrollable {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* dvh utility for Safari full-screen elements */
+.min-h-app {
+  min-height: calc(var(--app-vh, 1vh) * 100);
+  min-height: 100dvh;
+}
+
+.max-h-app {
+  max-height: calc(var(--app-vh, 1vh) * 100 - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+
+/* Full-screen modal backdrop bottom padding */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 @layer components {
   .soft-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     border-radius: var(--app-radius);
     border: 1px solid var(--app-card-border);
     background: var(--app-card-bg);
     box-shadow: var(--app-shadow);
     color: var(--app-text);
     @apply p-4 ring-1 ring-white/40 backdrop-blur-xl sm:p-5;
+  }
+
+  /* Reduce blur on mobile for performance */
+  @media (max-width: 640px) {
+    .soft-card {
+      @apply backdrop-blur-lg;
+    }
   }
 
   .portrait-background .soft-card {
@@ -67,7 +137,8 @@ select {
   }
 
   .field {
-    @apply w-full rounded-2xl border px-4 py-3 text-base shadow-inner outline-none transition placeholder:text-cocoa/35 focus:bg-white focus:ring-2 sm:text-sm;
+    @apply w-full rounded-2xl border px-4 py-3 text-base shadow-inner outline-none transition placeholder:text-cocoa/35 focus:bg-white focus:ring-2;
+    font-size: 16px !important;
     border-color: var(--app-card-border);
     background: color-mix(in srgb, var(--app-card-bg) 82%, white);
     color: var(--app-text);

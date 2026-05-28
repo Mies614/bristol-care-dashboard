@@ -2,341 +2,111 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { isPushSupported, subscribeToPush, unsubscribePush, registerServiceWorker } from "@/lib/pushClient";
 
-interface MissYouStats {
-  todayCount: number;
-  todayByAuthor: Record<string, number>;
-  todayDate: string;
-  viewer: string | null;
-  lastSeenAt: string | null;
-  unreadFromOtherCount: number;
-  unreadFromOtherEvents: Array<{ id: string; author: string; message: string; created_at: string }>;
-}
-
-interface PushStatus {
-  supportedByServer: boolean;
-  publicKey: string | null;
-  notificationPermission: NotificationPermission | "unsupported";
-  subscriptionStatus: "unknown" | "subscribed" | "not-subscribed";
-}
-
-function formatTime(isoString: string): string {
-  try {
-    const d = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    if (diffMinutes < 1) return "刚刚";
-    if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
-    const hours = d.getHours().toString().padStart(2, "0");
-    const minutes = d.getMinutes().toString().padStart(2, "0");
-    return `今天 ${hours}:${minutes}`;
-  } catch {
-    return "";
-  }
+interface MissYouRecord {
+  id: string;
+  author: string;
+  created_at: string;
 }
 
 export function MissYouAdminCard() {
-  const [stats, setStats] = useState<MissYouStats>({
-    todayCount: 0,
-    todayByAuthor: {},
-    todayDate: "",
-    viewer: null,
-    lastSeenAt: null,
-    unreadFromOtherCount: 0,
-    unreadFromOtherEvents: []
-  });
-  const [loadingStats, setLoadingStats] = useState(false);
-  const [pushStatus, setPushStatus] = useState<PushStatus>({
-    supportedByServer: false,
-    publicKey: null,
-    notificationPermission: "unsupported",
-    subscriptionStatus: "unknown"
-  });
-  const [subscribing, setSubscribing] = useState(false);
-  const [unsubscribing, setUnsubscribing] = useState(false);
-  const [showUnread, setShowUnread] = useState(false);
-  const [markingSeen, setMarkingSeen] = useState(false);
-  const [sendingMissYou, setSendingMissYou] = useState(false);
-  const [sendFeedback, setSendFeedback] = useState("");
+  const [code] = useState(getDefaultSpaceCode());
+  const [records, setRecords] = useState<MissYouRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const localDate = new Date().toISOString().split("T")[0];
-
-  const fetchStats = useCallback(async () => {
-    setLoadingStats(true);
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
     try {
-      const code = getDefaultSpaceCode();
-      // Fetch with viewer=admin to get unread from xiaoguai
-      const response = await fetch(
-        `/api/miss-you?code=${encodeURIComponent(code)}&localDate=${localDate}&limit=10&viewer=admin`
-      );
+      const response = await fetch(`/api/miss-you?code=${encodeURIComponent(code)}&includeUnread=true`);
       const payload = await response.json();
-      if (payload.ok) {
-        const hasUnread = payload.unreadFromOtherCount > 0;
-        setStats({
-          todayCount: payload.todayCount,
-          todayByAuthor: payload.todayByAuthor || {},
-          todayDate: localDate,
-          viewer: payload.viewer,
-          lastSeenAt: payload.lastSeenAt,
-          unreadFromOtherCount: payload.unreadFromOtherCount,
-          unreadFromOtherEvents: payload.unreadFromOtherEvents || []
-        });
-        if (hasUnread) setShowUnread(true);
-      }
+      if (Array.isArray(payload.records)) setRecords(payload.records.slice(0, 20));
+      else setRecords([]);
     } catch {
-      // Silent fail
-    } finally {
-      setLoadingStats(false);
+      setRecords([]);
     }
-  }, [localDate]);
-
-  const checkPushStatus = useCallback(async () => {
-    const browserSupported = isPushSupported();
-    if (!browserSupported) {
-      setPushStatus((prev) => ({
-        ...prev,
-        notificationPermission: "unsupported",
-        subscriptionStatus: "not-subscribed"
-      }));
-      return;
-    }
-
-    const permission = Notification.permission;
-    const registration = await registerServiceWorker();
-    let existingSub: PushSubscription | null = null;
-    if (registration) {
-      existingSub = await registration.pushManager.getSubscription();
-    }
-
-    let serverStatus = { supportedByServer: false, publicKey: null as string | null };
-    try {
-      const statusRes = await fetch("/api/push/status");
-      const statusPayload = await statusRes.json();
-      if (statusPayload.ok) {
-        serverStatus = {
-          supportedByServer: statusPayload.supportedByServer,
-          publicKey: statusPayload.publicKey || null
-        };
-      }
-    } catch {
-      // Server status check failed
-    }
-
-    setPushStatus({
-      supportedByServer: serverStatus.supportedByServer,
-      publicKey: serverStatus.publicKey,
-      notificationPermission: permission,
-      subscriptionStatus: existingSub ? "subscribed" : "not-subscribed"
-    });
-  }, []);
+    setLoading(false);
+  }, [code]);
 
   useEffect(() => {
-    fetchStats();
-    checkPushStatus();
-  }, [fetchStats, checkPushStatus]);
+    loadRecords();
+  }, [loadRecords]);
 
-  async function handleSubscribe() {
-    if (subscribing || !pushStatus.publicKey) return;
-    setSubscribing(true);
+  async function handleThinkHer() {
     try {
-      const subscription = await subscribeToPush(pushStatus.publicKey);
-      if (subscription) {
-        const code = getDefaultSpaceCode();
-        const response = await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            subscription,
-            userAgent: navigator.userAgent,
-            role: "admin"
-          })
-        });
-        const payload = await response.json();
-        if (payload.ok) {
-          setPushStatus((prev) => ({ ...prev, subscriptionStatus: "subscribed" }));
-        }
-      }
-    } catch {
-      // Subscribe failed
-    } finally {
-      setSubscribing(false);
-    }
-  }
-
-  async function handleUnsubscribe() {
-    if (unsubscribing) return;
-    setUnsubscribing(true);
-    try {
-      await unsubscribePush();
-      setPushStatus((prev) => ({ ...prev, subscriptionStatus: "not-subscribed" }));
-    } catch {
-      // Unsubscribe failed
-    } finally {
-      setUnsubscribing(false);
-    }
-  }
-
-  async function handleMarkSeen() {
-    if (markingSeen) return;
-    setMarkingSeen(true);
-    try {
-      const code = getDefaultSpaceCode();
-      await fetch("/api/miss-you", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, viewer: "admin", action: "mark_seen" })
-      });
-      setShowUnread(false);
-      setStats((prev) => ({ ...prev, unreadFromOtherCount: 0, unreadFromOtherEvents: [] }));
-    } catch {
-      // Silent fail
-    } finally {
-      setMarkingSeen(false);
-    }
-  }
-
-  async function handleSendMissYou() {
-    if (sendingMissYou) return;
-    setSendingMissYou(true);
-    setSendFeedback("");
-    try {
-      const code = getDefaultSpaceCode();
       const response = await fetch("/api/miss-you", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          author: "admin",
-          recipient: "xiaoguai",
-          message: "我也想你一下",
-          localDate
-        })
+        body: JSON.stringify({ code, author: "admin" })
       });
-      const payload = await response.json();
-      if (payload.ok) {
-        setStats((prev) => ({
-          ...prev,
-          todayCount: payload.todayCount,
-          todayByAuthor: payload.todayByAuthor || {}
-        }));
-        setSendFeedback("已经悄悄放进她的小首页。");
+      if (response.ok) {
+        setMessage("💭 已想她一下");
+        await loadRecords();
       } else {
-        setSendFeedback("记录失败，稍后再试。");
+        const payload = await response.json();
+        setMessage(payload.error || "失败");
       }
     } catch {
-      setSendFeedback("网络暂时不可用，稍后再试。");
-    } finally {
-      setSendingMissYou(false);
+      setMessage("网络错误");
     }
   }
 
-  // ── Unread card from xiaoguai ─────────────────────────────────────
-  const unreadCard = showUnread && stats.unreadFromOtherCount > 0 ? (
-    <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm">
-      <div className="mb-1 text-sm text-cocoa/70">💕 来自小乖的想念</div>
-      <p className="text-base font-medium text-cocoa">
-        上次之后，小乖想你 <span className="text-xl">{stats.unreadFromOtherCount}</span> 次。
-      </p>
-      {stats.unreadFromOtherEvents.length > 0 && (
-        <div className="mt-1 text-xs text-cocoa/55">
-          {stats.unreadFromOtherEvents.slice(0, 3).map((ev) => (
-            <p key={ev.id}>
-              {formatTime(ev.created_at)} · {ev.message}
-            </p>
-          ))}
-        </div>
-      )}
-      <p className="mt-1 text-xs text-cocoa/45">这些小小的想念都在这里。</p>
-      <button
-        className="btn-secondary btn-small mt-2"
-        disabled={markingSeen}
-        onClick={handleMarkSeen}
-      >
-        {markingSeen ? "..." : "我看到了"}
-      </button>
-    </div>
-  ) : null;
+  // Group by date
+  const grouped = records.reduce<Record<string, MissYouRecord[]>>((acc, record) => {
+    const date = record.created_at ? new Date(record.created_at).toLocaleDateString("zh-CN") : "未知";
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(record);
+    return acc;
+  }, {});
 
   return (
-    <section className="soft-card space-y-3">
-      <div>
-        <p className="section-kicker mb-1">Miss You</p>
-        <h2 className="font-semibold text-cocoa">想你一下 · 管理</h2>
-      </div>
-
-      {/* Stats */}
-      <div className="rounded-2xl bg-white/58 p-3 text-sm text-cocoa/70">
-        {loadingStats ? (
-          <p>加载中...</p>
-        ) : (
-          <>
-            <p>
-              今天（{stats.todayDate || localDate}）小乖想你 <strong className="text-cocoa">{stats.todayByAuthor["xiaoguai"] || 0}</strong> 次，
-              你想她 <strong className="text-cocoa">{stats.todayByAuthor["admin"] || 0}</strong> 次。
-            </p>
-            <p className="mt-1 text-xs text-cocoa/45">共 {stats.todayCount} 次</p>
-          </>
-        )}
-        <button className="btn-secondary btn-small mt-2" onClick={fetchStats}>刷新统计</button>
-      </div>
-
-      {/* Unread from xiaoguai */}
-      {unreadCard}
-
-      {/* Admin send miss you */}
-      <div className="rounded-2xl bg-white/58 p-3 text-center">
-        <p className="text-sm font-medium text-cocoa">我也想你一下</p>
-        <button
-          className="btn-primary mt-2 min-w-32"
-          disabled={sendingMissYou}
-          onClick={handleSendMissYou}
-        >
-          {sendingMissYou ? "..." : "想她一下"}
+    <div className="space-y-4">
+      <section className="soft-card bg-gradient-to-br from-white/85 to-blush/40">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="section-kicker mb-1">Miss You</p>
+            <h2 className="font-semibold text-[var(--app-text)]">想她记录</h2>
+          </div>
+          <button className="btn-secondary btn-small" onClick={loadRecords} disabled={loading}>
+            {loading ? "刷新..." : "刷新"}
+          </button>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">
+          每次点击「想她一下」都会在这里留下一笔记录。
+        </p>
+        <button className="btn-primary w-full mt-4" onClick={handleThinkHer}>
+          💭 想她一下
         </button>
-        {sendFeedback && (
-          <p className="mt-2 text-xs text-cocoa/55">{sendFeedback}</p>
+        {message && (
+          <p className="notice mt-3">{message}</p>
         )}
-      </div>
+      </section>
 
-      {/* Push Notification Status */}
-      <div className="space-y-2 text-sm text-cocoa/70">
-        <p className="font-medium text-cocoa">推送通知状态</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl bg-white/58 p-2.5 text-xs">
-            浏览器支持: {pushStatus.notificationPermission === "unsupported" ? "❌ 不支持" : "✅ 支持"}
-          </div>
-          <div className="rounded-2xl bg-white/58 p-2.5 text-xs">
-            权限状态: {pushStatus.notificationPermission === "granted" ? "✅ 已授权" : pushStatus.notificationPermission === "denied" ? "❌ 已拒绝" : pushStatus.notificationPermission === "unsupported" ? "—" : "⏳ 未请求"}
-          </div>
-          <div className="rounded-2xl bg-white/58 p-2.5 text-xs">
-            服务器配置: {pushStatus.supportedByServer ? "✅ 已配置" : "❌ 未配置"}
-          </div>
-          <div className="rounded-2xl bg-white/58 p-2.5 text-xs">
-            订阅状态: {pushStatus.subscriptionStatus === "subscribed" ? "✅ 已订阅" : pushStatus.subscriptionStatus === "not-subscribed" ? "⏳ 未订阅" : "—"}
-          </div>
+      <section className="soft-card">
+        <div>
+          <p className="section-kicker mb-1">History</p>
+          <h2 className="font-semibold text-[var(--app-text)]">历史记录</h2>
         </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          {pushStatus.subscriptionStatus === "not-subscribed" && pushStatus.supportedByServer && (
-            <button className="btn-primary btn-small" disabled={subscribing} onClick={handleSubscribe}>
-              {subscribing ? "订阅中..." : "订阅推送通知"}
-            </button>
-          )}
-          {pushStatus.subscriptionStatus === "subscribed" && (
-            <button className="btn-secondary btn-small" disabled={unsubscribing} onClick={handleUnsubscribe}>
-              {unsubscribing ? "取消中..." : "取消推送订阅"}
-            </button>
-          )}
-          <button className="btn-secondary btn-small" onClick={checkPushStatus}>刷新状态</button>
-        </div>
-        {!pushStatus.supportedByServer && (
-          <p className="text-xs text-cocoa/55">
-            提示: 需要在 .env.local 中配置 VAPID keys 才能启用推送。运行 <code className="rounded bg-white/60 px-1">npm run generate:vapid</code> 生成。
-          </p>
+        {Object.keys(grouped).length === 0 ? (
+          <p className="empty-state mt-3">还没有记录，点一下上面的按钮试试。</p>
+        ) : (
+          <div className="mt-3 space-y-4">
+            {Object.entries(grouped).map(([date, dateRecords]) => (
+              <div key={date}>
+                <p className="text-xs font-medium text-[var(--app-muted)] mb-2">{date}</p>
+                <div className="space-y-2">
+                  {dateRecords.map((record) => (
+                    <div className="rounded-2xl border border-white/70 bg-white/55 p-3 text-sm" key={record.id}>
+                      <span className="font-medium">{record.author === "admin" ? "我" : "小乖"}</span>
+                      <span className="text-[var(--app-muted)]"> 在 {record.created_at ? new Date(record.created_at).toLocaleTimeString("zh-CN") : "未知时间"} 想你了</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

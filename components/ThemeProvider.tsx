@@ -11,12 +11,14 @@ import {
 } from "@/lib/theme";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullCloudData } from "@/lib/cloudSync";
 import type { ThemeSettings } from "@/lib/types";
+import { cn, getDecorationClass } from "@/lib/design/tokens";
 
 function decorationLabel(decoration: ThemeSettings["decoration"]) {
   if (decoration === "hearts") return "♡";
   if (decoration === "tape") return "▱";
   if (decoration === "moon") return "☾";
   if (decoration === "stars") return "✦";
+  if (decoration === "dots") return "•";
   return "";
 }
 
@@ -39,7 +41,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener(THEME_SETTINGS_CHANGED_EVENT, onChange);
   }, []);
 
-  const decoration = decorationLabel(settings.decoration);
+  const decorationSymbol = decorationLabel(settings.decoration);
+  const decorationClass = getDecorationClass(settings.decoration);
 
   return (
     <div
@@ -48,12 +51,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       data-nav-style={settings.navStyle}
       data-radius={settings.radius}
       data-theme={settings.style}
+      className={cn(decorationClass)}
       style={getThemeCssVariables(settings)}
     >
-      {decoration ? (
+      {decorationSymbol ? (
         <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[2] mx-auto flex max-w-md justify-between px-8 pt-8 text-2xl text-[var(--app-accent)] opacity-[var(--app-decoration-opacity)] md:max-w-[520px]">
-          <span>{decoration}</span>
-          <span>{decoration}</span>
+          <span>{decorationSymbol}</span>
+          <span>{decorationSymbol}</span>
+          <span className="hidden sm:block">{decorationSymbol}</span>
         </div>
       ) : null}
       {children}

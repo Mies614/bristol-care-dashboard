@@ -51,7 +51,7 @@ export function DataManagementCenter({
   }
 
   return (
-    <section className="soft-card space-y-4">
+    <section className="soft-card w-full min-w-0 space-y-4">
       <div>
         <p className="section-kicker mb-1">Data</p>
         <h2 className="font-semibold text-cocoa">数据管理中心</h2>
@@ -72,24 +72,24 @@ export function DataManagementCenter({
       <div className="rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-sm text-cocoa/70 shadow-sm">
         <p>space code: {cloud.code || "未连接"}</p>
         <p>最近同步: {cloud.lastSync ? new Date(cloud.lastSync).toLocaleString("zh-CN") : "无"}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <AutoSyncStatusBadge />
-          <span>自动同步：{autoSync.enabled ? "开启" : "关闭"}</span>
-        </div>
+          <div className="mt-2 flex w-full min-w-0 flex-wrap items-center gap-2">
+            <AutoSyncStatusBadge />
+            <span>自动同步：{autoSync.enabled ? "开启" : "关闭"}</span>
+          </div>
         <p>自动同步时间: {autoSync.lastSyncAt ? new Date(autoSync.lastSyncAt).toLocaleString("zh-CN") : "无"}</p>
         {autoSync.lastError ? <p>最近错误: {autoSync.lastError}</p> : null}
         {autoSync.pending ? <p>有待同步数据</p> : null}
         {message ? <p className="mt-2">{message}</p> : null}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <label className="check-card">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className="check-card w-full">
           <input checked={autoSync.enabled} type="checkbox" onChange={(event) => autoSync.setEnabled(event.target.checked)} />
           自动同步到云端
         </label>
-        <button className="btn-secondary" onClick={() => runAutoSyncNow("settings_manual")}>立即同步</button>
-        <button className="btn-secondary" onClick={() => { clearPendingSyncState(); setMessage("同步错误已清除。"); }}>清除同步错误</button>
-        <button className="btn-secondary" onClick={() => downloadJson("bristol-care-backup.json", createBackupPayload())}>导出完整 JSON 备份</button>
-        <label className="btn-secondary cursor-pointer">
+        <button className="btn-secondary w-full" onClick={() => runAutoSyncNow("settings_manual")}>立即同步</button>
+        <button className="btn-secondary w-full" onClick={() => { clearPendingSyncState(); setMessage("同步错误已清除。"); }}>清除同步错误</button>
+        <button className="btn-secondary w-full" onClick={() => downloadJson("bristol-care-backup.json", createBackupPayload())}>导出完整 JSON 备份</button>
+        <label className="btn-secondary w-full cursor-pointer">
           导入 JSON 备份
           <input
             className="hidden"
@@ -116,19 +116,19 @@ export function DataManagementCenter({
             }}
           />
         </label>
-        <button className="btn-secondary" onClick={onUploadCloud}>上传本地到云端</button>
-        <button className="btn-secondary" onClick={onPullCloud}>从云端恢复到本地</button>
-        <button className="btn-secondary" onClick={() => { if (confirm("确定重置背景设置吗？")) { saveBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS); markLocalChange("background"); scheduleAutoSync("background_reset"); } }}>重置背景设置</button>
-        <button className="btn-secondary" onClick={() => { clearSharedAccess(); setMessage("已退出共享空间。"); }}>退出共享空间</button>
-        <button className="btn-secondary" onClick={async () => { if (confirm("确定清除本机保存的会员卡图片吗？")) { await clearAllCardImages(); setCardImageCount(0); setMessage("本地会员卡图片已清除。"); } }}>清除本地会员卡图片</button>
-        <button className="btn-danger" onClick={async () => { if (confirm("确定清除全部本地会员卡吗？")) { await clearAllWalletCards(); setCardCount(0); setCardImageCount(0); setMessage("本地会员卡已清除。"); } }}>清除全部本地会员卡</button>
-        <button className="btn-secondary" onClick={() => { try { localStorage.removeItem("bristol-care-onboarding-dismissed-v1"); setMessage("新手引导会重新显示。"); } catch { setMessage("操作完成。"); } }}>重新显示新手引导</button>
-        <button className="btn-danger" onClick={() => { if (confirm("确定清除本项目本地缓存吗？")) { resetAppData(); onData(loadAppData()); } }}>清除本地缓存</button>
-        <button className="btn-secondary" onClick={diagnose}>连接诊断</button>
+        <button className="btn-secondary w-full" onClick={onUploadCloud}>上传本地到云端</button>
+        <button className="btn-secondary w-full" onClick={onPullCloud}>从云端恢复</button>
+        <button className="btn-secondary w-full" onClick={() => { if (confirm("确定重置背景设置吗？")) { saveBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS); markLocalChange("background"); scheduleAutoSync("background_reset"); } }}>重置背景</button>
+        <button className="btn-secondary w-full" onClick={() => { clearSharedAccess(); setMessage("已退出共享空间。"); }}>退出共享空间</button>
+        <button className="btn-secondary w-full" onClick={async () => { if (confirm("确定清除本机保存的会员卡图片吗？")) { await clearAllCardImages(); setCardImageCount(0); setMessage("本地会员卡图片已清除。"); } }}>清除会员卡图片</button>
+        <button className="btn-danger w-full" onClick={async () => { if (confirm("确定清除全部本地会员卡吗？")) { await clearAllWalletCards(); setCardCount(0); setCardImageCount(0); setMessage("本地会员卡已清除。"); } }}>清除全部会员卡</button>
+        <button className="btn-secondary w-full" onClick={() => { try { localStorage.removeItem("bristol-care-onboarding-dismissed-v1"); setMessage("新手引导会重新显示。"); } catch { setMessage("操作完成。"); } }}>重新显示新手引导</button>
+        <button className="btn-danger w-full" onClick={() => { if (confirm("确定清除本项目本地缓存吗？")) { resetAppData(); onData(loadAppData()); } }}>清除本地缓存</button>
+        <button className="btn-secondary w-full" onClick={diagnose}>连接诊断</button>
       </div>
       {debugChecks.length ? (
-        <div className="rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-xs leading-6 text-cocoa/70">
-          {debugChecks.map((check) => <p key={check.name}>{check.ok ? "✓" : "×"} {check.name}{check.detail ? `：${check.detail}` : ""}</p>)}
+        <div className="max-w-full overflow-x-auto rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-xs leading-6 text-cocoa/70">
+          {debugChecks.map((check) => <p key={check.name} className="whitespace-nowrap">{check.ok ? "✓" : "×"} {check.name}{check.detail ? `：${check.detail}` : ""}</p>)}
         </div>
       ) : null}
     </section>

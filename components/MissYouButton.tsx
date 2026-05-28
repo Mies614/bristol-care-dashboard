@@ -11,6 +11,7 @@ interface MissYouData {
   lastSeenAt: string | null;
   unreadFromOtherCount: number;
   unreadFromOtherEvents: Array<{ id: string; author: string; message: string; created_at: string }>;
+  debug?: Record<string, unknown>;
 }
 
 const FEEDBACK_MESSAGES = [
@@ -102,17 +103,29 @@ export function MissYouButton() {
   const [hearts, setHearts] = useState<Array<{ id: number; left: number }>>([]);
   const [showUnread, setShowUnread] = useState(false);
   const [markingSeen, setMarkingSeen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const localDate = getLocalDateKey();
 
   const fetchData = useCallback(async () => {
     try {
       const code = getDefaultSpaceCode();
-      // Fetch with viewer=xiaoguai to get unread info from admin
+      // view 必须固定为 xiaoguai，并带上 includeUnread=true
       const response = await fetch(
-        `/api/miss-you?code=${encodeURIComponent(code)}&localDate=${localDate}&limit=1&viewer=xiaoguai`
+        `/api/miss-you?code=${encodeURIComponent(code)}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`
       );
       const payload = await response.json();
       if (payload.ok) {
+        // 打印 debug 信息到 console
+        if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+          console.log("[MissYouButton] API response:", {
+            unreadFromOtherCount: payload.unreadFromOtherCount,
+            viewer: payload.viewer,
+            lastSeenAt: payload.lastSeenAt,
+            oppositeAuthors: payload.oppositeAuthors,
+            debug: payload.debug
+          });
+        }
+
         const hasUnread = payload.unreadFromOtherCount > 0;
         setData({
           todayCount: payload.todayCount,
@@ -121,9 +134,14 @@ export function MissYouButton() {
           viewer: payload.viewer,
           lastSeenAt: payload.lastSeenAt,
           unreadFromOtherCount: payload.unreadFromOtherCount,
-          unreadFromOtherEvents: payload.unreadFromOtherEvents || []
+          unreadFromOtherEvents: payload.unreadFromOtherEvents || [],
+          debug: payload.debug
         });
         if (hasUnread) setShowUnread(true);
+      } else {
+        if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+          console.error("[MissYouButton] API error:", payload);
+        }
       }
     } catch {
       // Silent fail, data stays as-is
@@ -170,18 +188,27 @@ export function MissYouButton() {
     return () => window.removeEventListener("online", handleOnline);
   }, [fetchData, retryPending]);
 
+  // 只有用户主动点击"知道啦"按钮才触发 mark_seen
   async function handleMarkSeen() {
     if (markingSeen) return;
     setMarkingSeen(true);
     try {
       const code = getDefaultSpaceCode();
-      await fetch("/api/miss-you", {
+      const response = await fetch("/api/miss-you", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, viewer: "xiaoguai", action: "mark_seen" })
       });
-      setShowUnread(false);
-      setData((prev) => ({ ...prev, unreadFromOtherCount: 0, unreadFromOtherEvents: [] }));
+      const payload = await response.json();
+      if (payload.ok) {
+        setShowUnread(false);
+        setData((prev) => ({
+          ...prev,
+          unreadFromOtherCount: 0,
+          unreadFromOtherEvents: [],
+          lastSeenAt: payload.lastSeenAt
+        }));
+      }
     } catch {
       // Silent fail
     } finally {
@@ -253,13 +280,13 @@ export function MissYouButton() {
   // ── Unread card from admin ────────────────────────────────────────
   const unreadCard = showUnread && data.unreadFromOtherCount > 0 ? (
     <div className="mb-4 rounded-2xl bg-white/70 p-4 text-center shadow-sm">
-      <div className="mb-1 text-sm text-cocoa/70">✨ 来自他的想念</div>
+      <div className="mb-1 text-sm text-cocoa/70">💕 他也想你啦</div>
       <p className="text-base font-medium text-cocoa">
         你不在的时候，他想你了 <span className="text-xl">{data.unreadFromOtherCount}</span> 次。
       </p>
       {data.unreadFromOtherEvents.length > 0 && (
         <p className="mt-1 text-xs text-cocoa/55">
-          最近一次：{formatTime(data.unreadFromOtherEvents[0].created_at)}
+          最近一次：{data.unreadFromOtherEvents[0].message} · {formatTime(data.unreadFromOtherEvents[0].created_at)}
         </p>
       )}
       <p className="mt-1 text-xs text-cocoa/45">这些想念都帮你收好了。</p>
@@ -304,6 +331,21 @@ export function MissYouButton() {
           <p className="mt-3 text-xs text-cocoa/55">
             今天已经想你 {data.todayByAuthor["xiaoguai"] || data.todayCount} 次。
           </p>
+        )}
+
+        {/* ── Debug info (development only, no secrets) ── */}
+        {process.env.NODE_ENV === "development" && data.debug && (
+          <details className="mt-4 text-left">
+            <summary
+              className="cursor-pointer text-xs text-cocoa/40 hover:text-cocoa/70"
+              onClick={() => setDebugInfo(debugInfo ? null : JSON.stringify(data.debug, null, 2))}
+            >
+              🐛 Debug
+            </summary>
+            <pre className="mt-1 rounded bg-white/60 p-2 text-[10px] text-cocoa/60 whitespace-pre-wrap">
+              {debugInfo}
+            </pre>
+          </details>
         )}
       </div>
     </section>
