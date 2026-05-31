@@ -3,11 +3,11 @@ import { NextRequest } from "next/server";
 
 const insertMock = vi.fn();
 const updateMock = vi.fn();
-const getSpaceByCodeMock = vi.fn(async () => ({ id: "space-id", code: "xiaoguai520" }));
+const getSpaceByCodeMock = vi.fn(async (_code: string) => ({ id: "space-id", code: "xiaoguai520" }));
 
 vi.mock("@/lib/api/cloud", () => ({
   getDefaultSpaceCode: () => "xiaoguai520",
-  getSpaceByCode: (...args: unknown[]) => getSpaceByCodeMock(...args)
+  getSpaceByCode: (code: string) => getSpaceByCodeMock(code)
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

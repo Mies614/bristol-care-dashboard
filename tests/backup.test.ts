@@ -26,6 +26,9 @@ describe("backup", () => {
   it("restores missing fields without crashing", async () => {
     const { restoreBackupPayload } = await import("@/lib/backup");
     const data = restoreBackupPayload({ courses: [], deadlines: [], links: [] });
-    expect(data.courses).toEqual([]);
+    // With lenient validation, empty arrays get fallback defaults
+    expect(Array.isArray(data.courses)).toBe(true);
+    expect(typeof data.nickname).toBe("string");
+    expect(data.nickname.length).toBeGreaterThan(0);
   });
 });

@@ -33,7 +33,12 @@ describe("import validation", () => {
     expect(data.nickname).toBe("小乖");
   });
 
-  it("rejects incomplete app data", () => {
-    expect(() => validateAppData({ nickname: "小乖" })).toThrow("数据 JSON 缺少课程");
+  it("repairs incomplete app data without throwing", () => {
+    const data = validateAppData({ nickname: "小乖" });
+    // With lenient validation, missing fields get fallback defaults
+    expect(data.nickname).toBe("小乖");
+    expect(Array.isArray(data.courses)).toBe(true);
+    expect(Array.isArray(data.deadlines)).toBe(true);
+    expect(Array.isArray(data.links)).toBe(true);
   });
 });

@@ -58,33 +58,44 @@ export function validateCourseArray(value: unknown): Course[] {
   return value;
 }
 
+/**
+ * Safely extract an array of Valid items, skipping invalid ones.
+ * Never throws for per-item validation failures.
+ */
+function safeFilterArray<T>(value: unknown, validator: (item: unknown) => item is T): T[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(validator);
+}
+
+/**
+ * Validate and repair AppData. Invalid items in arrays are filtered out.
+ * Never throws on per-field issues - uses fallbacks for missing top-level fields.
+ */
 export function validateAppData(value: unknown): AppData {
   if (!isRecord(value)) {
-    throw new Error("数据 JSON 格式不正确。请导入由本应用导出的完整数据文件。");
+    return { ...defaultAppData, deadlines: [], courses: [], links: [] };
   }
 
-  const courses = Array.isArray(value.courses) && value.courses.every(isCourse) ? value.courses : null;
-  const deadlines = Array.isArray(value.deadlines) && value.deadlines.every(isDeadline) ? value.deadlines : null;
-  const links = Array.isArray(value.links) && value.links.every(isCommonLink) ? value.links : null;
-  const loveNotes = Array.isArray(value.loveNotes) && value.loveNotes.every(isLoveNote) ? value.loveNotes : defaultAppData.loveNotes;
-  const periodRecords = Array.isArray(value.periodRecords) && value.periodRecords.every(isPeriodRecord) ? value.periodRecords : [];
+  const courses = safeFilterArray(value.courses, isCourse);
+  const deadlines = safeFilterArray(value.deadlines, isDeadline);
+  const links = safeFilterArray(value.links, isCommonLink);
+  const loveNotes = safeFilterArray(value.loveNotes, isLoveNote);
+  const periodRecords = safeFilterArray(value.periodRecords, isPeriodRecord);
 
-  if (!courses || !deadlines || !links) {
-    throw new Error("数据 JSON 缺少课程、deadline 或常用链接字段。请检查导入文件。");
-  }
+  const hasPartialCourses = Array.isArray(value.courses) && value.courses.some((v: unknown) => isRecord(v) && isString((v as Record<string, unknown>).name));
 
   return {
     nickname: isString(value.nickname) && value.nickname !== LEGACY_DEFAULT_NICKNAME ? value.nickname : defaultAppData.nickname,
     nextMeetDate: isString(value.nextMeetDate) ? value.nextMeetDate : "",
     semesterEndDate: isString(value.semesterEndDate) ? value.semesterEndDate : "",
     note: isString(value.note) ? value.note : defaultAppData.note,
-    courses,
-    deadlines,
-    links,
-    loveNotes,
+    courses: courses.length ? courses : (hasPartialCourses ? [] : defaultAppData.courses),
+    deadlines: deadlines.length ? deadlines : [],
+    links: links.length ? links : [],
+    loveNotes: loveNotes.length ? loveNotes : defaultAppData.loveNotes,
     backgroundSettings: normalizeBackgroundSettings(value.backgroundSettings),
     themeSettings: normalizeThemeSettings(value.themeSettings),
-    periodRecords,
+    periodRecords: periodRecords.length ? periodRecords : [],
     periodSettings: normalizePeriodSettings(value.periodSettings || DEFAULT_PERIOD_SETTINGS)
   };
 }

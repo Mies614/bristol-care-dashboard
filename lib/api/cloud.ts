@@ -17,7 +17,7 @@ import {
 } from "@/lib/mappers";
 import type { AppData, CloudSettings, CommonLink, Course, Deadline } from "@/lib/types";
 import { DEFAULT_BACKGROUND_SETTINGS } from "@/lib/supabase/settings";
-import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
+import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "@/lib/period";
 import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 
 export function cloudUnavailableResponse() {
@@ -71,7 +71,7 @@ export async function fetchCloudDataByCode(code: string) {
     loveNotes: (loveNotes.data || []).map(loveNoteFromRow),
     backgroundSettings: cloudSettings.backgroundSettings || DEFAULT_BACKGROUND_SETTINGS,
     themeSettings: cloudSettings.themeSettings || DEFAULT_THEME_SETTINGS,
-    periodRecords: [],
+    periodRecords: cloudSettings.periodRecords || [],
     periodSettings: cloudSettings.periodSettings || DEFAULT_PERIOD_SETTINGS
   };
 
@@ -88,7 +88,8 @@ export async function replaceCloudData(code: string, data: AppData) {
     semesterEndDate: data.semesterEndDate || null,
     backgroundSettings: data.backgroundSettings,
     themeSettings: data.themeSettings,
-    periodSettings: data.periodSettings
+    periodSettings: data.periodSettings,
+    periodRecords: data.periodRecords || []
   };
 
   const deletes = await Promise.all([

@@ -116,7 +116,14 @@ export type CloudSettings = {
   backgroundSettings?: BackgroundSettings;
   themeSettings?: ThemeSettings;
   periodSettings?: PeriodSettings;
+  periodRecords?: PeriodRecord[];
+  autoSyncSettings?: AutoSyncSettings;
   quickActions?: string; // JSON stringified QuickAction[]
+};
+
+export type AutoSyncSettings = {
+  enabled: boolean;
+  [key: string]: unknown;
 };
 
 export type BackgroundImageFit = "cover" | "contain" | "portrait" | "softPortrait" | "fullPhoto";

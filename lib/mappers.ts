@@ -1,4 +1,4 @@
-import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote } from "./types";
+import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote, PeriodRecord } from "./types";
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "./theme";
@@ -255,8 +255,37 @@ export function albumItemToRow(item: Omit<AlbumItem, "id"> & { id?: string }, sp
   };
 }
 
+export function normalizePeriodRecord(value: unknown): PeriodRecord | null {
+  if (!isRecord(value)) return null;
+  const id = typeof value.id === "string" ? value.id : crypto.randomUUID();
+  const startDate = asStringOrNull(value.startDate) || asStringOrNull(value.start_date);
+  if (!startDate) return null;
+  return {
+    id,
+    startDate,
+    endDate: asStringOrNull(value.endDate) || asStringOrNull(value.end_date) || undefined,
+    flow: ["light", "medium", "heavy"].includes(String(value.flow)) ? (value.flow as PeriodRecord["flow"]) : undefined,
+    symptoms: Array.isArray(value.symptoms) ? value.symptoms.filter((s: unknown): s is string => typeof s === "string") : undefined,
+    mood: asStringOrNull(value.mood) || undefined,
+    note: asStringOrNull(value.note) || undefined,
+    createdAt: asStringOrNull(value.createdAt) || asStringOrNull(value.created_at) || undefined,
+    updatedAt: asStringOrNull(value.updatedAt) || asStringOrNull(value.updated_at) || undefined,
+    deletedAt: asStringOrNull(value.deletedAt) || asStringOrNull(value.deleted_at) || undefined
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function asStringOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
 export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: unknown }>, fallbackName = "小乖"): CloudSettings {
-  const result: CloudSettings = { girlfriendName: fallbackName, backgroundSettings: defaultBackgroundSettings, themeSettings: DEFAULT_THEME_SETTINGS, periodSettings: DEFAULT_PERIOD_SETTINGS };
+  const result: CloudSettings = { girlfriendName: fallbackName, backgroundSettings: { ...defaultBackgroundSettings }, themeSettings: { ...DEFAULT_THEME_SETTINGS }, periodSettings: { ...DEFAULT_PERIOD_SETTINGS } };
   for (const row of rows) {
     if (row.key === "girlfriend_name" && typeof row.value === "string") result.girlfriendName = row.value || fallbackName;
     if (row.key === "next_meeting_date" && (typeof row.value === "string" || row.value === null)) result.nextMeetingDate = row.value || null;
@@ -264,13 +293,20 @@ export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: un
     if (row.key === "background_settings") result.backgroundSettings = normalizeBackgroundSettings(row.value);
     if (row.key === "theme_settings") result.themeSettings = normalizeThemeSettings(row.value);
     if (row.key === "period_settings") result.periodSettings = normalizePeriodSettings(row.value);
+    if (row.key === "period_records" && Array.isArray(row.value)) result.periodRecords = row.value.map(normalizePeriodRecord).filter(Boolean) as PeriodRecord[];
+    if (row.key === "auto_sync_settings" && isRecord(row.value)) {
+      result.autoSyncSettings = {
+        enabled: typeof row.value.enabled === "boolean" ? row.value.enabled : true,
+        ...row.value
+      };
+    }
     if (row.key === "quick_actions" && typeof row.value === "string") result.quickActions = row.value;
   }
   return result;
 }
 
 export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
-  return [
+  const rows: Array<{ space_id: string; key: string; value: unknown }> = [
     { space_id: spaceId, key: "girlfriend_name", value: settings.girlfriendName || "小乖" },
     { space_id: spaceId, key: "next_meeting_date", value: settings.nextMeetingDate || "" },
     { space_id: spaceId, key: "semester_end_date", value: settings.semesterEndDate || "" },
@@ -278,7 +314,19 @@ export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
     { space_id: spaceId, key: "theme_settings", value: normalizeThemeSettings(settings.themeSettings || DEFAULT_THEME_SETTINGS) },
     { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) },
     { space_id: spaceId, key: "quick_actions", value: settings.quickActions || "" }
-  ].map((row) => ({
+  ];
+
+  // Include period_records if present (non-empty)
+  if (settings.periodRecords && settings.periodRecords.length > 0) {
+    rows.push({ space_id: spaceId, key: "period_records", value: settings.periodRecords.map((r) => ({ ...r })) });
+  }
+
+  // Include auto_sync_settings if present
+  if (settings.autoSyncSettings) {
+    rows.push({ space_id: spaceId, key: "auto_sync_settings", value: { ...settings.autoSyncSettings } });
+  }
+
+  return rows.map((row) => ({
     ...row,
     value: row.value === null || row.value === undefined ? "" : row.value
   }));

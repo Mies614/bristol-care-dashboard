@@ -133,10 +133,19 @@ export async function withAutoSyncSuppressedAsync<T>(callback: () => Promise<T>)
 }
 
 export function prepareAutoSyncData(data: AppData): AppData {
+  // Strip imageDataUrl from background settings for cloud storage
+  // as it's too large to store in Supabase and only valid locally
+  const bg = data.backgroundSettings ? { ...data.backgroundSettings } : undefined;
+  if (bg) {
+    delete bg.imageDataUrl;
+    // Don't change mode — leave it as-is; the upload route will handle sanitization
+  }
+
   return {
     ...data,
     note: "",
-    loveNotes: []
+    loveNotes: [],
+    backgroundSettings: bg || data.backgroundSettings
   };
 }
 
