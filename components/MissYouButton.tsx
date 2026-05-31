@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 
 interface MissYouData {
@@ -167,10 +169,10 @@ export function MissYouButton() {
           })
         });
         const payload = await response.json();
-        if (payload.ok) {
-          setData((prev) => ({ ...prev, todayCount: payload.todayCount, todayByAuthor: payload.todayByAuthor || {} }));
-          setFeedback("已同步成功。");
-        } else {
+      if (payload.ok) {
+        setData((prev) => ({ ...prev, todayCount: payload.todayCount, todayByAuthor: payload.todayByAuthor || {} }));
+        toast.success("已同步成功 ✨");
+      } else {
           remaining.push(item);
         }
       } catch {
@@ -224,27 +226,28 @@ export function MissYouButton() {
       setAnimating(true);
       setHearts((prev) => [...prev, { id: Date.now(), left: 30 + Math.random() * 40 }]);
 
-      const code = getDefaultSpaceCode();
-      const response = await fetch("/api/miss-you", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          author: "xiaoguai",
-          recipient: "admin",
-          localDate
-        })
-      });
-      const payload = await response.json();
+        const response = await fetch("/api/miss-you", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: getDefaultSpaceCode(),
+            author: "xiaoguai",
+            recipient: "admin",
+            localDate
+          })
+        });
+        const payload = await response.json();
 
-      if (payload.ok) {
-        setData((prev) => ({
-          ...prev,
-          todayCount: payload.todayCount,
-          todayByAuthor: payload.todayByAuthor || {}
-        }));
-        setFeedback(getMissYouFeedback(payload.todayCount));
-      } else {
+        if (payload.ok) {
+          setData((prev) => ({
+            ...prev,
+            todayCount: payload.todayCount,
+            todayByAuthor: payload.todayByAuthor || {}
+          }));
+          const feedbackText = getMissYouFeedback(payload.todayCount);
+          setFeedback(feedbackText);
+          toast(feedbackText, { className: "!rounded-[var(--app-radius)] !border !border-[var(--app-card-border)] !bg-[var(--app-card-bg)] !text-[var(--app-text)]" });
+        } else {
         // Save to pending queue
         const pending = loadPendingQueue();
         pending.push({
@@ -256,7 +259,9 @@ export function MissYouButton() {
           createdAt: new Date().toISOString()
         });
         savePendingQueue(pending);
-        setFeedback("已经先帮你记在本地，稍后再同步。");
+        const offlineMsg = "已经先帮你记在本地，稍后再同步。";
+        setFeedback(offlineMsg);
+        toast(offlineMsg);
       }
     } catch {
       // Network error - save to pending
@@ -270,7 +275,9 @@ export function MissYouButton() {
         createdAt: new Date().toISOString()
       });
       savePendingQueue(pending);
-      setFeedback("已经先帮你记在本地，稍后再同步。");
+      const offlineMsg = "已经先帮你记在本地，稍后再同步。";
+      setFeedback(offlineMsg);
+      toast(offlineMsg);
     } finally {
       setLoading(false);
       setTimeout(() => setAnimating(false), 600);
@@ -279,7 +286,12 @@ export function MissYouButton() {
 
   // ── Unread card from admin ────────────────────────────────────────
   const unreadCard = showUnread && data.unreadFromOtherCount > 0 ? (
-    <div className="mb-4 rounded-2xl bg-white/70 p-4 text-center shadow-sm">
+    <motion.div
+      className="mb-4 rounded-2xl bg-white/70 p-4 text-center shadow-sm"
+      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
       <div className="mb-1 text-sm text-cocoa/70">💕 他也想你啦</div>
       <p className="text-base font-medium text-cocoa">
         你不在的时候，他想你了 <span className="text-xl">{data.unreadFromOtherCount}</span> 次。
@@ -297,7 +309,7 @@ export function MissYouButton() {
       >
         {markingSeen ? "..." : "知道啦"}
       </button>
-    </div>
+    </motion.div>
   ) : null;
 
   return (

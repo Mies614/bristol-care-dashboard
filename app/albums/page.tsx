@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
@@ -12,6 +13,7 @@ import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import { createThumbnailFileFromVideo, shouldGenerateVideoThumbnail } from "@/lib/videoThumbnail";
+import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
@@ -147,11 +149,15 @@ export default function AlbumsPage() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(formatApiError(payload, "文件已上传，但记录保存失败，请重试保存。"));
+        const errMsg = formatApiError(payload, "文件已上传，但记录保存失败，请重试保存。");
+        setMessage(errMsg);
+        toast.error(errMsg);
         return;
       }
     } catch (error) {
-      setMessage(formatUploadError(currentStage, error));
+      const errMsg = formatUploadError(currentStage, error);
+      setMessage(errMsg);
+      toast.error("上传失败，请重试");
       return;
     } finally {
       setUploading(false);
@@ -161,7 +167,7 @@ export default function AlbumsPage() {
     setImage(null);
     setVideo(null);
     setUploadOpen(false);
-    setMessage(createUploadStageMessage("done"));
+    toast.success("回忆已加入相册 ✨");
     await loadItems();
   }
 
@@ -245,9 +251,21 @@ export default function AlbumsPage() {
                 ) : null}
                 {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
               </div>
+              {uploading ? (
+                <div className="space-y-2">
+                  <div className="rounded-full h-1.5 w-full overflow-hidden bg-[var(--app-card-border)]">
+                    <motion.div
+                      className="h-full rounded-full bg-[var(--app-accent)]"
+                      animate={{ width: ["0%", "70%", "85%", "90%"] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", times: [0, 0.4, 0.7, 1] }}
+                    />
+                  </div>
+                  <p className="text-center text-xs text-[var(--app-muted)]">{uploadStage || "上传中..."}</p>
+                </div>
+              ) : null}
               <div className="flex gap-2">
                 <AppButton variant="primary" className="flex-1" disabled={uploading} type="submit">
-                  {uploading ? uploadStage || "上传中..." : "上传到相册"}
+                  {uploading ? "请稍候..." : "上传到相册"}
                 </AppButton>
                 {uploading ? (
                   <AppButton variant="secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>
@@ -295,9 +313,19 @@ export default function AlbumsPage() {
                   type="button"
                 >
                   {item.imageUrl ? (
-                    <img className="aspect-[3/4] w-full object-cover transition group-hover:scale-105" src={item.imageUrl} alt={item.title || "相册照片"} />
+                    <ImageWithSkeleton
+                      src={item.imageUrl}
+                      alt={item.title || "相册照片"}
+                      aspectRatio="portrait"
+                      className="transition group-hover:scale-105"
+                    />
                   ) : item.videoUrl ? (
-                    <div className="flex aspect-[3/4] items-center justify-center bg-[var(--app-text)]/80 text-3xl text-white">▶</div>
+                    <ImageWithSkeleton
+                      src=""
+                      alt={item.title || "视频"}
+                      aspectRatio="portrait"
+                      showPlayIcon
+                    />
                   ) : null}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-2 text-left text-white">
                     <p className="truncate text-sm font-medium">{item.title || "未命名回忆"}</p>
@@ -350,10 +378,11 @@ export default function AlbumsPage() {
                 onEnded={() => setPlaying(false)}
               />
             ) : selected.imageUrl ? (
-              <img
-                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain"
+              <ImageWithSkeleton
                 src={selected.imageUrl}
                 alt={selected.title || "相册照片"}
+                aspectRatio="video"
+                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain"
               />
             ) : null}
             {selected.videoUrl ? (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUpload";
@@ -98,10 +100,12 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
       setImage(null);
       setVideo(null);
       setAudio(null);
-      setMessage(createUploadStageMessage("done"));
+      toast.success("小纸条已贴到墙上 ✨");
       await onCreated();
     } catch (error) {
-      setMessage(formatError("upload_or_save_note", error));
+      const errMsg = formatError("upload_or_save_note", error);
+      setMessage(errMsg);
+      toast.error("小纸条发布失败，请重试");
     } finally {
       setSubmitting(false);
     }
@@ -141,9 +145,20 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         <span className="font-medium text-cocoa">视频</span>
         <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(event) => setVideo(event.currentTarget.files?.[0] || null)} />
       </label>
-      {message ? <p className="notice">{message}</p> : null}
+      {submitting ? (
+        <div className="space-y-2">
+          <div className="rounded-full h-1.5 w-full overflow-hidden bg-[var(--app-card-border)]">
+            <motion.div
+              className="h-full rounded-full bg-[var(--app-accent)]"
+              animate={{ width: ["0%", "65%", "80%", "88%"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", times: [0, 0.4, 0.7, 1] }}
+            />
+          </div>
+          <p className="text-center text-xs text-[var(--app-muted)]">{message || "上传中..."}</p>
+        </div>
+      ) : message ? <p className="notice">{message}</p> : null}
       <div className="flex gap-2">
-        <button className="btn-primary flex-1" disabled={submitting} type="submit">{submitting ? "提交中..." : "贴到小纸条墙"}</button>
+        <button className="btn-primary flex-1" disabled={submitting} type="submit">{submitting ? "请稍候..." : "贴到小纸条墙"}</button>
         {submitting ? <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>取消</button> : null}
       </div>
     </form>
