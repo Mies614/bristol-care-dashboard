@@ -118,7 +118,6 @@ export default function SchedulePage() {
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Today</p>
         <h2 className="font-semibold text-[var(--app-text)]">今日课程</h2>
         <p className="mt-2 text-sm text-[var(--app-muted)]">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
-        <AppButton variant="secondary" className="mt-3 w-full sm:w-auto" onClick={exportAllCourses}>导出课程日历提醒</AppButton>
       </AppCard>
 
       {/* Add/Edit form */}
@@ -157,12 +156,12 @@ export default function SchedulePage() {
       <AppCard className="mb-4">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Tools</p>
         <h2 className="mb-3 font-semibold text-[var(--app-text)]">课程表工具</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <AppButton variant="secondary" className="w-full" onClick={() => persist(sampleCourses)}>导入示例课程表</AppButton>
-          <AppButton variant="danger" className="w-full" onClick={() => persist([])}>清空课程表</AppButton>
-          <AppButton variant="secondary" className="w-full" onClick={exportAllCourses}>导出整周课程提醒</AppButton>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <AppButton variant="secondary" className="w-full" onClick={() => persist(sampleCourses)}>导入示例</AppButton>
+          <AppButton variant="secondary" className="w-full" onClick={exportAllCourses}>导出日历</AppButton>
           <AppButton variant="secondary" className="w-full" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</AppButton>
-          <label className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-2 text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-[var(--app-accent-soft)] cursor-pointer sm:col-span-2">
+          <AppButton variant="danger" className="w-full" onClick={() => persist([])}>清空课程表</AppButton>
+          <label className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-2 text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-[var(--app-accent-soft)] cursor-pointer sm:col-span-1">
             导入 JSON
             <Input
               className="hidden"

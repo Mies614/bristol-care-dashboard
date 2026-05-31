@@ -112,13 +112,15 @@ export default function RecordsPage() {
   return (
     <AppShell>
       <PageHeader title="记录中心" subtitle="课程、DDL 和身体状态都放在这里。" />
-      <div className="space-y-4">
+      <div className="space-y-3.5">
+        {/* 1. Hero - 今日摘要 */}
         <section className="rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-butter/50 to-lilac/55 p-5 shadow-float backdrop-blur-xl">
           <p className="section-kicker mb-1">{todayLabel()}</p>
           <h1 className="text-2xl font-semibold text-cocoa">今日重点 {reminders.filter((item) => item.priority === "urgent" || item.priority === "soon").length} 条</h1>
           <p className="mt-2 text-sm leading-6 text-cocoa/65">先看最靠近时间的事，剩下的慢慢来。</p>
         </section>
 
+        {/* 2. Priority - 醒目提醒 */}
         <section className="soft-card">
           <div className="mb-3">
             <p className="section-kicker mb-1">Priority</p>
@@ -127,6 +129,20 @@ export default function RecordsPage() {
           <PriorityReminderList reminders={reminders} limit={5} />
         </section>
 
+        {/* 3. Quick Actions - 快速操作，紧跟提醒之后 */}
+        <section className="soft-card">
+          <p className="section-kicker mb-1">Quick Actions</p>
+          <h2 className="mb-3 font-semibold text-cocoa">快速操作</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <Link className="btn-secondary text-center" href="/schedule">添加课程</Link>
+            <Link className="btn-secondary text-center" href="/deadlines">添加 DDL</Link>
+            <Link className="btn-secondary text-center" href="/period">添加经期记录</Link>
+            <button className="btn-primary" onClick={exportAllCalendar}>导出日历提醒</button>
+          </div>
+          {message ? <p className="notice mt-3">{message}</p> : null}
+        </section>
+
+        {/* 4. Schedule - 今日课程 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -137,9 +153,9 @@ export default function RecordsPage() {
           </div>
           {nextCourse ? <p className="notice mb-3">下一节：{nextCourse.name}，{nextCourse.startTime} 开始。</p> : null}
           {todayCourses.length ? <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div> : <p className="empty-state text-left">今天没有课，可以慢慢安排自己的节奏。</p>}
-          <button className="btn-secondary mt-3 w-full" onClick={exportCourseCalendar}>导出课程日历</button>
         </section>
 
+        {/* 5. Deadlines - DDL 摘要 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -150,9 +166,9 @@ export default function RecordsPage() {
           </div>
           <p className="mb-3 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {soonDue.length} 个。</p>
           {incompleteDeadlines.length ? <div className="space-y-2">{incompleteDeadlines.slice(0, 3).map((deadline) => <DeadlineCard deadline={deadline} key={deadline.id} />)}</div> : <p className="empty-state text-left">最近没有未完成 DDL。</p>}
-          <button className="btn-secondary mt-3 w-full" onClick={exportDeadlineCalendar}>导出 DDL 提醒</button>
         </section>
 
+        {/* 6. Cycle - 经期记录 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -166,19 +182,6 @@ export default function RecordsPage() {
             <div className="rounded-2xl bg-white/58 p-3">剩余：<span className="font-semibold text-cocoa">{periodDays === null ? "待记录" : `${periodDays} 天`}</span></div>
             <div className="col-span-2 rounded-2xl bg-white/58 p-3">当前周期：<span className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "待记录"}</span></div>
           </div>
-          <button className="btn-secondary mt-3 w-full" onClick={exportPeriodCalendar}>导出经期提醒</button>
-        </section>
-
-        <section className="soft-card">
-          <p className="section-kicker mb-1">Quick Actions</p>
-          <h2 className="mb-3 font-semibold text-cocoa">快速操作</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <Link className="btn-secondary text-center" href="/schedule">添加课程</Link>
-            <Link className="btn-secondary text-center" href="/deadlines">添加 DDL</Link>
-            <Link className="btn-secondary text-center" href="/period">添加经期记录</Link>
-            <button className="btn-primary" onClick={exportAllCalendar}>导出日历提醒</button>
-          </div>
-          {message ? <p className="notice mt-3">{message}</p> : null}
         </section>
       </div>
     </AppShell>

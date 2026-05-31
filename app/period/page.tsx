@@ -166,7 +166,7 @@ export default function PeriodPage() {
     <SharedAccessGate>
       <AppShell>
         <PageHeader title="经期记录" subtitle="记录开始日、结束日和下次预计时间。" />
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           <div className="flex items-center justify-between gap-2">
             <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
             <AutoSyncStatusBadge />
@@ -192,7 +192,7 @@ export default function PeriodPage() {
                 <p className="mt-1 font-semibold text-cocoa">{daysUntil === null ? "待记录" : daysUntil >= 0 ? `${daysUntil} 天` : `已过 ${Math.abs(daysUntil)} 天`}</p>
               </div>
             </div>
-            <button className="btn-secondary mt-4 w-full sm:w-auto" onClick={exportReminder}>导出日历提醒</button>
+            <button className="btn-secondary mt-4 w-full" onClick={exportReminder}>导出日历提醒</button>
           </section>
 
           <form className="soft-card space-y-3" onSubmit={saveRecord}>
@@ -213,9 +213,9 @@ export default function PeriodPage() {
               <option value="medium">中等</option>
               <option value="heavy">较多</option>
             </select>
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-1 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
               {symptoms.map((item) => (
-                <button className={draft.symptoms.includes(item) ? "btn-primary btn-small" : "btn-secondary btn-small"} key={item} type="button" onClick={() => toggleSymptom(item)}>{item}</button>
+                <button className={(draft.symptoms.includes(item) ? "btn-primary" : "btn-secondary") + " btn-small shrink-0 whitespace-nowrap"} key={item} type="button" onClick={() => toggleSymptom(item)}>{item}</button>
               ))}
             </div>
             <input className="field" placeholder="心情" value={draft.mood} onChange={(e) => setDraft({ ...draft, mood: e.target.value })} />
@@ -228,7 +228,7 @@ export default function PeriodPage() {
               <p className="section-kicker mb-1">Settings</p>
               <h2 className="font-semibold text-cocoa">周期设置</h2>
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <label className="text-xs text-cocoa/65">周期（天）<input className="field mt-1" min={1} type="number" value={settings.averageCycleLength} onChange={(e) => setSettings({ ...settings, averageCycleLength: Number(e.target.value) })} /></label>
               <label className="text-xs text-cocoa/65">经期（天）<input className="field mt-1" min={1} type="number" value={settings.averagePeriodLength} onChange={(e) => setSettings({ ...settings, averagePeriodLength: Number(e.target.value) })} /></label>
               <label className="text-xs text-cocoa/65">提前提醒（天）<input className="field mt-1" min={0} type="number" value={settings.reminderDaysBefore} onChange={(e) => setSettings({ ...settings, reminderDaysBefore: Number(e.target.value) })} /></label>

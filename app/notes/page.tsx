@@ -92,15 +92,15 @@ export default function NotesPage() {
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Note Wall</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">小纸条墙</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把想说的话、当下的声音和照片都放在这里。</p>
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          {["写文字", "录语音", "发照片", "发视频"].map((item) => (
-            <span className="rounded-full bg-white/60 px-2 py-2 text-center text-xs text-[var(--app-muted)]" key={item}>{item}</span>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {["✎ 写文字", "🎤 录语音", "📷 发照片", "🎬 发视频"].map((item) => (
+            <span className="rounded-full bg-white/60 px-3 py-1.5 text-xs text-[var(--app-muted)]" key={item}>{item}</span>
           ))}
         </div>
       </header>
 
-      <div className="space-y-4">
-        {/* Composer */}
+      <div className="space-y-3.5">
+        {/* Composer - 写纸条区，优先放置 */}
         <AppCard>
           <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((v) => !v)} type="button">
             <div>
@@ -116,13 +116,15 @@ export default function NotesPage() {
           </div>
         </AppCard>
 
-        {/* Filters */}
+        {/* Filters - 筛选区，移动端优先展示高频筛选项 */}
         <AppCard>
-          <div className="flex flex-wrap gap-2 mb-3">
+          {/* 快速筛选标签 - 移动端可横向滑动 */}
+          <div className="-mx-1 mb-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
             {filters.map(([value, label]) => (
               <AppButton
                 variant={filter === value ? "primary" : "secondary"}
                 size="sm"
+                className="shrink-0 whitespace-nowrap"
                 key={value}
                 onClick={() => setFilter(value)}
               >
@@ -130,14 +132,15 @@ export default function NotesPage() {
               </AppButton>
             ))}
           </div>
-          <select
-            className="mb-3 w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as typeof sort)}
-          >
-            {sorts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          {/* 高级筛选 - 移动端单列 */}
+          <div className="space-y-2">
+            <select
+              className="w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as typeof sort)}
+            >
+              {sorts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
             <Input placeholder="搜索内容、心情或作者" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadNotes(); }} />
             <select
               className="w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
@@ -154,12 +157,12 @@ export default function NotesPage() {
               <option value="romantic">浪漫</option>
             </select>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2.5 shadow-sm cursor-pointer">
               <input checked={includeInactive} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setIncludeInactive(e.target.checked)} />
-              <span className="text-sm text-[var(--app-text)]">显示隐藏的小纸条</span>
+              <span className="text-sm text-[var(--app-text)]">显示隐藏</span>
             </label>
-            <AppButton variant="secondary" size="sm" onClick={loadNotes}>搜索/刷新</AppButton>
+            <AppButton variant="secondary" size="sm" onClick={loadNotes}>搜索</AppButton>
           </div>
           {message ? (
             <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{message}</div>

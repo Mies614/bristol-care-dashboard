@@ -246,10 +246,11 @@ export default function HomePage() {
       >
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
-        <DailyCareCard care={dailyCare} />
-        <WeatherCard weather={weather} error={error} />
-        {outfit ? <OutfitCard suggestion={outfit} /> : null}
 
+        {/* 1. Daily Care - 今日关怀摘要，最重要的信息区块 */}
+        <DailyCareCard care={dailyCare} />
+
+        {/* 2. Priority - 今日重点提醒，时间敏感事项 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -261,6 +262,7 @@ export default function HomePage() {
           <PriorityReminderList reminders={priorityReminders} limit={3} />
         </section>
 
+        {/* 3. Schedule - 今日课程 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -276,6 +278,7 @@ export default function HomePage() {
           )}
         </section>
 
+        {/* 4. Deadlines - 紧急截止日期 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -294,20 +297,7 @@ export default function HomePage() {
           {!nearestDeadlines.length ? <p className="empty-state text-left">最近没有未完成的 deadline。</p> : null}
         </section>
 
-        <section className="space-y-3.5">
-          <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
-            <p className="section-kicker mb-1">Countdown</p>
-            <h2 className="font-semibold text-cocoa">下次见面</h2>
-            <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
-          </div>
-          <MissYouButton />
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
-          <div className="grid grid-cols-2 gap-2">
-            <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
-            <Link className="btn-secondary text-center" href="/notes">写一张</Link>
-          </div>
-        </section>
-
+        {/* 5. Cycle - 经期提醒，身体状态 */}
         <section className="soft-card bg-gradient-to-br from-white/78 to-lilac/35">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -323,6 +313,28 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* 6. Weather & Outfit - 天气及穿搭，环境信息 */}
+        <section className="space-y-3.5">
+          <WeatherCard weather={weather} error={error} />
+          {outfit ? <OutfitCard suggestion={outfit} /> : null}
+        </section>
+
+        {/* 7. Love - 下次见面、Miss You、小纸条，情感中心 */}
+        <section className="space-y-3.5">
+          <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
+            <p className="section-kicker mb-1">Countdown</p>
+            <h2 className="font-semibold text-cocoa">下次见面</h2>
+            <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
+          </div>
+          <MissYouButton />
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+          <div className="grid grid-cols-2 gap-2">
+            <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
+            <Link className="btn-secondary text-center" href="/notes">写一张</Link>
+          </div>
+        </section>
+
+        {/* 8. Memories - 最近回忆，低优先级 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -347,7 +359,9 @@ export default function HomePage() {
             </div>
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
-          <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+
+        {/* 9. Onboarding - 引导卡，末位 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>
       </motion.div>
