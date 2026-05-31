@@ -196,30 +196,30 @@ export default function HomePage() {
     <AppShell>
       {/* ── Hero ── */}
       <motion.header
-        className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
+        className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 px-4 py-4 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
         variants={safeVariants(fadeInScale, reduceMotion)}
         initial="hidden"
         animate="visible"
         transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <p className="section-kicker">Bristol Care</p>
-            <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
+            <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
               小乖，今天也好
             </h1>
           </div>
-          <div className="rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-2 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
+          <div className="shrink-0 rounded-[1.25rem] border border-white/70 bg-white/62 px-2.5 py-1.5 text-right text-[11px] leading-5 text-cocoa/62 shadow-sm">
             <div>{todayLabel}</div>
             <div className="font-semibold text-cocoa">今日总览</div>
           </div>
         </div>
         <DualTimeCard />
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
-          <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-cocoa/70 shadow-sm">为 {data.nickname || "小乖"} 准备的小首页</span>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">为 {data.nickname || "小乖"} 准备的小首页</span>
         </div>
-        <p className="mt-4 text-sm leading-6 text-cocoa/70">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
+        <p className="mt-3 text-[13px] leading-5 text-cocoa/65">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
       </motion.header>
 
       <motion.div
