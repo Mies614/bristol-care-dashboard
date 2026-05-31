@@ -53,8 +53,21 @@ export async function POST(request: NextRequest) {
     step = "delete_old_deadlines";
     await assertNoError(await supabase.from("deadlines").delete().eq("space_id", space.id), step);
     if (normalized.deadlines.length) {
+      step = "normalize_deadlines";
+      const deadlineRows: Array<ReturnType<typeof deadlineToRow>> = normalized.deadlines
+        .map((deadline) => {
+          try {
+            return deadlineToRow(deadline, space.id);
+          } catch (e) {
+            console.warn("[upload] skipping invalid deadline row", deadline.id, e);
+            return null;
+          }
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null);
       step = "insert_deadlines";
-      await assertNoError(await supabase.from("deadlines").insert(normalized.deadlines.map((deadline) => deadlineToRow(deadline, space.id))), step);
+      if (deadlineRows.length) {
+        await assertNoError(await supabase.from("deadlines").insert(deadlineRows), step);
+      }
     }
 
     step = "upsert_settings";

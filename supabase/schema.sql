@@ -49,7 +49,8 @@ create table if not exists public.deadlines (
   status text default 'todo',
   note text,
   created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  deleted_at timestamptz
 );
 
 create table if not exists public.love_notes (
@@ -220,6 +221,10 @@ create index if not exists idx_quick_links_space_sort on public.quick_links(spac
 create index if not exists album_items_space_created_idx on public.album_items(space_id, created_at desc);
 create index if not exists album_items_space_favorite_idx on public.album_items(space_id, is_favorite, created_at desc);
 create index if not exists period_records_space_start_idx on public.period_records(space_id, start_date desc);
+
+-- Schema migration: add deleted_at to deadlines table (for soft delete support during sync)
+alter table public.deadlines
+add column if not exists deleted_at timestamptz;
 
 alter table public.album_items
 add column if not exists created_by text default 'xiaoguai';

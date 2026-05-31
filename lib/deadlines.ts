@@ -49,7 +49,8 @@ export function normalizeDeadlines(value: unknown, now?: string): Deadline[] {
     .filter((deadline): deadline is Deadline => Boolean(deadline));
 }
 
-export function collectDeadlineCandidates(data: RecordValue): unknown[] {
+export function collectDeadlineCandidates(data: unknown): unknown[] {
+  if (!isRecord(data)) return [];
   return [
     ...(Array.isArray(data.deadlines) ? data.deadlines : []),
     ...(Array.isArray(data.ddl) ? data.ddl : []),

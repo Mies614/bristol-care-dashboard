@@ -26,6 +26,7 @@ type DeadlineRow = {
   note?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  deleted_at?: string | null;
 };
 
 type LoveNoteRow = {
@@ -124,7 +125,8 @@ export function deadlineFromRow(row: DeadlineRow): Deadline {
     status: row.status,
     note: row.note || undefined,
     createdAt: row.created_at || undefined,
-    updatedAt: row.updated_at || undefined
+    updatedAt: row.updated_at || undefined,
+    deletedAt: row.deleted_at || undefined
   };
 }
 
@@ -140,7 +142,8 @@ export function deadlineToRow(deadline: Deadline, spaceId?: string) {
     status: deadline.status,
     note: deadline.note || null,
     created_at: deadline.createdAt || undefined,
-    updated_at: deadline.updatedAt || new Date().toISOString()
+    updated_at: deadline.updatedAt || new Date().toISOString(),
+    deleted_at: deadline.deletedAt || null
   };
 }
 
