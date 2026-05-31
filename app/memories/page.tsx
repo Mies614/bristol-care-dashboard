@@ -137,7 +137,7 @@ export default function MemoriesPage() {
               </button>
             </div>
             {randomMemory ? (
-              <Link className="block overflow-hidden rounded-[1.5rem] bg-white/65 shadow-sm transition active:scale-[0.99]" href={randomMemory.href}>
+              <Link className="block overflow-hidden rounded-[1.5rem] bg-white/65 shadow-sm transition active:scale-[0.99] animate-[fadeIn_0.3s_ease-out]" key={randomMemory.id} href={randomMemory.href}>
                 {randomMemory.imageUrl ? <img className="max-h-72 w-full object-cover" src={randomMemory.imageUrl} alt={randomMemory.title || "随机回忆"} /> : (
                   <div className="flex h-44 items-center justify-center bg-gradient-to-br from-cocoa/75 to-lilac/70 text-white">
                     {randomMemory.type === "audio" ? "AUDIO" : randomMemory.type === "video" || randomMemory.type === "live_photo" ? "▶" : "💌"}

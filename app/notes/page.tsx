@@ -109,7 +109,7 @@ export default function NotesPage() {
             </div>
             <AppButton variant="secondary" size="sm" type="button">{composerOpen ? "收起" : "展开"}</AppButton>
           </button>
-          <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
               <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} />
             </div>

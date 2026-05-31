@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import type { LoveNote } from "@/lib/types";
 
 const styles: Array<[NonNullable<LoveNote["displayStyle"]>, string]> = [
@@ -40,8 +41,23 @@ export function NoteEditorModal({ note, onClose, onSave }: { note: LoveNote; onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form className="mx-auto max-w-md space-y-3 rounded-[1.75rem] bg-cream p-4 shadow-float" onClick={(event) => event.stopPropagation()} onSubmit={submit}>
+    <motion.div
+      className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+    >
+      <motion.form
+        className="mx-auto max-w-md space-y-3 rounded-[1.75rem] bg-cream p-4 shadow-float"
+        onClick={(event) => event.stopPropagation()}
+        onSubmit={submit}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+      >
         <h2 className="font-semibold text-cocoa">编辑小纸条</h2>
         <textarea className="field min-h-32" value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} />
         <div className="grid grid-cols-1 gap-2">
@@ -61,7 +77,7 @@ export function NoteEditorModal({ note, onClose, onSave }: { note: LoveNote; onC
           <button className="btn-primary flex-1" disabled={saving} type="submit">{saving ? "保存中..." : "保存"}</button>
           <button className="btn-secondary flex-1" type="button" onClick={onClose}>取消</button>
         </div>
-      </form>
-    </div>
+      </motion.form>
+    </motion.div>
   );
 }

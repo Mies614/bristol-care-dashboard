@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useAccessibleMotion, safeTransition, fadeInScale, scaleOnTap } from "@/lib/design/motion";
+import { useAccessibleMotion, safeTransition, fadeInScale } from "@/lib/design/motion";
 import type { ThemePreviewConfig } from "./themePreviewPresets";
 
 interface Props {
