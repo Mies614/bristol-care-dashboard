@@ -1,5 +1,8 @@
 "use client";
+
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useAccessibleMotion, safeTransition, fadeInScale, scaleOnTap } from "@/lib/design/motion";
 import type { ThemePreviewConfig } from "./themePreviewPresets";
 
 interface Props {
@@ -34,12 +37,10 @@ function Decoration({ type, color }: { type: ThemePreviewConfig["decorationType"
   if (type === "tape") {
     return (
       <>
-        {/* top-left tape */}
         <div
           className="absolute -top-1 -left-1 h-3 w-6 rotate-[-12deg] rounded-sm opacity-60"
           style={{ backgroundColor: color }}
         />
-        {/* bottom-right tape */}
         <div
           className="absolute -bottom-1 -right-1 h-3 w-6 rotate-[8deg] rounded-sm opacity-50"
           style={{ backgroundColor: color }}
@@ -77,11 +78,14 @@ function Decoration({ type, color }: { type: ThemePreviewConfig["decorationType"
 
 function BadgeShape({ bg, text, shape }: { bg: string; text: string; shape: ThemePreviewConfig["badgeShape"] }) {
   const shapeClass =
-    shape === "pill" ? "rounded-full px-1.5 py-0.5" :
-    shape === "dot" ? "rounded-full h-[5px] w-[5px]" :
-    shape === "square" ? "rounded-[2px] px-1 py-0.5" :
-    "rounded-md px-1 py-0.5";
-  
+    shape === "pill"
+      ? "rounded-full px-1.5 py-0.5"
+      : shape === "dot"
+        ? "rounded-full h-[5px] w-[5px]"
+        : shape === "square"
+          ? "rounded-[2px] px-1 py-0.5"
+          : "rounded-md px-1 py-0.5";
+
   if (shape === "dot") {
     return <span className={`block ${shapeClass}`} style={{ backgroundColor: bg }} />;
   }
@@ -96,29 +100,43 @@ function BadgeShape({ bg, text, shape }: { bg: string; text: string; shape: Them
 }
 
 export function ThemePreviewCard({ config, selected, onClick }: Props) {
+  const reduceMotion = useAccessibleMotion();
   const isDark = config.style === "night";
 
   return (
-    <button
+    <motion.button
       onClick={onClick}
       type="button"
       className={cn(
-        "group relative w-full min-w-0 overflow-hidden text-left transition-all duration-200",
+        "group relative w-full min-w-0 overflow-hidden text-left transition-shadow duration-200",
         "rounded-[1.5rem] border-2",
-        "active:scale-[0.98]",
         "hover:shadow-md",
-        "motion-safe:animate-[fadeIn_0.35s_ease-out] motion-safe:animate-[slideUp_0.35s_ease-out]",
         selected
           ? "border-[var(--app-accent)] bg-white/85 shadow-md shadow-[var(--app-accent)]/10"
-          : "border-white/75 bg-white/65 hover:bg-white/80"
+          : "border-white/75 bg-white/65 hover:bg-white/80",
       )}
-      style={selected ? { boxShadow: `0 0 0 1px var(--app-accent), 0 8px 30px rgba(0,0,0,0.08), 0 0 16px var(--app-accent)/0.15` } : undefined}
+      style={
+        selected
+          ? { boxShadow: `0 0 0 1px var(--app-accent), 0 8px 30px rgba(0,0,0,0.08), 0 0 16px var(--app-accent)/0.15` }
+          : undefined
+      }
+      variants={reduceMotion ? undefined : fadeInScale}
+      initial="hidden"
+      animate="visible"
+      whileHover={reduceMotion ? undefined : { scale: 1.015 }}
+      whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+      transition={safeTransition({ duration: 0.35, ease: "easeOut" }, reduceMotion)}
     >
-      {/* Selected check icon */}
+      {/* Selected check icon with entrance animation */}
       {selected && (
-        <div className="absolute top-2.5 right-2.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-accent)] text-white text-xs font-bold shadow-sm animate-[fadeIn_0.2s_ease-out]">
+        <motion.div
+          className="absolute top-2.5 right-2.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-accent)] text-white text-xs font-bold shadow-sm"
+          initial={reduceMotion ? undefined : { scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={safeTransition({ type: "spring", stiffness: 500, damping: 24 }, reduceMotion)}
+        >
           ✓
-        </div>
+        </motion.div>
       )}
 
       {/* ─── Mini Preview Area ─── */}
@@ -147,7 +165,7 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
         {/* mini cards */}
         <div className="relative z-10 -mt-1 px-2">
           {/* card 1 */}
-          <div
+          <motion.div
             className="mb-1 rounded-md border px-2 py-1.5"
             style={{
               backgroundColor: config.cardBg,
@@ -155,6 +173,12 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
               borderRadius: config.cardRadius,
               boxShadow: config.cardShadow,
             }}
+            animate={reduceMotion ? undefined : { y: [0, -1, 0] }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: selected ? 0 : 0.8 }
+            }
           >
             <div className="flex items-center justify-between">
               <span
@@ -167,10 +191,10 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
               className="mt-1 block h-[3px] w-3/4 rounded-full"
               style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)" }}
             />
-          </div>
+          </motion.div>
 
           {/* card 2 */}
-          <div
+          <motion.div
             className="rounded-md border px-2 py-1"
             style={{
               backgroundColor: config.cardBg,
@@ -178,6 +202,12 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
               borderRadius: config.cardRadius,
               boxShadow: config.cardShadow,
             }}
+            animate={reduceMotion ? undefined : { y: [0, -0.5, 0] }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: selected ? 0 : 1.2 }
+            }
           >
             <div className="flex items-center gap-1">
               {/* mini button */}
@@ -199,7 +229,7 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
                 style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}
               />
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* mini bottom nav */}
@@ -244,6 +274,6 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
           {config.tagline}
         </p>
       </div>
-    </button>
+    </motion.button>
   );
 }

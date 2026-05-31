@@ -54,9 +54,9 @@ export function BottomNav({ status }: { status?: NavStatus }) {
     >
       <nav
         aria-label="main navigation"
-        className={getNavContainerClass(navStyle, themeStyle)}
+        className={cn(getNavContainerClass(navStyle, themeStyle), "overflow-visible")}
       >
-        <ul className="flex items-center justify-around gap-0.5">
+        <ul className="flex items-center justify-around gap-0 overflow-visible">
           {appNavItems.map((item) => {
             const isActive = activeHref === item.href;
             const icon = ICON_MAP[item.icon];
