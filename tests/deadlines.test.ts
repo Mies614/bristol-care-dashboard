@@ -146,3 +146,66 @@ describe("deadline normalization", () => {
     expect(deadlines[4].priority).toBe("medium"); // missing falls back to medium
   });
 });
+
+describe("deadline UUID enforcement", () => {
+  it("generates UUID when id is null", () => {
+    const d = normalizeDeadline({ title: "A", dueDate: "2026-06-01", id: null });
+    expect(d).not.toBeNull();
+    expect(d!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("generates UUID when id is undefined", () => {
+    const d = normalizeDeadline({ title: "B", dueDate: "2026-06-02" });
+    expect(d).not.toBeNull();
+    expect(d!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("generates UUID when id is empty string", () => {
+    const d = normalizeDeadline({ title: "C", dueDate: "2026-06-03", id: "" });
+    expect(d).not.toBeNull();
+    expect(d!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("replaces non-UUID id with UUID", () => {
+    const d = normalizeDeadline({ title: "D", dueDate: "2026-06-04", id: "deadline-123" });
+    expect(d).not.toBeNull();
+    expect(d!.id).not.toBe("deadline-123");
+    expect(d!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("preserves valid UUID id", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000";
+    const d = normalizeDeadline({ title: "E", dueDate: "2026-06-05", id: uuid });
+    expect(d).not.toBeNull();
+    expect(d!.id).toBe(uuid);
+  });
+
+  it("deadlineToRow output id is UUID", () => {
+    const d = normalizeDeadline({ title: "F", dueDate: "2026-06-06", id: "deadline-old" });
+    expect(d).not.toBeNull();
+    const row = deadlineToRow(d!);
+    expect(row.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("deadlineToRow never outputs deadline-xxx id", () => {
+    const d = normalizeDeadline({ title: "G", dueDate: "2026-06-07", id: "deadline-legacy" });
+    expect(d).not.toBeNull();
+    const row = deadlineToRow(d!);
+    expect(row.id).not.toContain("deadline-");
+  });
+
+  it("UUID replacement preserves completed/status/deletedAt", () => {
+    const d = normalizeDeadline({
+      title: "H",
+      dueDate: "2026-06-08",
+      id: "deadline-999",
+      completed: true,
+      status: "done",
+      deletedAt: "2026-05-01T00:00:00Z"
+    });
+    expect(d).not.toBeNull();
+    expect(d!.status).toBe("done");
+    expect(d!.deletedAt).toBe("2026-05-01T00:00:00Z");
+    expect(d!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+});

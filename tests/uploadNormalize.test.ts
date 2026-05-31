@@ -71,7 +71,9 @@ describe("normalizeLocalData", () => {
     });
     const row = courseToRow(normalized.courses[0], "space");
 
-    expect(row).not.toHaveProperty("id");
+    // ID is now always UUID — non-UUID ids replaced by ensureUuid before row building
+    expect(row.id).toBeDefined();
+    expect(row.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     expect(row.start_time).toBe("09:00");
     expect(row.end_time).toBe("10:00");
   });

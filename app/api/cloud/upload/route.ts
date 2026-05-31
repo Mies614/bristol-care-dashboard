@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { courseToRow, deadlineToRow } from "@/lib/mappers";
+import { isUuid } from "@/lib/id";
 import { getDefaultSpaceCode, getSpaceByCode } from "@/lib/api/cloud";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildSettingsRows, normalizeLocalData } from "@/lib/uploadNormalize";
@@ -169,16 +170,16 @@ export async function POST(request: NextRequest) {
         step = "normalize_courses";
         const courseRowsRaw = normalized.courses.map((course) => courseToRow(course, space.id));
         const invalidCourseRows = courseRowsRaw.filter(
-          (row) => typeof row.id !== "string" || !row.id.trim()
+          (row) => !isUuid(row.id)
         );
         if (invalidCourseRows.length > 0) {
           return NextResponse.json<ApiError>(
             {
               ok: false,
-              error: "课程数据格式错误：存在缺少 id 的记录。",
+              error: "课程数据格式错误：存在非法 UUID。",
               code: "INVALID_COURSE_ROWS",
               step: "normalize_courses",
-              detail: `Found ${invalidCourseRows.length} course rows without id before insert.`
+              detail: `Found ${invalidCourseRows.length} course rows with invalid uuid before insert.`
             },
             { status: 400 }
           );
@@ -230,16 +231,16 @@ export async function POST(request: NextRequest) {
 
         step = "normalize_deadlines";
         const invalidDeadlineRows = deadlineRows.filter(
-          (row) => typeof row.id !== "string" || !row.id.trim()
+          (row) => !isUuid(row.id)
         );
         if (invalidDeadlineRows.length > 0) {
           return NextResponse.json<ApiError>(
             {
               ok: false,
-              error: "DDL 数据格式错误：存在缺少 id 的记录。",
+              error: "DDL 数据格式错误：存在非法 UUID。",
               code: "INVALID_DEADLINE_ROWS",
               step: "normalize_deadlines",
-              detail: `Found ${invalidDeadlineRows.length} deadline rows without id before insert.`
+              detail: `Found ${invalidDeadlineRows.length} deadline rows with invalid uuid before insert.`
             },
             { status: 400 }
           );

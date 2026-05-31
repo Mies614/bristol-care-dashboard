@@ -2,7 +2,7 @@ import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote, 
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "./theme";
-import { ensureStringId } from "./id";
+import { ensureUuid } from "./id";
 
 type CourseRow = {
   id: string;
@@ -115,7 +115,7 @@ export function courseFromRow(row: CourseRow): Course {
 }
 
 export function courseToRow(course: Course, spaceId?: string) {
-  const id = ensureStringId(course.id, "course");
+  const id = ensureUuid(course.id);
   return {
     ...(spaceId ? { space_id: spaceId } : {}),
     id,
@@ -150,7 +150,7 @@ export function deadlineFromRow(row: DeadlineRow): Deadline {
 }
 
 export function deadlineToRow(deadline: Deadline, spaceId?: string) {
-  const id = ensureStringId(deadline.id, "deadline");
+  const id = ensureUuid(deadline.id);
   return {
     ...(spaceId ? { space_id: spaceId } : {}),
     id,

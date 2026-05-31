@@ -4,7 +4,7 @@ import { normalizeBackgroundSettings } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { normalizeThemeSettings } from "./theme";
 import { collectDeadlineCandidates, normalizeDeadlines } from "./deadlines";
-import { ensureStringId } from "./id";
+import { ensureUuid } from "./id";
 
 const LEGACY_DEFAULT_NICKNAME = "\u5b9d\u5b9d";
 
@@ -24,7 +24,7 @@ function validateAndRepairCourse(value: unknown): Course | null {
   if (!isRecord(value)) return null;
   if (!isString(value.name) || !DAYS.includes(value.day as Course["day"]) || !isString(value.startTime) || !isString(value.endTime)) return null;
   return {
-    id: ensureStringId(value.id, "course"),
+    id: ensureUuid(value.id),
     name: value.name as string,
     day: value.day as Course["day"],
     startTime: value.startTime as string,

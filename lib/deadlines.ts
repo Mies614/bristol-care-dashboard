@@ -1,5 +1,5 @@
 import type { Deadline } from "./types";
-import { ensureStringId } from "./id";
+import { ensureUuid } from "./id";
 
 type RecordValue = Record<string, unknown>;
 
@@ -23,7 +23,7 @@ export function normalizeDeadline(value: unknown, now = new Date().toISOString()
   const completed = value.completed === true || rawStatus === "done" || rawStatus === "completed";
 
   return {
-    id: ensureStringId(value.id, "deadline"),
+    id: ensureUuid(value.id),
     title,
     courseName: asString(value.courseName) || asString(value.course_name),
     dueDate,

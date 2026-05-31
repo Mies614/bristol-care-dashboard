@@ -93,21 +93,28 @@ describe("normalizeLocalData - courses handling", () => {
     expect(result.courses[0].name).toBe("测试课程");
   });
 
-  it("should extract courses from data.schedule (backward compat)", () => {
+  it("should extract courses from data.schedule (backward compat, non-UUID id replaced)", () => {
     const result = normalizeLocalData({
       schedule: [makeCourse({ id: "sch-1" })]
     });
     expect(result.courses).toHaveLength(1);
-    expect(result.courses[0].id).toBe("sch-1");
+    // Non-UUID id gets replaced with a valid UUID
+    expect(result.courses[0].id).not.toBe("sch-1");
+    expect(result.courses[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 
   it("should merge courses+schedule without duplicates", () => {
     const course = makeCourse();
     const result = normalizeLocalData({
       courses: [course],
-      schedule: [makeCourse({ id: "sch-extra" })]
+      schedule: [makeCourse({ id: "sch-extra", name: "额外课程" })]
     });
     expect(result.courses).toHaveLength(2);
+    // Non-UUID id gets replaced for schedule entry
+    const scheduleCourse = result.courses.find((c) => c.name === "额外课程");
+    expect(scheduleCourse).toBeDefined();
+    expect(scheduleCourse!.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(scheduleCourse!.id).not.toBe("sch-extra");
   });
 
   it("should return empty array when no courses data", () => {
@@ -477,5 +484,95 @@ describe("deadline rawPayloadHasField detection (expanded)", () => {
     const deadline = { id: "test", title: "test", dueDate: "2026-06-01", deletedAt: "2026-06-15T00:00:00.000Z", priority: "medium" as const, status: "todo" as const };
     const row = deadlineToRow(deadline, "space-id");
     expect(row.deleted_at).toBe("2026-06-15T00:00:00.000Z");
+  });
+});
+
+describe("course UUID enforcement", () => {
+  it("generates UUID when id is null", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程A", day: "Monday", startTime: "09:00", endTime: "10:00", id: null } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("generates UUID when id is undefined", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程B", day: "Tuesday", startTime: "10:00", endTime: "11:00" } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("generates UUID when id is empty string", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程C", day: "Wednesday", startTime: "11:00", endTime: "12:00", id: "" } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("replaces non-UUID id (course-xxx) with UUID", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程D", day: "Thursday", startTime: "12:00", endTime: "13:00", id: "course-123" } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].id).not.toBe("course-123");
+    expect(result.courses[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("preserves valid UUID id", () => {
+    const uuid = "660e8400-e29b-41d4-a716-446655440001";
+    const result = normalizeLocalData({
+      courses: [{ name: "课程E", day: "Friday", startTime: "13:00", endTime: "14:00", id: uuid } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].id).toBe(uuid);
+  });
+
+  it("courseToRow output id is UUID", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程F", day: "Monday", startTime: "14:00", endTime: "15:00", id: "course-old" } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    const row = courseToRow(result.courses[0], "space-id");
+    expect(row.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  it("courseToRow never outputs course-xxx id", () => {
+    const result = normalizeLocalData({
+      courses: [{ name: "课程G", day: "Tuesday", startTime: "15:00", endTime: "16:00", id: "course-legacy" } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    const row = courseToRow(result.courses[0], "space-id");
+    expect(row.id).not.toContain("course-");
+  });
+
+  it("UUID replacement preserves weekday/startTime/endTime/location/teacher/notes/deletedAt", () => {
+    const result = normalizeLocalData({
+      courses: [{
+        id: "course-999",
+        name: "课程H",
+        day: "Wednesday",
+        startTime: "16:00",
+        endTime: "17:00",
+        location: "A101",
+        teacher: "王老师",
+        notes: "带作业",
+        deletedAt: "2026-04-01T00:00:00.000Z"
+      } as unknown as Record<string, unknown>]
+    });
+    expect(result.courses).toHaveLength(1);
+    const course = result.courses[0];
+    expect(course.name).toBe("课程H");
+    expect(course.day).toBe("Wednesday");
+    expect(course.startTime).toBe("16:00");
+    expect(course.endTime).toBe("17:00");
+    expect(course.location).toBe("A101");
+    expect(course.teacher).toBe("王老师");
+    expect(course.note).toBe("带作业");
+    expect(course.deletedAt).toBe("2026-04-01T00:00:00.000Z");
+    expect(course.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(course.id).not.toBe("course-999");
   });
 });
