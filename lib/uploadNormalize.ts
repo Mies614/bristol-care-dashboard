@@ -3,6 +3,7 @@ import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgro
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "./theme";
 import { collectDeadlineCandidates, normalizeDeadlines } from "./deadlines";
+import { ensureStringId } from "./id";
 
 type RecordValue = Record<string, unknown>;
 
@@ -112,7 +113,7 @@ function normalizeCourse(value: unknown): Course | null {
   const endTime = asStringOrNull(value.endTime) || asStringOrNull(value.end_time);
   if (!name || !day || !startTime || !endTime) return null;
   return {
-    id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
+    id: ensureStringId(value.id, "course"),
     name,
     day: day as Course["day"],
     startTime,

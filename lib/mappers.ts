@@ -2,6 +2,7 @@ import type { AlbumItem, CloudSettings, CommonLink, Course, Deadline, LoveNote, 
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "./theme";
+import { ensureStringId } from "./id";
 
 type CourseRow = {
   id: string;
@@ -84,8 +85,16 @@ type AlbumItemRow = {
   deleted_at?: string | null;
 };
 
-function withOptionalUuid(id: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ? { id } : {};
+/**
+ * 返回包含 id 字段的对象。id 必须是有效的非空字符串。
+ * 对于任何有效 id（UUID、带前缀的 ID、纯数字 ID 等），都直接保留。
+ * 如果 id 是空字符串、null 或 undefined，返回空对象（让调用方使用 ensureStringId 兜底）。
+ */
+function withOptionalUuid(id: unknown): { id: string } | Record<string, never> {
+  if (typeof id === "string" && id.trim()) {
+    return { id: id.trim() };
+  }
+  return {};
 }
 
 export function courseFromRow(row: CourseRow): Course {
@@ -106,9 +115,10 @@ export function courseFromRow(row: CourseRow): Course {
 }
 
 export function courseToRow(course: Course, spaceId?: string) {
+  const id = ensureStringId(course.id, "course");
   return {
     ...(spaceId ? { space_id: spaceId } : {}),
-    ...withOptionalUuid(course.id),
+    id,
     name: course.name,
     day: course.day,
     start_time: course.startTime,
@@ -140,9 +150,10 @@ export function deadlineFromRow(row: DeadlineRow): Deadline {
 }
 
 export function deadlineToRow(deadline: Deadline, spaceId?: string) {
+  const id = ensureStringId(deadline.id, "deadline");
   return {
     ...(spaceId ? { space_id: spaceId } : {}),
-    ...withOptionalUuid(deadline.id),
+    id,
     title: deadline.title,
     course_name: deadline.courseName || null,
     due_date: deadline.dueDate,

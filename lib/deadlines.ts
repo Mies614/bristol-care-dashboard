@@ -1,4 +1,5 @@
 import type { Deadline } from "./types";
+import { ensureStringId } from "./id";
 
 type RecordValue = Record<string, unknown>;
 
@@ -12,10 +13,6 @@ function asString(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
-function makeId() {
-  return globalThis.crypto?.randomUUID?.() || `deadline-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export function normalizeDeadline(value: unknown, now = new Date().toISOString()): Deadline | null {
   if (!isRecord(value)) return null;
   const title = asString(value.title) || asString(value.name);
@@ -26,7 +23,7 @@ export function normalizeDeadline(value: unknown, now = new Date().toISOString()
   const completed = value.completed === true || rawStatus === "done" || rawStatus === "completed";
 
   return {
-    id: asString(value.id) || makeId(),
+    id: ensureStringId(value.id, "deadline"),
     title,
     courseName: asString(value.courseName) || asString(value.course_name),
     dueDate,

@@ -166,11 +166,29 @@ export async function POST(request: NextRequest) {
       step = "delete_courses";
       await assertNoError(await supabase.from("courses").delete().eq("space_id", space.id), step);
       if (normalized.courses.length) {
+        step = "normalize_courses";
+        const courseRowsRaw = normalized.courses.map((course) => courseToRow(course, space.id));
+        const invalidCourseRows = courseRowsRaw.filter(
+          (row) => typeof row.id !== "string" || !row.id.trim()
+        );
+        if (invalidCourseRows.length > 0) {
+          return NextResponse.json<ApiError>(
+            {
+              ok: false,
+              error: "课程数据格式错误：存在缺少 id 的记录。",
+              code: "INVALID_COURSE_ROWS",
+              step: "normalize_courses",
+              detail: `Found ${invalidCourseRows.length} course rows without id before insert.`
+            },
+            { status: 400 }
+          );
+        }
+
         step = "insert_courses";
         const courseRows = await stripUnsupportedColumns(
           supabase,
           "courses",
-          normalized.courses.map((course) => courseToRow(course, space.id))
+          courseRowsRaw
         );
         await assertNoError(await supabase.from("courses").insert(courseRows), step);
         syncedCourses = courseRows.length;
@@ -209,6 +227,23 @@ export async function POST(request: NextRequest) {
             })
           )
         ).filter((row): row is NonNullable<typeof row> => row !== null);
+
+        step = "normalize_deadlines";
+        const invalidDeadlineRows = deadlineRows.filter(
+          (row) => typeof row.id !== "string" || !row.id.trim()
+        );
+        if (invalidDeadlineRows.length > 0) {
+          return NextResponse.json<ApiError>(
+            {
+              ok: false,
+              error: "DDL 数据格式错误：存在缺少 id 的记录。",
+              code: "INVALID_DEADLINE_ROWS",
+              step: "normalize_deadlines",
+              detail: `Found ${invalidDeadlineRows.length} deadline rows without id before insert.`
+            },
+            { status: 400 }
+          );
+        }
 
         step = "insert_deadlines";
         if (deadlineRows.length) {

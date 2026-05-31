@@ -4,6 +4,7 @@ import { normalizeBackgroundSettings } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { normalizeThemeSettings } from "./theme";
 import { collectDeadlineCandidates, normalizeDeadlines } from "./deadlines";
+import { ensureStringId } from "./id";
 
 const LEGACY_DEFAULT_NICKNAME = "\u5b9d\u5b9d";
 
@@ -13,6 +14,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+/**
+ * Validate a course object and repair missing/invalid id.
+ * Returns the validated Course or null if essential fields are missing.
+ */
+function validateAndRepairCourse(value: unknown): Course | null {
+  if (!isRecord(value)) return null;
+  if (!isString(value.name) || !DAYS.includes(value.day as Course["day"]) || !isString(value.startTime) || !isString(value.endTime)) return null;
+  return {
+    id: ensureStringId(value.id, "course"),
+    name: value.name as string,
+    day: value.day as Course["day"],
+    startTime: value.startTime as string,
+    endTime: value.endTime as string,
+    location: isString(value.location) ? value.location : undefined,
+    teacher: isString(value.teacher) ? value.teacher : undefined,
+    note: isString(value.note) ? value.note : undefined,
+    color: isString(value.color) ? value.color : undefined,
+    createdAt: isString(value.createdAt) ? value.createdAt : undefined,
+    updatedAt: isString(value.updatedAt) ? value.updatedAt : undefined,
+    deletedAt: isString(value.deletedAt) ? value.deletedAt : undefined
+  };
 }
 
 function isCourse(value: unknown): value is Course {
@@ -66,7 +90,10 @@ export function validateAppData(value: unknown): AppData {
     return { ...defaultAppData, deadlines: [], courses: [], links: [] };
   }
 
-  const courses = safeFilterArray(value.courses, isCourse);
+  // Use validateAndRepairCourse to repair missing/invalid ids in courses
+  const courses = Array.isArray(value.courses)
+    ? value.courses.map(validateAndRepairCourse).filter((c): c is Course => c !== null)
+    : [];
   const deadlines = normalizeDeadlines(collectDeadlineCandidates(value));
   const links = safeFilterArray(value.links, isCommonLink);
   const loveNotes = safeFilterArray(value.loveNotes, isLoveNote);

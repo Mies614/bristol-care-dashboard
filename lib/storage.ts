@@ -17,9 +17,34 @@ export function loadAppData(): AppData {
       saveAppData(defaultAppData, { suppressAutoSync: true });
       return defaultAppData;
     }
-    return { ...validateAppData(JSON.parse(raw)), backgroundSettings: getBackgroundSettings(), themeSettings: getThemeSettings() };
+    const parsed = JSON.parse(raw);
+    const validated = validateAppData(parsed);
+
+    // Write back repaired data (e.g. courses/deadlines with fixed ids)
+    // so old broken data is automatically healed on next load
+    if (!deepEqual(parsed, validated)) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
+      } catch {
+        // Non-critical: repair will be retried on next load
+      }
+    }
+
+    return { ...validated, backgroundSettings: getBackgroundSettings(), themeSettings: getThemeSettings() };
   } catch {
     return defaultAppData;
+  }
+}
+
+/**
+ * Shallow deep-equal for AppData-like objects.
+ * Only checks known keys to avoid false negatives from extra fields.
+ */
+function deepEqual(a: unknown, b: unknown): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
   }
 }
 
