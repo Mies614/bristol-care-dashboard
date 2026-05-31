@@ -3,8 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
+import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
@@ -184,15 +186,23 @@ export default function AlbumsPage() {
     patchItem(item.id, { action: "delete" });
   }
 
+  const reduceMotion = useAccessibleMotion();
+
   return (
     <SharedAccessGate>
     <AppShell>
       {/* Hero */}
-      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+      <motion.header
+        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl"
+        variants={fadeInScale}
+        initial="hidden"
+        animate="visible"
+        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
+      >
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Albums</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">我们的相册</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把喜欢的瞬间慢慢收起来。</p>
-      </header>
+      </motion.header>
 
       <div className="space-y-4">
         {/* Upload */}
@@ -269,11 +279,18 @@ export default function AlbumsPage() {
             </div>
           ) : null}
           {items.length ? (
-            <div className="grid grid-cols-2 gap-3">
+            <motion.div
+              className="grid grid-cols-2 gap-3"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              key={items.length}
+            >
               {items.map((item) => (
-                <button
+                <motion.button
                   className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm"
                   key={item.id}
+                  variants={staggerItem}
                   onClick={() => { setSelected(item); setPlaying(false); }}
                   type="button"
                 >
@@ -295,9 +312,9 @@ export default function AlbumsPage() {
                   {item.isFavorite ? (
                     <span className="absolute left-2 top-2 rounded-full bg-white/75 px-2 py-1 text-xs">♡</span>
                   ) : null}
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           ) : (
             <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有放进相册的照片，之后慢慢补上。</p>
           )}
@@ -305,16 +322,25 @@ export default function AlbumsPage() {
       </div>
 
       {/* Lightbox */}
-      {selected ? (
-        <div
-          className="fixed inset-0 z-50 bg-[var(--app-text)]/50 p-4 backdrop-blur-sm"
-          onClick={() => setSelected(null)}
-          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
-        >
-          <div
-            className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {selected ? (
+          <motion.div
+            className="fixed inset-0 z-50 bg-[var(--app-text)]/50 p-4 backdrop-blur-sm"
+            onClick={() => setSelected(null)}
+            style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={safeTransition({ duration: 0.2 }, reduceMotion)}
           >
+            <motion.div
+              className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={safeTransition({ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }, reduceMotion)}
+            >
             {selected.videoUrl && (playing || !selected.imageUrl) ? (
               <video
                 className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
@@ -357,9 +383,10 @@ export default function AlbumsPage() {
                 关闭
               </AppButton>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </AppShell>
     </SharedAccessGate>
   );

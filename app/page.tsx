@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { CourseCard } from "@/components/CourseCard";
 import { DeadlineCard } from "@/components/DeadlineCard";
@@ -25,6 +26,7 @@ import { DailyCareCard } from "@/components/DailyCareCard";
 import { DualTimeCard } from "@/components/DualTimeCard";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
+import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 
 function safeBristolDate() {
   try {
@@ -205,9 +207,17 @@ export default function HomePage() {
     randomMemory
   }), [weather, outfit, todayCourses, nearestDeadlines, periodRecords, periodSettings, featuredLoveNote, randomMemory]);
 
+  const reduceMotion = useAccessibleMotion();
+
   return (
     <AppShell>
-      <header className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl">
+      <motion.header
+        className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
+        variants={safeVariants(fadeInScale, reduceMotion)}
+        initial="hidden"
+        animate="visible"
+        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="section-kicker">Bristol Care</p>
@@ -226,9 +236,14 @@ export default function HomePage() {
           <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-cocoa/70 shadow-sm">为 {data.nickname || "小乖"} 准备的小首页</span>
         </div>
         <p className="mt-4 text-sm leading-6 text-cocoa/70">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
-      </header>
+      </motion.header>
 
-      <div className="space-y-3.5">
+      <motion.div
+        className="space-y-3.5"
+        variants={safeVariants(staggerContainer, reduceMotion)}
+        initial="hidden"
+        animate="visible"
+      >
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
         <DailyCareCard care={dailyCare} />
@@ -332,8 +347,10 @@ export default function HomePage() {
             </div>
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
-        <OnboardingCard />
-      </div>
+          <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <OnboardingCard />
+        </motion.div>
+      </motion.div>
     </AppShell>
   );
 }

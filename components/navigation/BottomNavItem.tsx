@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   getNavItemContainerClass,
   getNavLabelClass,
@@ -11,6 +12,7 @@ import {
 } from "./navVariants";
 import type { ThemeNavStyle, AppThemeStyle, ThemeDecoration } from "@/lib/types";
 import { cn } from "@/lib/design/tokens";
+import { microSpring } from "@/lib/design/motion";
 
 interface BottomNavItemProps {
   href: string;
@@ -44,22 +46,24 @@ export function BottomNavItem({
   const labelClass = getNavLabelClass(isActive, navStyle);
 
   return (
-    <li className="flex-1">
+    <motion.li className="flex-1" layout transition={microSpring}>
       <Link
         href={href}
         aria-current={isActive ? "page" : undefined}
         className={containerClass}
       >
         <span className="relative">
-          {/* Icon */}
-          <span
+          {/* Icon with subtle scale on active */}
+          <motion.span
             className={cn(
               "flex items-center justify-center",
               isActive ? "text-[var(--app-accent)]" : "text-[var(--app-muted)]",
             )}
+            animate={{ scale: isActive ? 1.08 : 1 }}
+            transition={microSpring}
           >
             {icon}
-          </span>
+          </motion.span>
 
           {/* Status dot */}
           {hasStatusDot && !isActive && (
@@ -75,6 +79,6 @@ export function BottomNavItem({
 
         <span className={labelClass}>{label}</span>
       </Link>
-    </li>
+    </motion.li>
   );
 }

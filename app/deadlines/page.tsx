@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { DeadlineCard } from "@/components/DeadlineCard";
+import { fadeInScale, useAccessibleMotion, safeTransition } from "@/lib/design/motion";
 import { getDaysUntilDeadline } from "@/lib/date";
 import { createAllDeadlinesIcs, createDeadlineIcs, downloadIcs, isDeadlineCalendarExportable, safeIcsFilename } from "@/lib/ics";
 import { loadAppData, saveAppData } from "@/lib/storage";
@@ -88,16 +90,24 @@ export default function DeadlinesPage() {
   const activeDeadlines = sorted.filter((deadline) => deadline.status !== "done");
   const completedDeadlines = sorted.filter((deadline) => deadline.status === "done");
 
+  const reduceMotion = useAccessibleMotion();
+
   if (!data) return <AppShell><AppCard>正在加载 deadline...</AppCard></AppShell>;
 
   return (
     <AppShell>
       {/* Hero */}
-      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+      <motion.header
+        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl"
+        variants={fadeInScale}
+        initial="hidden"
+        animate="visible"
+        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
+      >
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Deadlines</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">Deadline</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">按截止时间排序，把重要任务提前一点点处理。</p>
-      </header>
+      </motion.header>
 
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link href="/records">

@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
+import { fadeInScale, useAccessibleMotion, safeTransition } from "@/lib/design/motion";
 import { AdminNotice } from "@/components/admin/AdminNotice";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
@@ -240,6 +242,8 @@ export default function AdminPage() {
     );
   }
 
+  const reduceMotion = useAccessibleMotion();
+
   if (!isCloudConfigured()) {
     return (
       <AppShell>
@@ -256,7 +260,13 @@ export default function AdminPage() {
   return (
     <AppShell>
       {/* Admin Hero */}
-      <header className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl">
+      <motion.header
+        className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
+        variants={fadeInScale}
+        initial="hidden"
+        animate="visible"
+        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)]">Admin Console</p>
@@ -278,7 +288,7 @@ export default function AdminPage() {
             code: {code}
           </span>
         </div>
-      </header>
+      </motion.header>
 
       <AdminNotice value={message} />
 

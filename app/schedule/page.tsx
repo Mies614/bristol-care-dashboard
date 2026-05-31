@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
+import { fadeInScale, useAccessibleMotion, safeTransition } from "@/lib/design/motion";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { CourseCard } from "@/components/CourseCard";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
@@ -85,16 +87,24 @@ export default function SchedulePage() {
   const todayCourses = useMemo(() => data ? getTodayCourses(data.courses) : [], [data]);
   const nextCourse = useMemo(() => data ? getNextCourse(data.courses) : undefined, [data]);
 
+  const reduceMotion = useAccessibleMotion();
+
   if (!data) return <AppShell><AppCard>正在加载课程表...</AppCard></AppShell>;
 
   return (
     <AppShell>
       {/* Hero */}
-      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+      <motion.header
+        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl"
+        variants={fadeInScale}
+        initial="hidden"
+        animate="visible"
+        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
+      >
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Schedule</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">一周课程表</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把 Bristol 的课程、地点和小提醒放在一个地方。</p>
-      </header>
+      </motion.header>
 
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link href="/records">
