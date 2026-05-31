@@ -61,10 +61,8 @@ export function BottomNav({ status }: { status?: NavStatus }) {
             const isActive = activeHref === item.href;
             const icon = ICON_MAP[item.icon];
 
-            let hasStatusDot = false;
-            if (item.group === "records" && status?.records) hasStatusDot = true;
-            if (item.group === "memories" && status?.memories) hasStatusDot = true;
-            if (item.group === "settings" && status?.settings) hasStatusDot = true;
+            // Only settings retains status dot; records/memories dots removed
+            const hasStatusDot = item.group === "settings" ? Boolean(status?.settings) : false;
 
             return (
               <BottomNavItem
