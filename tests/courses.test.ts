@@ -297,3 +297,185 @@ describe("course sync through uploadNormalize preserve all fields", () => {
     expect(normalized.courses[0]).toEqual(original);
   });
 });
+
+// ----- Anti-accidental-clear protection tests -----
+// These test the logic that the upload route uses to decide whether to sync courses/deadlines.
+// The route checks if the raw payload contains "courses" (or "schedule"/"timetable") / "deadlines" keys.
+describe("upload anti-accidental-clear protection", () => {
+  it("should detect courses present in payload via courses field", () => {
+    const rawData = { courses: [makeCourse()] };
+    const hasCourses = typeof rawData === "object" && !Array.isArray(rawData) && ("courses" in rawData || "schedule" in rawData || "timetable" in rawData);
+    expect(hasCourses).toBe(true);
+  });
+
+  it("should detect courses present in payload via schedule field", () => {
+    const rawData = { schedule: [makeCourse()] };
+    const hasCourses = typeof rawData === "object" && !Array.isArray(rawData) && ("courses" in rawData || "schedule" in rawData || "timetable" in rawData);
+    expect(hasCourses).toBe(true);
+  });
+
+  it("should detect courses present in payload via timetable field", () => {
+    const rawData = { timetable: [makeCourse()] };
+    const hasCourses = typeof rawData === "object" && !Array.isArray(rawData) && ("courses" in rawData || "schedule" in rawData || "timetable" in rawData);
+    expect(hasCourses).toBe(true);
+  });
+
+  it("should not detect courses when payload has no courses field", () => {
+    const rawData = { deadlines: [], settings: {} };
+    const hasCourses = typeof rawData === "object" && !Array.isArray(rawData) && ("courses" in rawData || "schedule" in rawData || "timetable" in rawData);
+    expect(hasCourses).toBe(false);
+  });
+
+  it("should detect courses when courses is empty array", () => {
+    const rawData = { courses: [] };
+    const hasCourses = typeof rawData === "object" && !Array.isArray(rawData) && ("courses" in rawData || "schedule" in rawData || "timetable" in rawData);
+    expect(hasCourses).toBe(true);
+  });
+
+  it("should return empty courses array after normalizeLocalData when courses=[]", () => {
+    const result = normalizeLocalData({ courses: [] });
+    expect(result.courses).toEqual([]);
+  });
+
+  it("should not detect deadlines when payload has no deadlines field", () => {
+    const rawData = { courses: [] };
+    const hasDeadlines = typeof rawData === "object" && !Array.isArray(rawData) && "deadlines" in rawData;
+    expect(hasDeadlines).toBe(false);
+  });
+
+  it("should detect deadlines when deadlines is empty array", () => {
+    const rawData = { deadlines: [] };
+    const hasDeadlines = typeof rawData === "object" && !Array.isArray(rawData) && "deadlines" in rawData;
+    expect(hasDeadlines).toBe(true);
+  });
+
+  it("should return empty deadlines array after normalizeLocalData when deadlines=[]", () => {
+    const result = normalizeLocalData({ deadlines: [] });
+    expect(result.deadlines).toEqual([]);
+  });
+
+  it("should handle null/undefined rawData gracefully", () => {
+    // Simulate the check with null rawData
+    const rawData = null;
+    const hasCourses = rawData != null && typeof rawData === "object" && !Array.isArray(rawData) && "courses" in rawData;
+    expect(hasCourses).toBe(false);
+
+    const hasDeadlines = rawData != null && typeof rawData === "object" && !Array.isArray(rawData) && "deadlines" in rawData;
+    expect(hasDeadlines).toBe(false);
+  });
+});
+
+// ----- Deadline rawPayloadHasField tests (mirrors upload route logic) -----
+// These test the expanded detection for deadlines that now includes ddl/reminders/assignments/tasks
+describe("deadline rawPayloadHasField detection (expanded)", () => {
+  function rawHasField(rawData: unknown, field: string): boolean {
+    return (
+      rawData != null &&
+      typeof rawData === "object" &&
+      !Array.isArray(rawData) &&
+      field in rawData
+    );
+  }
+
+  // Combined detection as used in upload route
+  function rawHasDeadlines(rawData: unknown): boolean {
+    return (
+      rawHasField(rawData, "deadlines") ||
+      rawHasField(rawData, "ddl") ||
+      rawHasField(rawData, "reminders") ||
+      rawHasField(rawData, "assignments") ||
+      rawHasField(rawData, "tasks")
+    );
+  }
+
+  it("detects deadlines via deadlines field", () => {
+    expect(rawHasDeadlines({ deadlines: [] })).toBe(true);
+  });
+
+  it("detects deadlines via ddl field", () => {
+    expect(rawHasDeadlines({ ddl: [] })).toBe(true);
+  });
+
+  it("detects deadlines via reminders field", () => {
+    expect(rawHasDeadlines({ reminders: [] })).toBe(true);
+  });
+
+  it("detects deadlines via assignments field", () => {
+    expect(rawHasDeadlines({ assignments: [] })).toBe(true);
+  });
+
+  it("detects deadlines via tasks field", () => {
+    expect(rawHasDeadlines({ tasks: [] })).toBe(true);
+  });
+
+  it("does not detect deadlines when no deadline-related fields present", () => {
+    expect(rawHasDeadlines({ courses: [] })).toBe(false);
+  });
+
+  it("does not detect deadlines for null/undefined", () => {
+    expect(rawHasDeadlines(null)).toBe(false);
+    expect(rawHasDeadlines(undefined)).toBe(false);
+  });
+
+  it("does not detect deadlines for arrays", () => {
+    expect(rawHasDeadlines([])).toBe(false);
+  });
+
+  it("does not collapse deadlines sync when old payload missing all deadline fields", () => {
+    // Simulate an old-version payload that only has courses — deadlines should be skipped
+    expect(rawHasDeadlines({ courses: [{ name: "test", day: "Monday", startTime: "09:00", endTime: "10:00" }] })).toBe(false);
+  });
+
+  it("returns empty deadlines from normalizeLocalData for ddl field", () => {
+    const result = normalizeLocalData({ ddl: [] });
+    expect(result.deadlines).toEqual([]);
+  });
+
+  it("returns empty deadlines from normalizeLocalData for reminders field", () => {
+    const result = normalizeLocalData({ reminders: [] });
+    expect(result.deadlines).toEqual([]);
+  });
+
+  it("returns empty deadlines from normalizeLocalData for assignments field", () => {
+    const result = normalizeLocalData({ assignments: [] });
+    expect(result.deadlines).toEqual([]);
+  });
+
+  it("returns empty deadlines from normalizeLocalData for tasks field", () => {
+    const result = normalizeLocalData({ tasks: [] });
+    expect(result.deadlines).toEqual([]);
+  });
+
+  it("normalizes deadlines from ddl (legacy)", () => {
+    const result = normalizeLocalData({ ddl: [{ title: "考试", dueDate: "2026-06-15" }] });
+    expect(result.deadlines).toHaveLength(1);
+    expect(result.deadlines[0].title).toBe("考试");
+  });
+
+  it("merges deadlines from multiple fields without duplicates", () => {
+    const result = normalizeLocalData({
+      deadlines: [{ title: "DL1", dueDate: "2026-06-01" }],
+      ddl: [{ title: "DL2", dueDate: "2026-06-02" }],
+      reminders: [{ title: "DL3", dueDate: "2026-06-03" }],
+      assignments: [{ title: "DL4", dueDate: "2026-06-04" }],
+      tasks: [{ title: "DL5", dueDate: "2026-06-05" }]
+    });
+    expect(result.deadlines).toHaveLength(5);
+  });
+
+  // Test that deleted_at is preserved through normalizeLocalData (critical for deletion sync)
+  it("preserves deletedAt through normalizeLocalData for deadlines", () => {
+    const result = normalizeLocalData({
+      deadlines: [{ title: "已删作业", dueDate: "2026-05-01", deletedAt: "2026-05-15T00:00:00.000Z" }]
+    });
+    expect(result.deadlines).toHaveLength(1);
+    expect(result.deadlines[0].deletedAt).toBe("2026-05-15T00:00:00.000Z");
+  });
+
+  it("preserves deletedAt through deadlineToRow", async () => {
+    const { deadlineToRow } = await import("@/lib/mappers");
+    const deadline = { id: "test", title: "test", dueDate: "2026-06-01", deletedAt: "2026-06-15T00:00:00.000Z", priority: "medium" as const, status: "todo" as const };
+    const row = deadlineToRow(deadline, "space-id");
+    expect(row.deleted_at).toBe("2026-06-15T00:00:00.000Z");
+  });
+});

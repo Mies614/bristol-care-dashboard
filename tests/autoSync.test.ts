@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultAppData } from "@/lib/sampleData";
 
 function makeStorage() {
@@ -33,6 +33,12 @@ describe("auto sync", () => {
       ok: true,
       json: async () => ({ ok: true, data: {} })
     })));
+  });
+
+  afterEach(() => {
+    // Restore real timers to prevent timer leaks between tests
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("enables auto sync by default", async () => {
@@ -99,5 +105,78 @@ describe("auto sync", () => {
     const payload = prepareAutoSyncData({ ...defaultAppData, loveNotes: [{ id: "n", content: "note", active: true, pinned: false }] });
     expect(payload.loveNotes).toEqual([]);
     expect(payload.note).toBe("");
+  });
+
+  // ----- Concurrency control tests -----
+  describe("auto sync concurrency control", () => {
+    it("does not start a new sync while one is already in progress", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      // Make fetch slow so we can overlap calls
+      let resolveFetch: (value: unknown) => void;
+      const fetchPromise = new Promise((resolve) => {
+        resolveFetch = resolve;
+      });
+      vi.stubGlobal("fetch", vi.fn(() => fetchPromise.then(() => ({
+        ok: true,
+        json: async () => ({ ok: true, data: {} })
+      }))));
+
+      const { runAutoSyncNow } = await import("@/lib/autoSync");
+
+      // Start first sync (will hang because fetch never resolves)
+      const firstSync = runAutoSyncNow("first");
+
+      // Allow microtask queue to process so syncInProgress = true
+      await new Promise((r) => setTimeout(r, 0));
+      await vi.advanceTimersByTimeAsync(10);
+
+      // Start second sync while first is still running
+      const secondSync = runAutoSyncNow("second");
+
+      // Give time for the retry logic to process
+      await vi.advanceTimersByTimeAsync(500);
+
+      // Verify only one fetch call was made (the first one)
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      // Resolve first sync
+      resolveFetch!({ ok: true, json: async () => ({ ok: true, data: {} }) });
+      await firstSync;
+      
+      // Wait for retry (pendingRetryAfterSync)
+      await vi.advanceTimersByTimeAsync(1500);
+      await vi.advanceTimersByTimeAsync(500);
+      
+      // The second sync should auto-retry after the first completes
+      expect(fetch).toHaveBeenCalledTimes(2);
+
+      await secondSync;
+    }, 10000);
+
+    it("queues sync when offline and retries when online", async () => {
+      vi.useFakeTimers();
+
+      // Start offline
+      vi.stubGlobal("navigator", { onLine: false });
+
+      const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
+      
+      await runAutoSyncNow("offline_test");
+      
+      expect(getPendingSyncState().status).toBe("queued");
+      expect(fetch).not.toHaveBeenCalled();
+
+      // Go online
+      vi.stubGlobal("navigator", { onLine: true });
+
+      // The "online" event handler calls runAutoSyncNow - we already stubbed addEventListener
+      // so let's invoke the sync directly
+      await runAutoSyncNow("online_now");
+      
+      expect(fetch).toHaveBeenCalled();
+      expect(getPendingSyncState().pending).toBe(false);
+    }, 5000);
+
   });
 });

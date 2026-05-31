@@ -4,6 +4,13 @@ import type { AppData } from "./types";
 
 export type AutoSyncStatus = "idle" | "local_saved" | "syncing" | "synced" | "failed" | "queued" | "disabled";
 
+export type SyncErrorDetail = {
+  message: string;
+  code?: string;
+  step?: string;
+  detail?: string;
+};
+
 export const AUTO_SYNC_ENABLED_KEY = "bristol_dashboard_auto_sync_enabled";
 export const PENDING_SYNC_KEY = "bristol_dashboard_pending_sync";
 export const AUTO_SYNC_LAST_SYNC_AT_KEY = "bristol_dashboard_last_sync_at";
@@ -15,6 +22,9 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressCount = 0;
 let bootstrapped = false;
+let syncInProgress = false;
+let pendingRetryAfterSync = false;
+let pendingReason = "";
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -188,13 +198,26 @@ export async function runAutoSyncNow(reason = "manual"): Promise<void> {
     setStatus("queued");
     return;
   }
+
+  // Concurrency control: if a sync is already in progress, mark a pending retry
+  if (syncInProgress) {
+    pendingRetryAfterSync = true;
+    pendingReason = reason;
+    console.log("[autoSync] sync already in progress — will retry after current sync completes");
+    return;
+  }
+
+  syncInProgress = true;
   setStatus("syncing");
+
   try {
     const [{ getDefaultSpaceCode, uploadLocalDataToCloud }, { loadAppData }] = await Promise.all([
       import("./cloudSync"),
       import("./storage")
     ]);
-    const result = await uploadLocalDataToCloud(getDefaultSpaceCode(), prepareAutoSyncData(loadAppData()));
+    // Read fresh data from localStorage *just before* uploading
+    const freshData = loadAppData();
+    const result = await uploadLocalDataToCloud(getDefaultSpaceCode(), prepareAutoSyncData(freshData));
     if (!result.ok) {
       throw new Error([result.error || "同步失败", result.code, result.step, result.detail].filter(Boolean).join(" · "));
     }
@@ -216,6 +239,18 @@ export async function runAutoSyncNow(reason = "manual"): Promise<void> {
           // Keep pending for next page load or manual retry.
         });
       }, 30000);
+    }
+  } finally {
+    syncInProgress = false;
+    // If a new sync was requested while we were running, trigger it now
+    if (pendingRetryAfterSync) {
+      pendingRetryAfterSync = false;
+      const retryReason = pendingReason;
+      pendingReason = "";
+      // Small delay to allow any pending localStorage writes to complete
+      setTimeout(() => {
+        runAutoSyncNow(retryReason).catch(() => {});
+      }, 200);
     }
   }
 }

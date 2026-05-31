@@ -205,7 +205,31 @@ export async function GET() {
           await addReadableCheck("deadlines sync check", "deadlines");
           await addReadableCheck("miss_you_seen_state readable", "miss_you_seen_state");
 
-          // Courses column checks
+          // Deadlines column check - validate raw_payload column exists (critical for hasDeadlines detection)
+          try {
+            const { data: deadlineRows, error: deadlineErr } = await supabase
+              .from("deadlines")
+              .select("id, raw_payload")
+              .eq("space_id", spaceId)
+              .limit(1);
+            const hasRawPayload = deadlineRows && deadlineRows.length > 0 && "raw_payload" in deadlineRows[0];
+            checks.push({
+              name: "deadlines raw_payload column check",
+              ok: !deadlineErr,
+              detail: deadlineErr
+                ? `select failed: ${deadlineErr.message}`
+                : hasRawPayload
+                  ? "raw_payload column present  (hasDeadlines detection will work)"
+                  : "raw_payload column MISSING! (hasDeadlines detection will skip deadlines)"
+            });
+          } catch (err) {
+            checks.push({
+              name: "deadlines raw_payload column check",
+              ok: false,
+              detail: `query failed: ${err instanceof Error ? err.message : String(err)}`
+            });
+          }
+
           try {
             const { data: courseCols, error: colErr } = await supabase.rpc("get_columns_info", { table_name: "courses" });
             if (colErr) {
