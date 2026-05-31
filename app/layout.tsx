@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 import { AppBackground } from "@/components/AppBackground";
 import { PwaRegister } from "@/components/PwaRegister";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -29,6 +30,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PwaRegister />
         <ThemeProvider>
           <AppBackground>{children}</AppBackground>
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              className: "!rounded-[var(--app-radius)] !border !border-[var(--app-card-border)] !bg-[var(--app-card-bg)] !text-[var(--app-text)] !shadow-float"
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

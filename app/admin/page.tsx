@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { AppShell } from "@/components/AppShell";
 import { AdminNotice } from "@/components/admin/AdminNotice";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
@@ -12,6 +11,11 @@ import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { MissYouAdminCard } from "@/components/MissYouAdminCard";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppBadge } from "@/components/ui/AppBadge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
 
@@ -236,17 +240,12 @@ export default function AdminPage() {
     );
   }
 
-  function StatusBadge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "ok" | "warn" | "danger" }) {
-    const toneClass = { neutral: "bg-white/70 text-[var(--app-muted)]", ok: "bg-sage/18 text-[var(--app-text)]", warn: "bg-butter/75 text-[var(--app-text)]", danger: "bg-[#ffe1dd] text-[#9f4d45]" };
-    return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${toneClass[tone]}`}>{children}</span>;
-  }
-
   if (!isCloudConfigured()) {
     return (
       <AppShell>
-        <div className="soft-card text-sm leading-7 text-[var(--app-muted)]">
+        <AppCard className="text-sm leading-7 text-[var(--app-muted)]">
           云同步未配置，无法远程管理。请先填写 Supabase 环境变量。
-        </div>
+        </AppCard>
       </AppShell>
     );
   }
@@ -260,7 +259,7 @@ export default function AdminPage() {
       <header className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="section-kicker">Admin Console</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)]">Admin Console</p>
             <h1 className="mt-2 text-[1.8rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--app-text)]">
               远程照顾控制台
             </h1>
@@ -284,17 +283,19 @@ export default function AdminPage() {
       <AdminNotice value={message} />
 
       {!loggedIn ? (
-        <form className="soft-card mx-auto max-w-md space-y-4 bg-gradient-to-br from-white/90 to-lilac/50" onSubmit={login}>
-          <div>
-            <p className="section-kicker mb-1">Admin Login</p>
-            <h2 className="font-semibold text-[var(--app-text)]">后台登录</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">登录后操作会由服务端校验密码。</p>
-          </div>
-          <label className="block text-sm text-[var(--app-muted)]">
-            后台密码
-            <input className="field mt-1" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </label>
-          <button className="btn-primary w-full" type="submit">登录</button>
+        <form className="space-y-4" onSubmit={login}>
+          <AppCard className="mx-auto max-w-md space-y-4 bg-gradient-to-br from-white/90 to-lilac/50">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Admin Login</p>
+              <h2 className="font-semibold text-[var(--app-text)]">后台登录</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">登录后操作会由服务端校验密码。</p>
+            </div>
+            <label className="block text-sm text-[var(--app-muted)]">
+              后台密码
+              <Input className="mt-1" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </label>
+            <AppButton variant="primary" className="w-full" type="submit">登录</AppButton>
+          </AppCard>
         </form>
       ) : (
         <>
@@ -308,14 +309,16 @@ export default function AdminPage() {
           </div>
 
           {/* Space info bar */}
-          <section className="soft-card mb-4 flex items-center justify-between gap-3 bg-gradient-to-br from-white/85 to-skySoft/55">
-            <div>
-              <p className="section-kicker mb-1">Space</p>
-              <h2 className="font-semibold text-[var(--app-text)]">当前管理空间</h2>
-            </div>
+          <section className="mb-4 flex items-center justify-between gap-3">
+            <AppCard compact className="flex-1 bg-gradient-to-br from-white/85 to-skySoft/55">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Space</p>
+                <h2 className="font-semibold text-[var(--app-text)]">当前管理空间</h2>
+              </div>
+            </AppCard>
             <label className="flex items-center gap-2 text-sm text-[var(--app-muted)]">
               code
-              <input className="field w-32" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => loadNotes()} />
+              <Input className="w-32" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => loadNotes()} />
             </label>
           </section>
 
@@ -337,57 +340,67 @@ export default function AdminPage() {
           {activeTab === "notes" && (
             <div className="space-y-4">
               {/* Publish form */}
-              <form className="soft-card space-y-4 bg-gradient-to-br from-white/85 to-butter/45" id="publish-note" onSubmit={publish}>
-                <div>
-                  <p className="section-kicker mb-1">Publish</p>
-                  <h2 className="font-semibold text-[var(--app-text)]">发布新小纸条</h2>
-                </div>
-                <textarea className="field min-h-36 resize-y leading-7" placeholder="写给小乖的话" value={content} onChange={(e) => setContent(e.target.value)} />
-                <div className="grid grid-cols-2 gap-2 text-sm text-[var(--app-muted)]">
-                  <label className="check-card">
-                    <input checked={active} type="checkbox" onChange={(e) => setActive(e.target.checked)} />
-                    <span><span className="block font-medium text-[var(--app-text)]">立即启用</span><span className="text-xs">active</span></span>
-                  </label>
-                  <label className="check-card">
-                    <input checked={pinned} type="checkbox" onChange={(e) => setPinned(e.target.checked)} />
-                    <span><span className="block font-medium text-[var(--app-text)]">设为置顶</span><span className="text-xs">pinned</span></span>
-                  </label>
-                </div>
-                <label className="block text-sm font-medium text-[var(--app-muted)]">
-                  可见时间
-                  <input className="field mt-1" type="datetime-local" value={visibleFrom} onChange={(e) => setVisibleFrom(e.target.value)} />
-                </label>
-                <label className="file-panel">
-                  <span className="font-medium text-[var(--app-text)]">上传图片</span>
-                  <span className="mt-1 block text-xs text-[var(--app-muted)]">JPG / PNG / WebP，最大 5MB</span>
-                  <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0] || null; if (f) { const v = validateImageFile(f); if (!v.ok) { setMessage(v.error || "图片不符合要求。"); e.currentTarget.value = ""; return; } } setImage(f); }} />
-                </label>
-                {previewUrl ? (
-                  <div className="rounded-[1.6rem] border border-white/75 bg-white/55 p-2 shadow-sm">
-                    <Image className="max-h-72 w-full rounded-[1.35rem] object-cover shadow-sm" src={previewUrl} alt="预览" width={640} height={360} unoptimized />
-                    <div className="mt-2 flex items-center justify-between gap-2 px-1">
-                      <span className="truncate text-xs text-[var(--app-muted)]">{image?.name}</span>
-                      <button className="btn-secondary btn-small" type="button" onClick={() => setImage(null)}>移除</button>
-                    </div>
+              <form className="space-y-4" id="publish-note" onSubmit={publish}>
+                <AppCard className="bg-gradient-to-br from-white/85 to-butter/45">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Publish</p>
+                    <h2 className="font-semibold text-[var(--app-text)]">发布新小纸条</h2>
                   </div>
-                ) : null}
-                <button className="btn-primary w-full" disabled={publishing} type="submit">
-                  {publishing ? "发布中..." : "发布小纸条"}
-                </button>
+                  <Textarea className="min-h-36 resize-y leading-7 mt-3" placeholder="写给小乖的话" value={content} onChange={(e) => setContent(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-2 mt-3 text-sm text-[var(--app-muted)]">
+                    <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+                      <input checked={active} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setActive(e.target.checked)} />
+                      <span><span className="block font-medium text-[var(--app-text)]">立即启用</span><span className="text-xs">active</span></span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+                      <input checked={pinned} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setPinned(e.target.checked)} />
+                      <span><span className="block font-medium text-[var(--app-text)]">设为置顶</span><span className="text-xs">pinned</span></span>
+                    </label>
+                  </div>
+                  <label className="block text-sm font-medium text-[var(--app-muted)] mt-3">
+                    可见时间
+                    <Input className="mt-1" type="datetime-local" value={visibleFrom} onChange={(e) => setVisibleFrom(e.target.value)} />
+                  </label>
+                  <label className="block rounded-[var(--app-radius)] border border-dashed border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm cursor-pointer hover:border-[var(--app-accent)] transition mt-3">
+                    <span className="font-medium text-[var(--app-text)]">上传图片</span>
+                    <span className="mt-1 block text-xs text-[var(--app-muted)]">JPG / PNG / WebP，最大 5MB</span>
+                    <Input className="mt-3 block w-full cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0] || null; if (f) { const v = validateImageFile(f); if (!v.ok) { setMessage(v.error || "图片不符合要求。"); e.currentTarget.value = ""; return; } } setImage(f); }} />
+                  </label>
+                  {previewUrl ? (
+                    <div className="rounded-[1.6rem] border border-white/75 bg-white/55 p-2 shadow-sm mt-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img className="max-h-72 w-full rounded-[1.35rem] object-cover shadow-sm" src={previewUrl} alt="预览" />
+                      <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                        <span className="truncate text-xs text-[var(--app-muted)]">{image?.name}</span>
+                        <AppButton variant="secondary" size="sm" type="button" onClick={() => setImage(null)}>移除</AppButton>
+                      </div>
+                    </div>
+                  ) : null}
+                  <AppButton variant="primary" className="w-full mt-3" disabled={publishing} type="submit">
+                    {publishing ? "发布中..." : "发布小纸条"}
+                  </AppButton>
+                </AppCard>
               </form>
 
               {/* Notes list */}
-              <section className="soft-card">
+              <AppCard>
                 <div className="mb-3 flex items-center justify-between">
                   <div>
-                    <p className="section-kicker mb-1">History</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">History</p>
                     <h2 className="font-semibold text-[var(--app-text)]">最近 20 条小纸条</h2>
                   </div>
-                  <button className="btn-secondary btn-small" onClick={() => loadNotes()}>刷新</button>
+                  <AppButton variant="secondary" size="sm" onClick={() => loadNotes()}>刷新</AppButton>
                 </div>
                 <div className="mb-3 flex flex-wrap gap-2">
                   {["all", "xiaoguai", "me", "image", "audio", "video"].map((v) => (
-                    <button className={noteFilter === v ? "btn-primary btn-small" : "btn-secondary btn-small"} key={v} onClick={() => setNoteFilter(v)}>{v === "all" ? "全部" : v === "xiaoguai" ? "小乖" : v === "me" ? "我" : v}</button>
+                    <AppButton
+                      variant={noteFilter === v ? "primary" : "secondary"}
+                      size="sm"
+                      key={v}
+                      onClick={() => setNoteFilter(v)}
+                    >
+                      {v === "all" ? "全部" : v === "xiaoguai" ? "小乖" : v === "me" ? "我" : v}
+                    </AppButton>
                   ))}
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
@@ -398,35 +411,38 @@ export default function AdminPage() {
                           <p className="text-sm leading-6 text-[var(--app-text)]">{note.content}</p>
                           <p className="mt-2 text-xs text-[var(--app-muted)]">{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN") : "无时间"}</p>
                         </div>
-                        {note.imageUrl ? <Image className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || ""} width={64} height={64} unoptimized /> : null}
+                        {note.imageUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || ""} />
+                        ) : null}
                       </div>
                       {note.audioUrl ? <audio className="mt-3 w-full" src={note.audioUrl} controls /> : null}
                       {note.videoUrl ? <video className="mt-3 max-h-40 w-full rounded-2xl bg-black" src={note.videoUrl} controls playsInline /> : null}
                       <p className="mt-3 flex flex-wrap gap-2">
-                        <StatusBadge tone={note.active ? "ok" : "neutral"}>{note.active ? "active" : "inactive"}</StatusBadge>
-                        <StatusBadge tone={note.pinned ? "warn" : "neutral"}>{note.pinned ? "pinned" : "not pinned"}</StatusBadge>
-                        {note.deletedAt ? <StatusBadge tone="danger">deleted</StatusBadge> : null}
-                        <StatusBadge>{getUserFacingAuthorLabel(note.author)}</StatusBadge>
-                        <StatusBadge>{note.noteType || "text"}</StatusBadge>
+                        <AppBadge variant={note.active ? "success" : "default"}>{note.active ? "active" : "inactive"}</AppBadge>
+                        <AppBadge variant={note.pinned ? "warning" : "default"}>{note.pinned ? "pinned" : "not pinned"}</AppBadge>
+                        {note.deletedAt ? <AppBadge variant="danger">deleted</AppBadge> : null}
+                        <AppBadge>{getUserFacingAuthorLabel(note.author)}</AppBadge>
+                        <AppBadge>{note.noteType || "text"}</AppBadge>
                       </p>
                       <div className="mt-3 border-t border-white/65 pt-3">
                         <details className="text-xs">
                           <summary className="cursor-pointer font-medium text-[var(--app-muted)]">操作</summary>
-                          <div className="btn-group mt-2">
-                            <button className="btn-secondary btn-small" disabled={updatingNoteId === note.id} onClick={() => patchNote({ id: note.id, action: "set_pinned", pinned: !note.pinned })}>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <AppButton variant="secondary" size="sm" disabled={updatingNoteId === note.id} onClick={() => patchNote({ id: note.id, action: "set_pinned", pinned: !note.pinned })}>
                               {note.pinned ? "取消置顶" : "设为置顶"}
-                            </button>
-                            <button className="btn-secondary btn-small" disabled={updatingNoteId === note.id} onClick={() => patchNote(note.active ? { id: note.id, action: "deactivate" } : { id: note.id, action: "set_active", active: true })}>
+                            </AppButton>
+                            <AppButton variant="secondary" size="sm" disabled={updatingNoteId === note.id} onClick={() => patchNote(note.active ? { id: note.id, action: "deactivate" } : { id: note.id, action: "set_active", active: true })}>
                               {note.active ? "停用" : "重新启用"}
-                            </button>
-                            <button className="btn-danger btn-small" disabled={updatingNoteId === note.id} onClick={() => deleteNote(note.id)}>删除</button>
+                            </AppButton>
+                            <AppButton variant="danger" size="sm" disabled={updatingNoteId === note.id} onClick={() => deleteNote(note.id)}>删除</AppButton>
                           </div>
                         </details>
                       </div>
                     </article>
-                  )) : <div className="empty-state md:col-span-2">还没有小纸条记录。</div>}
+                  )) : <div className="text-center py-8 text-sm text-[var(--app-muted)] md:col-span-2">还没有小纸条记录。</div>}
                 </div>
-              </section>
+              </AppCard>
             </div>
           )}
 
@@ -438,15 +454,17 @@ export default function AdminPage() {
           {/* ── Settings Tab ── */}
           {activeTab === "settings" && (
             <div className="space-y-4">
-              <form className="soft-card space-y-3 bg-gradient-to-br from-white/85 to-butter/45" onSubmit={saveSettings}>
-                <div>
-                  <p className="section-kicker mb-1">Settings</p>
-                  <h2 className="font-semibold text-[var(--app-text)]">云端设置</h2>
-                </div>
-                <input className="field" placeholder="女朋友昵称" value={settings.girlfriendName} onChange={(e) => setSettings({ ...settings, girlfriendName: e.target.value || "小乖" })} />
-                <input className="field" type="date" value={settings.nextMeetingDate} onChange={(e) => setSettings({ ...settings, nextMeetingDate: e.target.value })} />
-                <input className="field" type="date" value={settings.semesterEndDate} onChange={(e) => setSettings({ ...settings, semesterEndDate: e.target.value })} />
-                <button className="btn-secondary w-full" disabled={savingSettings} type="submit">{savingSettings ? "保存中..." : "保存设置"}</button>
+              <form onSubmit={saveSettings}>
+                <AppCard className="space-y-3 bg-gradient-to-br from-white/85 to-butter/45">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Settings</p>
+                    <h2 className="font-semibold text-[var(--app-text)]">云端设置</h2>
+                  </div>
+                  <Input placeholder="女朋友昵称" value={settings.girlfriendName} onChange={(e) => setSettings({ ...settings, girlfriendName: e.target.value || "小乖" })} />
+                  <Input type="date" value={settings.nextMeetingDate} onChange={(e) => setSettings({ ...settings, nextMeetingDate: e.target.value })} />
+                  <Input type="date" value={settings.semesterEndDate} onChange={(e) => setSettings({ ...settings, semesterEndDate: e.target.value })} />
+                  <AppButton variant="secondary" className="w-full" disabled={savingSettings} type="submit">{savingSettings ? "保存中..." : "保存设置"}</AppButton>
+                </AppCard>
               </form>
             </div>
           )}
@@ -454,9 +472,9 @@ export default function AdminPage() {
           {/* ── Diagnostics Tab ── */}
           {activeTab === "diagnostics" && (
             <div className="space-y-3">
-              <a className="btn-primary block text-center" href="/debug" target="_blank">打开诊断页面 🔍</a>
-              <a className="btn-secondary block text-center" href="/api/debug/supabase" target="_blank">API Debug 端点</a>
-              <a className="btn-secondary block text-center" href="/debug" target="_blank">Debug UI</a>
+              <AppButton variant="primary" className="w-full" onClick={() => window.open("/debug", "_blank")}>打开诊断页面 🔍</AppButton>
+              <AppButton variant="secondary" className="w-full" onClick={() => window.open("/api/debug/supabase", "_blank")}>API Debug 端点</AppButton>
+              <AppButton variant="secondary" className="w-full" onClick={() => window.open("/debug", "_blank")}>Debug UI</AppButton>
             </div>
           )}
         </>

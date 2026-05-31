@@ -6,13 +6,16 @@ import { AppShell } from "@/components/AppShell";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { CourseCard } from "@/components/CourseCard";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
-import { PageHeader } from "@/components/PageHeader";
 import { sampleCourses } from "@/lib/sampleData";
 import { getCoursesForDay, getNextCourse, getTodayCourses } from "@/lib/schedule";
 import { createAllCoursesIcs, createCourseIcs, downloadIcs, isCourseCalendarExportable, safeIcsFilename } from "@/lib/ics";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import { DAYS, type AppData, type Course, type DayName } from "@/lib/types";
 import { validateCourseArray } from "@/lib/validation";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const emptyCourse: Omit<Course, "id"> = {
   name: "",
@@ -82,60 +85,76 @@ export default function SchedulePage() {
   const todayCourses = useMemo(() => data ? getTodayCourses(data.courses) : [], [data]);
   const nextCourse = useMemo(() => data ? getNextCourse(data.courses) : undefined, [data]);
 
-  if (!data) return <AppShell><div className="soft-card">正在加载课程表...</div></AppShell>;
+  if (!data) return <AppShell><AppCard>正在加载课程表...</AppCard></AppShell>;
 
   return (
     <AppShell>
-      <PageHeader title="一周课程表" subtitle="把 Bristol 的课程、地点和小提醒放在一个地方。" />
+      {/* Hero */}
+      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Schedule</p>
+        <h1 className="text-2xl font-semibold text-[var(--app-text)]">一周课程表</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把 Bristol 的课程、地点和小提醒放在一个地方。</p>
+      </header>
+
       <div className="mb-4 flex items-center justify-between gap-2">
-        <Link className="btn-secondary btn-small" href="/records">返回记录中心</Link>
+        <Link href="/records">
+          <AppButton variant="secondary" size="sm">返回记录中心</AppButton>
+        </Link>
         <AutoSyncStatusBadge />
       </div>
 
       {/* Today summary */}
-      <section className="soft-card mb-4">
-        <p className="section-kicker mb-1">Today</p>
-        <h2 className="font-semibold text-cocoa">今日课程</h2>
-        <p className="mt-2 text-sm text-cocoa/65">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
-        <button className="btn-secondary mt-3 w-full sm:w-auto" onClick={exportAllCourses}>导出课程日历提醒</button>
-      </section>
+      <AppCard className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Today</p>
+        <h2 className="font-semibold text-[var(--app-text)]">今日课程</h2>
+        <p className="mt-2 text-sm text-[var(--app-muted)]">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
+        <AppButton variant="secondary" className="mt-3 w-full sm:w-auto" onClick={exportAllCourses}>导出课程日历提醒</AppButton>
+      </AppCard>
 
       {/* Add/Edit form */}
-      <form className="soft-card mb-4 space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={submit}>
-        <div>
-          <p className="section-kicker mb-1">Course</p>
-          <h2 className="font-semibold text-cocoa">{editingId ? "编辑课程" : "添加课程"}</h2>
-        </div>
-        <input className="field" placeholder="课程名称" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <select className="field" value={draft.day} onChange={(e) => setDraft({ ...draft, day: e.target.value as DayName })}>
-            {DAYS.map((day) => <option key={day}>{day}</option>)}
-          </select>
-          <input className="field" type="color" value={draft.color} onChange={(e) => setDraft({ ...draft, color: e.target.value })} />
-          <input className="field" type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} />
-          <input className="field" type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} />
-        </div>
-        <input className="field" placeholder="地点" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
-        <input className="field" placeholder="老师，可选" value={draft.teacher} onChange={(e) => setDraft({ ...draft, teacher: e.target.value })} />
-        <textarea className="field min-h-20" placeholder="备注，可选" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
-        <div className="flex gap-2">
-          <button className="btn-primary flex-1" type="submit">{editingId ? "保存修改" : "添加课程"}</button>
-          {editingId ? <button className="btn-secondary" type="button" onClick={() => { setEditingId(null); setDraft(emptyCourse); }}>取消</button> : null}
-        </div>
+      <form className="mb-4 space-y-3" onSubmit={submit}>
+        <AppCard className="space-y-3 bg-gradient-to-br from-white/85 to-blush/45">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Course</p>
+            <h2 className="font-semibold text-[var(--app-text)]">{editingId ? "编辑课程" : "添加课程"}</h2>
+          </div>
+          <Input placeholder="课程名称" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <select
+              className="w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
+              value={draft.day}
+              onChange={(e) => setDraft({ ...draft, day: e.target.value as DayName })}
+            >
+              {DAYS.map((day) => <option key={day}>{day}</option>)}
+            </select>
+            <Input type="color" value={draft.color} onChange={(e) => setDraft({ ...draft, color: e.target.value })} />
+            <Input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} />
+            <Input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} />
+          </div>
+          <Input placeholder="地点" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
+          <Input placeholder="老师，可选" value={draft.teacher} onChange={(e) => setDraft({ ...draft, teacher: e.target.value })} />
+          <Textarea className="min-h-20" placeholder="备注，可选" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+          <div className="flex gap-2">
+            <AppButton variant="primary" className="flex-1" type="submit">{editingId ? "保存修改" : "添加课程"}</AppButton>
+            {editingId ? (
+              <AppButton variant="secondary" type="button" onClick={() => { setEditingId(null); setDraft(emptyCourse); }}>取消</AppButton>
+            ) : null}
+          </div>
+        </AppCard>
       </form>
 
       {/* Tools */}
-      <section className="soft-card mb-4">
-        <p className="section-kicker mb-1">Tools</p>
-        <h2 className="mb-3 font-semibold text-cocoa">课程表工具</h2>
+      <AppCard className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Tools</p>
+        <h2 className="mb-3 font-semibold text-[var(--app-text)]">课程表工具</h2>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <button className="btn-secondary w-full" onClick={() => persist(sampleCourses)}>导入示例课程表</button>
-          <button className="btn-danger w-full" onClick={() => persist([])}>清空课程表</button>
-          <button className="btn-secondary w-full" onClick={exportAllCourses}>导出整周课程提醒</button>
-          <button className="btn-secondary w-full" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</button>
-          <label className="btn-secondary w-full cursor-pointer sm:col-span-2">
+          <AppButton variant="secondary" className="w-full" onClick={() => persist(sampleCourses)}>导入示例课程表</AppButton>
+          <AppButton variant="danger" className="w-full" onClick={() => persist([])}>清空课程表</AppButton>
+          <AppButton variant="secondary" className="w-full" onClick={exportAllCourses}>导出整周课程提醒</AppButton>
+          <AppButton variant="secondary" className="w-full" onClick={() => downloadJson("bristol-schedule.json", data.courses)}>导出 JSON</AppButton>
+          <label className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-2 text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-[var(--app-accent-soft)] cursor-pointer sm:col-span-2">
             导入 JSON
-            <input
+            <Input
               className="hidden"
               type="file"
               accept="application/json"
@@ -154,34 +173,38 @@ export default function SchedulePage() {
             />
           </label>
         </div>
-        {importMessage ? <p className="notice mt-3">{importMessage}</p> : null}
-      </section>
+        {importMessage ? (
+          <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
+            {importMessage}
+          </div>
+        ) : null}
+      </AppCard>
 
       {/* Courses by day - single column on mobile */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {DAYS.map((day) => (
-          <section className="soft-card" key={day}>
+          <AppCard key={day}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-semibold text-cocoa">{day}</h2>
-              <span className="rounded-full bg-cream/80 px-3 py-1 text-xs text-cocoa/55">{grouped[day].length} 门</span>
+              <h2 className="font-semibold text-[var(--app-text)]">{day}</h2>
+              <span className="rounded-full bg-cream/80 px-3 py-1 text-xs text-[var(--app-muted)]">{grouped[day].length} 门</span>
             </div>
             {grouped[day].length ? (
               <div className="space-y-2">
                 {grouped[day].map((course) => (
                   <div key={course.id}>
                     <CourseCard course={course} />
-                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      <button className="btn-secondary btn-small w-full" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</button>
-                      <button className="btn-secondary btn-small w-full" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</button>
-                      <button className="btn-danger btn-small w-full" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <AppButton variant="secondary" size="sm" onClick={() => { setEditingId(course.id); setDraft(course); }}>编辑</AppButton>
+                      <AppButton variant="secondary" size="sm" disabled={!isCourseCalendarExportable(course)} onClick={() => exportCourse(course)}>添加到日历</AppButton>
+                      <AppButton variant="danger" size="sm" onClick={() => persist(data.courses.filter((item) => item.id !== course.id))}>删除</AppButton>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="empty-state">这一天暂时没有课程。</p>
+              <p className="py-8 text-center text-sm text-[var(--app-muted)]">这一天暂时没有课程。</p>
             )}
-          </section>
+          </AppCard>
         ))}
       </div>
     </AppShell>

@@ -4,13 +4,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import { createThumbnailFileFromVideo, shouldGenerateVideoThumbnail } from "@/lib/videoThumbnail";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { AlbumItem } from "@/lib/types";
 
 const filters = [
@@ -32,7 +35,14 @@ function formatApiError(payload: Record<string, unknown>, fallback: string) {
 
 function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata", error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "未知错误");
-  const label = stage === "generate_thumbnail" ? "视频封面生成失败" : stage === "upload_image" ? "图片上传失败" : stage === "upload_video" ? "视频上传失败" : "相册保存失败";
+  const label =
+    stage === "generate_thumbnail"
+      ? "视频封面生成失败"
+      : stage === "upload_image"
+        ? "图片上传失败"
+        : stage === "upload_video"
+          ? "视频上传失败"
+          : "相册保存失败";
   return `stage: ${stage} · error: ${label} · detail: ${message}`;
 }
 
@@ -177,105 +187,175 @@ export default function AlbumsPage() {
   return (
     <SharedAccessGate>
     <AppShell>
-      <PageHeader title="我们的相册" subtitle="把喜欢的瞬间慢慢收起来。" />
+      {/* Hero */}
+      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Albums</p>
+        <h1 className="text-2xl font-semibold text-[var(--app-text)]">我们的相册</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把喜欢的瞬间慢慢收起来。</p>
+      </header>
+
       <div className="space-y-4">
-        <section className="soft-card bg-gradient-to-br from-white/85 to-blush/40">
+        {/* Upload */}
+        <AppCard className="bg-gradient-to-br from-white/85 to-blush/40">
           <button className="flex w-full items-center justify-between text-left" onClick={() => setUploadOpen((value) => !value)} type="button">
             <span>
-              <span className="section-kicker mb-1 block">Upload</span>
-              <span className="font-semibold text-cocoa">添加一张回忆</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1 block">Upload</span>
+              <span className="font-semibold text-[var(--app-text)]">添加一张回忆</span>
             </span>
-            <span className="btn-secondary btn-small">{uploadOpen ? "收起" : "展开"}</span>
+            <AppButton variant="secondary" size="sm" type="button">{uploadOpen ? "收起" : "展开"}</AppButton>
           </button>
           <form className={`grid transition-all duration-300 ${uploadOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} onSubmit={upload}>
-          <div className="space-y-3 overflow-hidden">
-          <input className="field" placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
-          <textarea className="field min-h-24" placeholder="备注" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
-          <div className="grid grid-cols-2 gap-2">
-            <input className="field" type="date" value={draft.takenAt} onChange={(e) => setDraft({ ...draft, takenAt: e.target.value })} />
-            <input className="field" placeholder="地点" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
-          </div>
-          <label className="check-card">
-            <input checked={draft.isFavorite} type="checkbox" onChange={(e) => setDraft({ ...draft, isFavorite: e.target.checked })} />
-            设为精选
-          </label>
-          <label className="file-panel">
-            <span className="font-medium text-cocoa">封面图片</span>
-            <span className="block text-xs text-cocoa/55">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
-            <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} />
-          </label>
-          <label className="file-panel">
-            <span className="font-medium text-cocoa">视频 / 实况视频</span>
-            <span className="block text-xs text-cocoa/55">MP4 / MOV / WebM，最大 100MB</span>
-            <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
-          </label>
-          <div className="grid gap-2">
-            {imagePreview ? <img className="max-h-56 w-full rounded-[1.35rem] object-cover shadow-sm" src={imagePreview} alt="图片预览" /> : null}
-            {image?.type.includes("heic") || image?.type.includes("heif") ? <p className="notice">该格式可能无法在浏览器中预览，但可以上传保存。</p> : null}
-            {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
-          </div>
-          <div className="flex gap-2">
-            <button className="btn-primary flex-1" disabled={uploading} type="submit">{uploading ? uploadStage || "上传中..." : "上传到相册"}</button>
-            {uploading ? <button className="btn-secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>取消</button> : null}
-          </div>
-          </div>
-        </form>
-        </section>
+            <div className="space-y-3 overflow-hidden">
+              <Input placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+              <Textarea className="min-h-24" placeholder="备注" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" value={draft.takenAt} onChange={(e) => setDraft({ ...draft, takenAt: e.target.value })} />
+                <Input placeholder="地点" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
+              </div>
+              <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+                <input checked={draft.isFavorite} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setDraft({ ...draft, isFavorite: e.target.checked })} />
+                <span className="text-sm text-[var(--app-text)]">设为精选</span>
+              </label>
+              <label className="block rounded-[var(--app-radius)] border border-dashed border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm cursor-pointer hover:border-[var(--app-accent)] transition">
+                <span className="font-medium text-[var(--app-text)]">封面图片</span>
+                <span className="mt-1 block text-xs text-[var(--app-muted)]">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
+                <Input className="mt-3 block w-full cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} />
+              </label>
+              <label className="block rounded-[var(--app-radius)] border border-dashed border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm cursor-pointer hover:border-[var(--app-accent)] transition">
+                <span className="font-medium text-[var(--app-text)]">视频 / 实况视频</span>
+                <span className="mt-1 block text-xs text-[var(--app-muted)]">MP4 / MOV / WebM，最大 100MB</span>
+                <Input className="mt-3 block w-full cursor-pointer" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
+              </label>
+              <div className="grid gap-2">
+                {imagePreview ? <img className="max-h-56 w-full rounded-[1.35rem] object-cover shadow-sm" src={imagePreview} alt="图片预览" /> : null}
+                {image?.type.includes("heic") || image?.type.includes("heif") ? (
+                  <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
+                    该格式可能无法在浏览器中预览，但可以上传保存。
+                  </div>
+                ) : null}
+                {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
+              </div>
+              <div className="flex gap-2">
+                <AppButton variant="primary" className="flex-1" disabled={uploading} type="submit">
+                  {uploading ? uploadStage || "上传中..." : "上传到相册"}
+                </AppButton>
+                {uploading ? (
+                  <AppButton variant="secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>
+                    取消
+                  </AppButton>
+                ) : null}
+              </div>
+            </div>
+          </form>
+        </AppCard>
 
-        <section className="soft-card">
+        {/* Filter & Grid */}
+        <AppCard>
           <div className="mb-3 flex flex-wrap gap-2">
             {filters.map(([value, label]) => (
-              <button className={filter === value ? "btn-primary btn-small" : "btn-secondary btn-small"} key={value} onClick={() => setFilter(value)}>
+              <AppButton
+                variant={filter === value ? "primary" : "secondary"}
+                size="sm"
+                key={value}
+                onClick={() => setFilter(value)}
+              >
                 {label}
-              </button>
+              </AppButton>
             ))}
           </div>
-          {message ? <p className="notice mb-3">{message}</p> : null}
+          {message ? (
+            <div className="mb-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
+              {message}
+            </div>
+          ) : null}
           {items.length ? (
             <div className="grid grid-cols-2 gap-3">
               {items.map((item) => (
-                <button className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm" key={item.id} onClick={() => { setSelected(item); setPlaying(false); }}>
+                <button
+                  className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm"
+                  key={item.id}
+                  onClick={() => { setSelected(item); setPlaying(false); }}
+                  type="button"
+                >
                   {item.imageUrl ? (
                     <img className="aspect-[3/4] w-full object-cover transition group-hover:scale-105" src={item.imageUrl} alt={item.title || "相册照片"} />
                   ) : item.videoUrl ? (
-                    <div className="flex aspect-[3/4] items-center justify-center bg-cocoa/80 text-3xl text-white">▶</div>
+                    <div className="flex aspect-[3/4] items-center justify-center bg-[var(--app-text)]/80 text-3xl text-white">▶</div>
                   ) : null}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-2 text-left text-white">
                     <p className="truncate text-sm font-medium">{item.title || "未命名回忆"}</p>
                     <p className="text-xs opacity-80">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
                   </div>
-                  {item.type === "live_photo" ? <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">LIVE</span> : null}
-                  {item.type === "video" ? <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">VIDEO</span> : null}
-                  {item.isFavorite ? <span className="absolute left-2 top-2 rounded-full bg-white/75 px-2 py-1 text-xs">♡</span> : null}
+                  {item.type === "live_photo" ? (
+                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">LIVE</span>
+                  ) : null}
+                  {item.type === "video" ? (
+                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">VIDEO</span>
+                  ) : null}
+                  {item.isFavorite ? (
+                    <span className="absolute left-2 top-2 rounded-full bg-white/75 px-2 py-1 text-xs">♡</span>
+                  ) : null}
                 </button>
               ))}
             </div>
-          ) : <p className="empty-state">还没有放进相册的照片，之后慢慢补上。</p>}
-        </section>
+          ) : (
+            <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有放进相册的照片，之后慢慢补上。</p>
+          )}
+        </AppCard>
       </div>
 
+      {/* Lightbox */}
       {selected ? (
-        <div className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)} style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
-          <div className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 bg-[var(--app-text)]/50 p-4 backdrop-blur-sm"
+          onClick={() => setSelected(null)}
+          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <div
+            className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float"
+            onClick={(e) => e.stopPropagation()}
+          >
             {selected.videoUrl && (playing || !selected.imageUrl) ? (
-              <video className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black" src={selected.videoUrl} controls autoPlay onEnded={() => setPlaying(false)} />
+              <video
+                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
+                src={selected.videoUrl}
+                controls
+                autoPlay
+                onEnded={() => setPlaying(false)}
+              />
             ) : selected.imageUrl ? (
-              <img className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain" src={selected.imageUrl} alt={selected.title || "相册照片"} />
+              <img
+                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain"
+                src={selected.imageUrl}
+                alt={selected.title || "相册照片"}
+              />
             ) : null}
             {selected.videoUrl ? (
-              <button className="btn-secondary mt-3 w-full" onClick={() => setPlaying((value) => !value)}>{playing ? "回到封面" : "播放实况/视频"}</button>
+              <AppButton variant="secondary" className="mt-3 w-full" onClick={() => setPlaying((value) => !value)}>
+                {playing ? "回到封面" : "播放实况/视频"}
+              </AppButton>
             ) : null}
-              {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? <p className="notice mt-3 break-words">如果 MOV 无法播放，请在浏览器中打开或下载查看。</p> : null}
-            <div className="mt-4 space-y-2 text-sm text-cocoa/75">
-              <h2 className="text-lg font-semibold text-cocoa">{selected.title || "未命名回忆"}</h2>
+            {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? (
+              <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words">
+                如果 MOV 无法播放，请在浏览器中打开或下载查看。
+              </div>
+            ) : null}
+            <div className="mt-4 space-y-2 text-sm text-[var(--app-muted)]">
+              <h2 className="text-lg font-semibold text-[var(--app-text)]">{selected.title || "未命名回忆"}</h2>
               {selected.takenAt ? <p>{selected.takenAt.slice(0, 10)}</p> : null}
               {selected.location ? <p>{selected.location}</p> : null}
               {selected.note ? <p className="leading-6">{selected.note}</p> : null}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button className="btn-secondary btn-small" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>{selected.isFavorite ? "取消精选" : "设为精选"}</button>
-              <button className="btn-danger btn-small" onClick={() => deleteItem(selected)}>删除</button>
-              <button className="btn-secondary btn-small" onClick={() => setSelected(null)}>关闭</button>
+              <AppButton variant="secondary" size="sm" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>
+                {selected.isFavorite ? "取消精选" : "设为精选"}
+              </AppButton>
+              <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
+                删除
+              </AppButton>
+              <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>
+                关闭
+              </AppButton>
             </div>
           </div>
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn, getRadiusClass } from "@/lib/design/tokens";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 interface AppCardProps {
   children: ReactNode;
@@ -22,10 +23,6 @@ export function AppCard({
   style,
   onClick
 }: AppCardProps) {
-  const radiusClass = getRadiusClass('extra'); // will be overridden by CSS var anyway
-  
-  // We base card style on CSS vars from the theme; the actual visual style uses --app-card-bg, --app-card-border etc.
-  // The variant changes border color and bg slightly
   const variantClasses: Record<string, string> = {
     default:   "bg-[var(--app-card-bg)] border-[var(--app-card-border)]",
     highlight: "border-[var(--app-accent)] bg-[var(--app-accent-soft)]",
@@ -36,19 +33,20 @@ export function AppCard({
   };
 
   return (
-    <div
+    <Card
       className={cn(
-        "w-full min-w-0 border shadow-[var(--app-card-shadow)] transition-all duration-200",
-        radiusClass,
+        "w-full min-w-0 transition-all duration-200",
         variantClasses[variant] || variantClasses.default,
         compact ? "p-3" : "p-4",
         interactive ? "cursor-pointer hover:scale-[1.01] hover:shadow-lg" : "",
+        // Preserve AppCard-specific shadow
+        "shadow-[var(--app-card-shadow)]",
         className
       )}
       onClick={onClick}
       style={style}
     >
       {children}
-    </div>
+    </Card>
   );
 }

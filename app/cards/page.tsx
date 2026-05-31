@@ -22,6 +22,8 @@ import {
   updateWalletCard,
   type CardState
 } from "@/lib/cardWalletDb";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
 
 type ActiveCard = {
   card: WalletCard;
@@ -149,20 +151,24 @@ export default function CardsPage() {
 
   return (
     <AppShell>
-      <section className="mb-4 rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/90 via-skySoft/55 to-lilac/45 p-5 shadow-float backdrop-blur-xl">
-        <p className="section-kicker mb-1">Wallet</p>
-        <h1 className="text-2xl font-semibold text-cocoa">会员卡夹</h1>
-        <p className="mt-2 text-sm leading-6 text-cocoa/65">常用卡放在这里，结账时点开就能扫。</p>
-        <p className="mt-3 rounded-2xl bg-white/62 px-3 py-2 text-sm text-cocoa/65">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
-      </section>
+      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/90 via-skySoft/55 to-lilac/45 p-5 shadow-float backdrop-blur-xl">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Wallet</p>
+        <h1 className="text-2xl font-semibold text-[var(--app-text)]">会员卡夹</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">常用卡放在这里，结账时点开就能扫。</p>
+        <p className="mt-3 rounded-2xl bg-white/62 px-3 py-2 text-sm text-[var(--app-muted)]">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
+      </header>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={() => setCreating(true)}>新增会员卡</button>
-        <button className="btn-secondary" onClick={() => setSorting((current) => !current)}>{sorting ? "完成排序" : "编辑排序"}</button>
-        <button className="btn-secondary" onClick={restoreDefaults}>恢复默认卡</button>
+        <AppButton variant="primary" onClick={() => setCreating(true)}>新增会员卡</AppButton>
+        <AppButton variant="secondary" onClick={() => setSorting((current) => !current)}>{sorting ? "完成排序" : "编辑排序"}</AppButton>
+        <AppButton variant="secondary" onClick={restoreDefaults}>恢复默认卡</AppButton>
       </div>
 
-      {message ? <p className="notice mb-4">{message}</p> : null}
+      {message ? (
+        <div className="mb-4 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
+          {message}
+        </div>
+      ) : null}
 
       {cards.length ? (
         <CardWalletGrid
@@ -178,10 +184,10 @@ export default function CardsPage() {
           onOpen={openCard}
         />
       ) : (
-        <section className="empty-state text-left">
-          <p>还没有会员卡，可以先添加一张。</p>
-          <button className="btn-primary mt-3" onClick={() => setCreating(true)}>新增会员卡</button>
-        </section>
+        <AppCard>
+          <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有会员卡，可以先添加一张。</p>
+          <AppButton variant="primary" className="mt-3 w-full" onClick={() => setCreating(true)}>新增会员卡</AppButton>
+        </AppCard>
       )}
 
       {active ? (

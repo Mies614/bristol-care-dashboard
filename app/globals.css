@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 33 100% 97%;
+    --foreground: 10 20% 25%;
+    --card: 33 100% 99%;
+    --card-foreground: 10 20% 25%;
+    --popover: 33 100% 99%;
+    --popover-foreground: 10 20% 25%;
+    --primary: 8 73% 81%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 255 50% 95%;
+    --secondary-foreground: 255 20% 35%;
+    --muted: 10 10% 55%;
+    --muted-foreground: 10 8% 40%;
+    --accent: 8 80% 93%;
+    --accent-foreground: 10 20% 30%;
+    --destructive: 6 65% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 10 50% 90%;
+    --input: 10 50% 90%;
+    --ring: 8 60% 70%;
+    --radius: 1.15rem;
+  }
+}
+
 ::selection {
   background: #e8c4b8;
   color: #3d2c26;

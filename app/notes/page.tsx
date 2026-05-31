@@ -6,6 +6,9 @@ import { NoteComposer } from "@/components/NoteComposer";
 import { NoteWall } from "@/components/NoteWall";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { Input } from "@/components/ui/input";
 import type { LoveNote } from "@/lib/types";
 
 const filters = [
@@ -84,43 +87,63 @@ export default function NotesPage() {
   return (
     <SharedAccessGate>
     <AppShell>
-      <section className="mb-4 rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
-        <p className="section-kicker mb-1">Note Wall</p>
-        <h1 className="text-2xl font-semibold text-cocoa">小纸条墙</h1>
-        <p className="mt-2 text-sm leading-6 text-cocoa/65">把想说的话、当下的声音和照片都放在这里。</p>
-        <div className="mt-4 grid grid-cols-4 gap-2 text-xs">
-          {["写文字", "录语音", "发照片", "发视频"].map((item) => <span className="rounded-full bg-white/60 px-2 py-2 text-center text-cocoa/65" key={item}>{item}</span>)}
+      {/* Hero */}
+      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Note Wall</p>
+        <h1 className="text-2xl font-semibold text-[var(--app-text)]">小纸条墙</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把想说的话、当下的声音和照片都放在这里。</p>
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {["写文字", "录语音", "发照片", "发视频"].map((item) => (
+            <span className="rounded-full bg-white/60 px-2 py-2 text-center text-xs text-[var(--app-muted)]" key={item}>{item}</span>
+          ))}
         </div>
-      </section>
+      </header>
+
       <div className="space-y-4">
-        <section className="soft-card">
-          <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((value) => !value)} type="button">
-            <span>
-              <span className="section-kicker mb-1 block">Compose</span>
-              <span className="font-semibold text-cocoa">写一张小纸条</span>
-            </span>
-            <span className="btn-secondary btn-small">{composerOpen ? "收起" : "展开"}</span>
+        {/* Composer */}
+        <AppCard>
+          <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((v) => !v)} type="button">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Compose</p>
+              <p className="font-semibold text-[var(--app-text)]">写一张小纸条</p>
+            </div>
+            <AppButton variant="secondary" size="sm" type="button">{composerOpen ? "收起" : "展开"}</AppButton>
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
             <div className="overflow-hidden">
               <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} />
             </div>
           </div>
-        </section>
-        <section className="soft-card space-y-3">
-          <div className="flex flex-wrap gap-2">
+        </AppCard>
+
+        {/* Filters */}
+        <AppCard>
+          <div className="flex flex-wrap gap-2 mb-3">
             {filters.map(([value, label]) => (
-              <button className={filter === value ? "btn-primary btn-small" : "btn-secondary btn-small"} key={value} onClick={() => setFilter(value)}>
+              <AppButton
+                variant={filter === value ? "primary" : "secondary"}
+                size="sm"
+                key={value}
+                onClick={() => setFilter(value)}
+              >
                 {label}
-              </button>
+              </AppButton>
             ))}
           </div>
-          <select className="field" value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
+          <select
+            className="mb-3 w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+          >
             {sorts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <div className="grid grid-cols-2 gap-2">
-            <input className="field" placeholder="搜索内容、心情或作者" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") loadNotes(); }} />
-            <select className="field" value={style} onChange={(event) => setStyle(event.target.value)}>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Input placeholder="搜索内容、心情或作者" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadNotes(); }} />
+            <select
+              className="w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+            >
               <option value="">所有样式</option>
               <option value="sticky">便签</option>
               <option value="postcard">明信片</option>
@@ -132,14 +155,17 @@ export default function NotesPage() {
             </select>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <label className="check-card flex-1">
-              <input checked={includeInactive} type="checkbox" onChange={(event) => setIncludeInactive(event.target.checked)} />
-              显示隐藏的小纸条
+            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+              <input checked={includeInactive} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setIncludeInactive(e.target.checked)} />
+              <span className="text-sm text-[var(--app-text)]">显示隐藏的小纸条</span>
             </label>
-            <button className="btn-secondary btn-small" onClick={loadNotes}>搜索/刷新</button>
+            <AppButton variant="secondary" size="sm" onClick={loadNotes}>搜索/刷新</AppButton>
           </div>
-          {message ? <p className="notice">{message}</p> : null}
-        </section>
+          {message ? (
+            <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{message}</div>
+          ) : null}
+        </AppCard>
+
         <NoteWall notes={notes} onPatch={patchNote} />
       </div>
     </AppShell>
