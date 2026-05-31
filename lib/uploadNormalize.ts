@@ -106,8 +106,8 @@ export function omitInvalidUuidId<T extends RecordValue>(record: T): T {
 
 function normalizeCourse(value: unknown): Course | null {
   if (!isRecord(value)) return null;
-  const name = asStringOrNull(value.name);
-  const day = asStringOrNull(value.day);
+  const name = asStringOrNull(value.name) || asStringOrNull(value.title);
+  const day = asStringOrNull(value.day) || asStringOrNull(value.weekday) || asStringOrNull(value.dayOfWeek);
   const startTime = asStringOrNull(value.startTime) || asStringOrNull(value.start_time);
   const endTime = asStringOrNull(value.endTime) || asStringOrNull(value.end_time);
   if (!name || !day || !startTime || !endTime) return null;
@@ -117,10 +117,13 @@ function normalizeCourse(value: unknown): Course | null {
     day: day as Course["day"],
     startTime,
     endTime,
-    location: asStringOrNull(value.location) || undefined,
+    location: asStringOrNull(value.location) || asStringOrNull(value.room) || undefined,
     teacher: asStringOrNull(value.teacher) || undefined,
-    note: asStringOrNull(value.note) || undefined,
-    color: asStringOrNull(value.color) || undefined
+    note: asStringOrNull(value.note) || asStringOrNull(value.notes) || undefined,
+    color: asStringOrNull(value.color) || undefined,
+    createdAt: asStringOrNull(value.createdAt) || asStringOrNull(value.created_at) || undefined,
+    updatedAt: asStringOrNull(value.updatedAt) || asStringOrNull(value.updated_at) || undefined,
+    deletedAt: asStringOrNull(value.deletedAt) || asStringOrNull(value.deleted_at) || undefined
   };
 }
 

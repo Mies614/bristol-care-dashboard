@@ -226,6 +226,12 @@ create index if not exists period_records_space_start_idx on public.period_recor
 alter table public.deadlines
 add column if not exists deleted_at timestamptz;
 
+-- Schema migration: add deleted_at and timestamp fields to courses table
+alter table public.courses
+add column if not exists created_at timestamptz default now(),
+add column if not exists updated_at timestamptz default now(),
+add column if not exists deleted_at timestamptz;
+
 alter table public.album_items
 add column if not exists created_by text default 'xiaoguai';
 

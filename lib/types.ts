@@ -20,6 +20,9 @@ export type Course = {
   teacher?: string;
   note?: string;
   color?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string;
 };
 
 export type Deadline = {

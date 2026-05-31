@@ -201,8 +201,48 @@ export async function GET() {
             checks.push({ name: "theme_settings upsert test", ok: false, detail: String(err) });
           }
 
+          await addReadableCheck("courses readable", "courses");
           await addReadableCheck("deadlines sync check", "deadlines");
           await addReadableCheck("miss_you_seen_state readable", "miss_you_seen_state");
+
+          // Courses column checks
+          try {
+            const { data: courseCols, error: colErr } = await supabase.rpc("get_columns_info", { table_name: "courses" });
+            if (colErr) {
+              // Fallback: try selecting specific columns to check if they exist
+              const { error: selectErr } = await supabase
+                .from("courses")
+                .select("id, name, day, start_time, end_time, location, teacher, note, color, created_at, updated_at, deleted_at")
+                .eq("space_id", spaceId)
+                .limit(1);
+              checks.push({
+                name: "courses required columns exist",
+                ok: !selectErr,
+                detail: selectErr ? `column check failed: ${selectErr.message}` : "all columns present (name, day, start_time, end_time, location, teacher, note, color, created_at, updated_at, deleted_at)"
+              });
+            } else {
+              checks.push({
+                name: "courses table columns",
+                ok: true,
+                detail: `columns: ${(courseCols as Array<{ column_name: string }>).map((c) => c.column_name).join(", ")}`
+              });
+            }
+          } catch (err) {
+            // Last fallback: just try a simple select
+            try {
+              const { count, error: simpleErr } = await supabase
+                .from("courses")
+                .select("id", { count: "exact", head: true })
+                .eq("space_id", spaceId);
+              checks.push({
+                name: "courses table readable",
+                ok: !simpleErr,
+                detail: simpleErr ? `query failed: ${simpleErr.message}` : `table exists, ${count ?? 0} rows`
+              });
+            } catch {
+              checks.push({ name: "courses table", ok: false, detail: `both checks failed: ${err instanceof Error ? err.message : String(err)}` });
+            }
+          }
 
           // 10) miss_you_events readable
           try {

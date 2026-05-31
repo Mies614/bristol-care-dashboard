@@ -13,6 +13,9 @@ type CourseRow = {
   teacher?: string | null;
   note?: string | null;
   color?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
 };
 
 type DeadlineRow = {
@@ -95,7 +98,10 @@ export function courseFromRow(row: CourseRow): Course {
     location: row.location || undefined,
     teacher: row.teacher || undefined,
     note: row.note || undefined,
-    color: row.color || undefined
+    color: row.color || undefined,
+    createdAt: row.created_at || undefined,
+    updatedAt: row.updated_at || undefined,
+    deletedAt: row.deleted_at || undefined
   };
 }
 
@@ -110,7 +116,10 @@ export function courseToRow(course: Course, spaceId?: string) {
     location: course.location || null,
     teacher: course.teacher || null,
     note: course.note || null,
-    color: course.color || "rose"
+    color: course.color || "rose",
+    created_at: course.createdAt || undefined,
+    updated_at: course.updatedAt || new Date().toISOString(),
+    deleted_at: course.deletedAt || null
   };
 }
 
