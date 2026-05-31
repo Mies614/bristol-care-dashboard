@@ -31,6 +31,9 @@ export type Deadline = {
   priority: "low" | "medium" | "high";
   status: "todo" | "done";
   note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string;
 };
 
 export type CommonLink = {

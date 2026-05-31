@@ -37,9 +37,11 @@ describe("normalizeLocalData", () => {
     });
     const rows = buildSettingsRows(normalized.settings, "space-id");
 
-    expect(rows.find((row) => row.key === "girlfriend_name")?.value).toBe("小乖");
-    expect(rows.find((row) => row.key === "next_meeting_date")).toHaveProperty("value", "");
-    expect(rows.find((row) => row.key === "semester_end_date")).toHaveProperty("value", "");
+    expect(rows.find((row) => row.key === "app_settings")?.value).toMatchObject({
+      girlfriendName: "小乖",
+      nextMeetingDate: "",
+      semesterEndDate: ""
+    });
     expect(rows.every((row) => Object.prototype.hasOwnProperty.call(row, "value"))).toBe(true);
     expect(rows.every((row) => row.value !== undefined)).toBe(true);
     expect(rows.every((row) => row.value !== null)).toBe(true);
@@ -94,5 +96,11 @@ describe("normalizeLocalData", () => {
     expect(source).not.toContain(".from(\"love_notes\").insert");
     expect(source).not.toContain("album_items");
     expect(source).not.toContain("storage.from");
+  });
+
+  it("cloud upload includes deadlines and does not proactively sync retired links", () => {
+    const source = readFileSync(new URL("../app/api/cloud/upload/route.ts", import.meta.url), "utf8");
+    expect(source).toContain('supabase.from("deadlines").insert');
+    expect(source).not.toContain('supabase.from("quick_links")');
   });
 });

@@ -24,6 +24,8 @@ type DeadlineRow = {
   priority: Deadline["priority"];
   status: Deadline["status"];
   note?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 type LoveNoteRow = {
@@ -120,7 +122,9 @@ export function deadlineFromRow(row: DeadlineRow): Deadline {
     dueTime: row.due_time || undefined,
     priority: row.priority,
     status: row.status,
-    note: row.note || undefined
+    note: row.note || undefined,
+    createdAt: row.created_at || undefined,
+    updatedAt: row.updated_at || undefined
   };
 }
 
@@ -134,7 +138,9 @@ export function deadlineToRow(deadline: Deadline, spaceId?: string) {
     due_time: deadline.dueTime || null,
     priority: deadline.priority,
     status: deadline.status,
-    note: deadline.note || null
+    note: deadline.note || null,
+    created_at: deadline.createdAt || undefined,
+    updated_at: deadline.updatedAt || new Date().toISOString()
   };
 }
 
@@ -286,7 +292,9 @@ function asStringOrNull(value: unknown): string | null {
 
 export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: unknown }>, fallbackName = "小乖"): CloudSettings {
   const result: CloudSettings = { girlfriendName: fallbackName, backgroundSettings: { ...defaultBackgroundSettings }, themeSettings: { ...DEFAULT_THEME_SETTINGS }, periodSettings: { ...DEFAULT_PERIOD_SETTINGS } };
+  let appSettings: Record<string, unknown> | undefined;
   for (const row of rows) {
+    if (row.key === "app_settings" && isRecord(row.value)) appSettings = row.value;
     if (row.key === "girlfriend_name" && typeof row.value === "string") result.girlfriendName = row.value || fallbackName;
     if (row.key === "next_meeting_date" && (typeof row.value === "string" || row.value === null)) result.nextMeetingDate = row.value || null;
     if (row.key === "semester_end_date" && (typeof row.value === "string" || row.value === null)) result.semesterEndDate = row.value || null;
@@ -302,18 +310,24 @@ export function settingsRowsToCloudSettings(rows: Array<{ key: string; value: un
     }
     if (row.key === "quick_actions" && typeof row.value === "string") result.quickActions = row.value;
   }
+  if (appSettings) {
+    result.girlfriendName = asStringOrNull(appSettings.girlfriendName) || result.girlfriendName;
+    result.nextMeetingDate = asStringOrNull(appSettings.nextMeetingDate);
+    result.semesterEndDate = asStringOrNull(appSettings.semesterEndDate);
+  }
   return result;
 }
 
 export function cloudSettingsToRows(settings: CloudSettings, spaceId: string) {
   const rows: Array<{ space_id: string; key: string; value: unknown }> = [
-    { space_id: spaceId, key: "girlfriend_name", value: settings.girlfriendName || "小乖" },
-    { space_id: spaceId, key: "next_meeting_date", value: settings.nextMeetingDate || "" },
-    { space_id: spaceId, key: "semester_end_date", value: settings.semesterEndDate || "" },
+    { space_id: spaceId, key: "app_settings", value: {
+      girlfriendName: settings.girlfriendName || "小乖",
+      nextMeetingDate: settings.nextMeetingDate || "",
+      semesterEndDate: settings.semesterEndDate || ""
+    } },
     { space_id: spaceId, key: "background_settings", value: sanitizeBackgroundSettingsForCloud(settings.backgroundSettings || defaultBackgroundSettings) },
     { space_id: spaceId, key: "theme_settings", value: normalizeThemeSettings(settings.themeSettings || DEFAULT_THEME_SETTINGS) },
-    { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) },
-    { space_id: spaceId, key: "quick_actions", value: settings.quickActions || "" }
+    { space_id: spaceId, key: "period_settings", value: normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS) }
   ];
 
   // Include period_records if present (non-empty)

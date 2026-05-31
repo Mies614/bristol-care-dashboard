@@ -42,8 +42,10 @@ body {
   touch-action: manipulation;
 }
 
-html {
-  scrollbar-gutter: stable both-edges;
+@media (min-width: 768px) {
+  html {
+    scrollbar-gutter: stable both-edges;
+  }
 }
 
 @layer components {
@@ -75,7 +77,7 @@ html {
     @apply px-3 py-1.5 text-xs;
   }
   .field {
-    @apply w-full min-w-0 rounded-[var(--app-radius)] border border-white/80 bg-white/70 px-3 py-2.5 text-sm text-cocoa placeholder-cocoa/40 shadow-sm backdrop-blur transition-all duration-200 focus:border-roseSoft/60 focus:outline-none focus:ring-2 focus:ring-roseSoft/20;
+    @apply w-full min-w-0 rounded-[var(--app-radius)] border border-white/80 bg-white/70 px-3 py-2.5 text-base text-cocoa placeholder-cocoa/40 shadow-sm backdrop-blur transition-all duration-200 focus:border-roseSoft/60 focus:outline-none focus:ring-2 focus:ring-roseSoft/20;
   }
   .soft-card {
     @apply rounded-[1.35rem] border border-white/75 bg-[var(--app-card-bg)] p-4 shadow-soft backdrop-blur-md ring-1 ring-white/60 md:p-5;
@@ -101,6 +103,12 @@ html {
   .btn-group {
     @apply flex flex-wrap gap-2;
   }
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {

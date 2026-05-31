@@ -92,5 +92,17 @@ describe("mappers", () => {
       mode: "color",
       color: "#FDF2F8"
     });
+    expect(rows.some((row) => row.key === "quick_actions")).toBe(false);
+  });
+
+  it("reads unified app_settings while retaining legacy compatibility", () => {
+    expect(settingsRowsToCloudSettings([
+      { key: "next_meeting_date", value: "2026-06-01" },
+      { key: "app_settings", value: { girlfriendName: "小乖", nextMeetingDate: "2026-06-02", semesterEndDate: "2026-07-01" } }
+    ])).toMatchObject({
+      girlfriendName: "小乖",
+      nextMeetingDate: "2026-06-02",
+      semesterEndDate: "2026-07-01"
+    });
   });
 });

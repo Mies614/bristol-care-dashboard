@@ -18,9 +18,9 @@ export function MissYouAdminCard() {
   const loadRecords = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/miss-you?code=${encodeURIComponent(code)}&includeUnread=true`);
+      const response = await fetch(`/api/miss-you?code=${encodeURIComponent(code)}&viewer=admin&includeUnread=true`);
       const payload = await response.json();
-      if (Array.isArray(payload.records)) setRecords(payload.records.slice(0, 20));
+      if (Array.isArray(payload.latestEvents)) setRecords(payload.latestEvents.slice(0, 20));
       else setRecords([]);
     } catch {
       setRecords([]);
@@ -37,7 +37,7 @@ export function MissYouAdminCard() {
       const response = await fetch("/api/miss-you", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, author: "admin" })
+        body: JSON.stringify({ code, author: "admin", recipient: "xiaoguai" })
       });
       if (response.ok) {
         setMessage("💭 已想她一下");

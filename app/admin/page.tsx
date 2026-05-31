@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AppShell } from "@/components/AppShell";
 import { AdminNotice } from "@/components/admin/AdminNotice";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
-import { AdminQuickActions } from "@/components/admin/AdminQuickActions";
 import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
 import { validateImageFile } from "@/lib/imageValidation";
 import { getUserFacingAuthorLabel } from "@/lib/identity";
@@ -88,20 +88,6 @@ export default function AdminPage() {
       });
     } catch { /* optional */ }
   }, [code]);
-
-  async function handleThoughtHer() {
-    try {
-      await fetch("/api/miss-you", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, author: "admin" })
-      });
-      setMessage("💭 已想她一下");
-      await loadCareSummary();
-    } catch {
-      setMessage("想她一下失败");
-    }
-  }
 
   async function login(event: React.FormEvent) {
     event.preventDefault();
@@ -344,7 +330,6 @@ export default function AdminPage() {
                 missYouCounts={missYouCounts}
                 onRefresh={loadCareSummary}
               />
-              <AdminQuickActions onThoughtHer={handleThoughtHer} />
             </>
           )}
 
@@ -379,7 +364,7 @@ export default function AdminPage() {
                 </label>
                 {previewUrl ? (
                   <div className="rounded-[1.6rem] border border-white/75 bg-white/55 p-2 shadow-sm">
-                    <img className="max-h-72 w-full rounded-[1.35rem] object-cover shadow-sm" src={previewUrl} alt="预览" />
+                    <Image className="max-h-72 w-full rounded-[1.35rem] object-cover shadow-sm" src={previewUrl} alt="预览" width={640} height={360} unoptimized />
                     <div className="mt-2 flex items-center justify-between gap-2 px-1">
                       <span className="truncate text-xs text-[var(--app-muted)]">{image?.name}</span>
                       <button className="btn-secondary btn-small" type="button" onClick={() => setImage(null)}>移除</button>
@@ -413,10 +398,10 @@ export default function AdminPage() {
                           <p className="text-sm leading-6 text-[var(--app-text)]">{note.content}</p>
                           <p className="mt-2 text-xs text-[var(--app-muted)]">{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN") : "无时间"}</p>
                         </div>
-                        {note.imageUrl ? <img className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || ""} /> : null}
+                        {note.imageUrl ? <Image className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || ""} width={64} height={64} unoptimized /> : null}
                       </div>
                       {note.audioUrl ? <audio className="mt-3 w-full" src={note.audioUrl} controls /> : null}
-                      {note.videoUrl ? <video className="mt-3 max-h-40 w-full rounded-2xl bg-black" src={note.videoUrl} controls /> : null}
+                      {note.videoUrl ? <video className="mt-3 max-h-40 w-full rounded-2xl bg-black" src={note.videoUrl} controls playsInline /> : null}
                       <p className="mt-3 flex flex-wrap gap-2">
                         <StatusBadge tone={note.active ? "ok" : "neutral"}>{note.active ? "active" : "inactive"}</StatusBadge>
                         <StatusBadge tone={note.pinned ? "warn" : "neutral"}>{note.pinned ? "pinned" : "not pinned"}</StatusBadge>

@@ -88,6 +88,24 @@ export async function GET() {
         }
 
         if (spaceId) {
+          const addReadableCheck = async (name: string, table: string) => {
+            try {
+              const { count, error } = await supabase
+                .from(table)
+                .select("id", { count: "exact", head: true })
+                .eq("space_id", spaceId);
+              checks.push({
+                name,
+                ok: !error,
+                detail: error ? `query failed: ${error.message}` : `table exists, ${count ?? 0} rows`
+              });
+            } catch (err) {
+              checks.push({ name, ok: false, detail: `query failed: ${err instanceof Error ? err.message : String(err)}` });
+            }
+          };
+
+          await addReadableCheck("settings readable", "settings");
+
           // 7) settings upsert test  settings table uses key+value, NOT girlfriend_name column
           try {
             const settingsPayload = {
@@ -183,6 +201,9 @@ export async function GET() {
             checks.push({ name: "theme_settings upsert test", ok: false, detail: String(err) });
           }
 
+          await addReadableCheck("deadlines sync check", "deadlines");
+          await addReadableCheck("miss_you_seen_state readable", "miss_you_seen_state");
+
           // 10) miss_you_events readable
           try {
             const { count, error: missYouErr } = await supabase
@@ -224,6 +245,7 @@ export async function GET() {
               detail: `query failed: ${err instanceof Error ? err.message : String(err)}`
             });
           }
+
         } else {
           // Space not found, mark remaining checks as skipped
           checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space)" });
@@ -231,6 +253,9 @@ export async function GET() {
           checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space)" });
           checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space)" });
           checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "settings readable", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no space)" });
+          checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no space)" });
         }
       } catch (err) {
         checks.push({ name: "DB connection", ok: false, detail: String(err) });
@@ -240,6 +265,9 @@ export async function GET() {
         checks.push({ name: "theme_settings upsert test", ok: false, detail: "DB connection failed" });
         checks.push({ name: "miss_you_events readable", ok: false, detail: "DB connection failed" });
         checks.push({ name: "push_subscriptions readable", ok: false, detail: "DB connection failed" });
+        checks.push({ name: "settings readable", ok: false, detail: "DB connection failed" });
+        checks.push({ name: "deadlines sync check", ok: false, detail: "DB connection failed" });
+        checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "DB connection failed" });
       }
     } else {
       checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "skipped (no supabase connection)" });
@@ -248,7 +276,13 @@ export async function GET() {
       checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no supabase connection)" });
       checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no supabase connection)" });
       checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no supabase connection)" });
+      checks.push({ name: "settings readable", ok: false, detail: "skipped (no supabase connection)" });
+      checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no supabase connection)" });
+      checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no supabase connection)" });
     }
+
+    checks.push({ name: "cloud upload route exists", ok: true, detail: "/api/cloud/upload" });
+    checks.push({ name: "cloud pull route exists", ok: true, detail: "/api/cloud/pull" });
 
     return NextResponse.json({
       ok: true,

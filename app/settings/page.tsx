@@ -58,8 +58,7 @@ export default function SettingsPage() {
   const counts = useMemo(() => ({
     courses: data?.courses.length || 0,
     deadlines: data?.deadlines.length || 0,
-    loveNotes: data?.loveNotes.length || 0,
-    links: data?.links.length || 0
+    loveNotes: data?.loveNotes.length || 0
   }), [data]);
 
   function update(next: AppData) {
@@ -490,7 +489,7 @@ export default function SettingsPage() {
             <span>课程 {counts.courses}</span>
             <span>Deadline {counts.deadlines}</span>
             <span>小纸条 {counts.loveNotes}</span>
-            <span>常用链接 {counts.links}</span>
+            <span>经期记录 {data.periodRecords?.length || 0}</span>
           </div>
           <label className="mt-3 block text-sm text-[var(--app-muted)]">
             访问码

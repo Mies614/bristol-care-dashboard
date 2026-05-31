@@ -174,7 +174,7 @@ export default function PeriodPage() {
           <section className="soft-card bg-gradient-to-br from-white/85 via-blush/35 to-lilac/35">
             <p className="section-kicker mb-1">Cycle</p>
             <h2 className="font-semibold text-cocoa">下次预计</h2>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-cocoa/72">
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-cocoa/70">
               <div className="rounded-2xl bg-white/58 p-3 shadow-sm">
                 <p className="text-xs text-cocoa/50">最近开始</p>
                 <p className="mt-1 font-semibold text-cocoa">{latest?.startDate || "还没有记录"}</p>
@@ -248,7 +248,7 @@ export default function PeriodPage() {
             {records.length ? (
               <div className="space-y-2 transition-all duration-300">
                 {visibleRecords.map((record) => (
-                  <article className="rounded-[1.35rem] border border-white/70 bg-white/58 p-3 text-sm text-cocoa/72 shadow-sm" key={record.id}>
+                  <article className="rounded-[1.35rem] border border-white/70 bg-white/58 p-3 text-sm text-cocoa/70 shadow-sm" key={record.id}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold text-cocoa">{record.startDate}{record.endDate ? ` - ${record.endDate}` : ""}</p>

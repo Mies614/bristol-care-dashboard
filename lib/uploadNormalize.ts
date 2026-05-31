@@ -2,6 +2,7 @@ import type { CloudSettings, CommonLink, Course, Deadline, LoveNote, PeriodRecor
 import { defaultBackgroundSettings, normalizeBackgroundSettings, sanitizeBackgroundSettingsForCloud } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings } from "./theme";
+import { collectDeadlineCandidates, normalizeDeadlines } from "./deadlines";
 
 type RecordValue = Record<string, unknown>;
 
@@ -13,31 +14,17 @@ export type NormalizedLocalData = {
   quickLinks: CommonLink[];
 };
 
-function safeStringify(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return "";
-  return JSON.stringify(value);
-}
-
 export function buildSettingsRows(settings: NormalizedLocalData["settings"], spaceId: string) {
   const updatedAt = new Date().toISOString();
   const rows = [
     {
       space_id: spaceId,
-      key: "girlfriend_name",
-      value: safeSettingValue(settings.girlfriendName, "小乖"),
-      updated_at: updatedAt
-    },
-    {
-      space_id: spaceId,
-      key: "next_meeting_date",
-      value: safeSettingValue(settings.nextMeetingDate, ""),
-      updated_at: updatedAt
-    },
-    {
-      space_id: spaceId,
-      key: "semester_end_date",
-      value: safeSettingValue(settings.semesterEndDate, ""),
+      key: "app_settings",
+      value: safeSettingValue({
+        girlfriendName: settings.girlfriendName || "小乖",
+        nextMeetingDate: settings.nextMeetingDate || "",
+        semesterEndDate: settings.semesterEndDate || ""
+      }, {}),
       updated_at: updatedAt
     },
     {
@@ -56,12 +43,6 @@ export function buildSettingsRows(settings: NormalizedLocalData["settings"], spa
       space_id: spaceId,
       key: "period_settings",
       value: safeSettingValue(normalizePeriodSettings(settings.periodSettings || DEFAULT_PERIOD_SETTINGS), DEFAULT_PERIOD_SETTINGS),
-      updated_at: updatedAt
-    },
-    {
-      space_id: spaceId,
-      key: "quick_actions",
-      value: safeSettingValue(safeStringify(settings.quickActions), ""),
       updated_at: updatedAt
     }
   ];
@@ -140,23 +121,6 @@ function normalizeCourse(value: unknown): Course | null {
     teacher: asStringOrNull(value.teacher) || undefined,
     note: asStringOrNull(value.note) || undefined,
     color: asStringOrNull(value.color) || undefined
-  };
-}
-
-function normalizeDeadline(value: unknown): Deadline | null {
-  if (!isRecord(value)) return null;
-  const title = asStringOrNull(value.title);
-  const dueDate = asStringOrNull(value.dueDate) || asStringOrNull(value.due_date);
-  if (!title || !dueDate) return null;
-  return {
-    id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
-    title,
-    courseName: asStringOrNull(value.courseName) || asStringOrNull(value.course_name) || undefined,
-    dueDate,
-    dueTime: asStringOrNull(value.dueTime) || asStringOrNull(value.due_time) || undefined,
-    priority: (asStringOrNull(value.priority) || "medium") as Deadline["priority"],
-    status: (asStringOrNull(value.status) || "todo") as Deadline["status"],
-    note: asStringOrNull(value.note) || undefined
   };
 }
 
@@ -278,7 +242,7 @@ export function normalizeLocalData(data: unknown): NormalizedLocalData {
     },
     loveNotes: rawLoveNotes.map(normalizeLoveNote).filter((note): note is Omit<LoveNote, "id"> & { id?: string } => Boolean(note)),
     courses: [...asArray(data.courses), ...asArray(data.schedule), ...asArray(data.timetable)].map(normalizeCourse).filter((course): course is Course => Boolean(course)),
-    deadlines: [...asArray(data.deadlines), ...asArray(data.assignments), ...asArray(data.tasks)].map(normalizeDeadline).filter((deadline): deadline is Deadline => Boolean(deadline)),
+    deadlines: normalizeDeadlines(collectDeadlineCandidates(data)),
     quickLinks: [...asArray(data.quickLinks), ...asArray(data.links)].map(normalizeQuickLink).filter((link): link is CommonLink => Boolean(link))
   };
 }

@@ -127,8 +127,8 @@ export function DataManagementCenter({
         <button className="btn-secondary w-full" onClick={diagnose}>连接诊断</button>
       </div>
       {debugChecks.length ? (
-        <div className="max-w-full overflow-x-auto rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-xs leading-6 text-cocoa/70">
-          {debugChecks.map((check) => <p key={check.name} className="whitespace-nowrap">{check.ok ? "✓" : "×"} {check.name}{check.detail ? `：${check.detail}` : ""}</p>)}
+        <div className="max-w-full overflow-hidden rounded-[1.35rem] border border-white/70 bg-white/55 p-3 text-xs leading-6 text-cocoa/70">
+          {debugChecks.map((check) => <p key={check.name} className="break-words">{check.ok ? "✓" : "×"} {check.name}{check.detail ? `：${check.detail}` : ""}</p>)}
         </div>
       ) : null}
     </section>

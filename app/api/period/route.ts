@@ -8,6 +8,7 @@ import {
   validatePeriodRecord
 } from "@/lib/period";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
+import { upsertSetting } from "@/lib/supabase/settings";
 
 function developmentDetail(error: unknown) {
   if (process.env.NODE_ENV !== "development") return undefined;
@@ -90,15 +91,7 @@ export async function PATCH(request: NextRequest) {
     if (body.action === "settings") {
       step = "upsert_period_settings";
       const settings = normalizePeriodSettings(body.settings);
-      const { error } = await supabase
-        .from("settings")
-        .upsert({
-          space_id: space.id,
-          key: "period_settings",
-          value: settings,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "space_id,key" });
-      if (error) return fail("经期设置保存失败。", "PERIOD_SETTINGS_UPDATE_FAILED", step, 500, error);
+      await upsertSetting(supabase, space.id, "period_settings", settings);
       return NextResponse.json({ ok: true, settings });
     }
 

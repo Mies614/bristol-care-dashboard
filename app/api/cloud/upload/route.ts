@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { courseToRow, deadlineToRow, quickLinkToRow } from "@/lib/mappers";
+import { courseToRow, deadlineToRow } from "@/lib/mappers";
 import { getDefaultSpaceCode, getSpaceByCode } from "@/lib/api/cloud";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildSettingsRows, normalizeLocalData } from "@/lib/uploadNormalize";
@@ -13,7 +13,6 @@ type ApiError = {
 };
 
 function detail(error: unknown) {
-  if (process.env.NODE_ENV !== "development") return undefined;
   if (error instanceof Error) return error.message;
   if (typeof error === "object" && error && "message" in error) return String((error as { message: unknown }).message);
   return undefined;
@@ -82,13 +81,6 @@ export async function POST(request: NextRequest) {
     }
     await assertNoError(await supabase.from("settings").upsert(sanitizedSettingsRows, { onConflict: "space_id,key" }), step);
     await assertNoError(await supabase.from("couple_spaces").update({ girlfriend_name: normalized.settings.girlfriendName || "小乖" }).eq("id", space.id), step);
-
-    step = "delete_old_quick_links";
-    await assertNoError(await supabase.from("quick_links").delete().eq("space_id", space.id), step);
-    if (normalized.quickLinks.length) {
-      step = "insert_quick_links";
-      await assertNoError(await supabase.from("quick_links").insert(normalized.quickLinks.map((link) => quickLinkToRow(link, space.id))), step);
-    }
 
     return NextResponse.json({ ok: true, data: normalized });
   } catch (error) {

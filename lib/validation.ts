@@ -1,8 +1,9 @@
 import { defaultAppData } from "./sampleData";
-import { DAYS, type AppData, type CommonLink, type Course, type Deadline, type LoveNote, type PeriodRecord } from "./types";
+import { DAYS, type AppData, type CommonLink, type Course, type LoveNote, type PeriodRecord } from "./types";
 import { normalizeBackgroundSettings } from "./background";
 import { DEFAULT_PERIOD_SETTINGS, normalizePeriodSettings } from "./period";
 import { normalizeThemeSettings } from "./theme";
+import { collectDeadlineCandidates, normalizeDeadlines } from "./deadlines";
 
 const LEGACY_DEFAULT_NICKNAME = "\u5b9d\u5b9d";
 
@@ -22,17 +23,6 @@ function isCourse(value: unknown): value is Course {
     DAYS.includes(value.day as Course["day"]) &&
     isString(value.startTime) &&
     isString(value.endTime)
-  );
-}
-
-function isDeadline(value: unknown): value is Deadline {
-  if (!isRecord(value)) return false;
-  return (
-    isString(value.id) &&
-    isString(value.title) &&
-    isString(value.dueDate) &&
-    ["low", "medium", "high"].includes(String(value.priority)) &&
-    ["todo", "done"].includes(String(value.status))
   );
 }
 
@@ -77,7 +67,7 @@ export function validateAppData(value: unknown): AppData {
   }
 
   const courses = safeFilterArray(value.courses, isCourse);
-  const deadlines = safeFilterArray(value.deadlines, isDeadline);
+  const deadlines = normalizeDeadlines(collectDeadlineCandidates(value));
   const links = safeFilterArray(value.links, isCommonLink);
   const loveNotes = safeFilterArray(value.loveNotes, isLoveNote);
   const periodRecords = safeFilterArray(value.periodRecords, isPeriodRecord);

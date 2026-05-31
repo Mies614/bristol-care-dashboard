@@ -37,12 +37,13 @@ export function normalizeNavStyle(raw: string): ThemeNavStyle {
   return NAV_ALIAS[raw] ?? "glass";
 }
 
-export function getNavContainerClass(navStyle: ThemeNavStyle, _themeStyle: AppThemeStyle): string {
+export function getNavContainerClass(navStyle: ThemeNavStyle, themeStyle: AppThemeStyle): string {
   const base = "mx-auto w-full max-w-md pointer-events-auto";
+  const themeAccent = themeStyle === "night" ? " ring-1 ring-white/10" : "";
 
   switch (navStyle) {
     case "glass":
-      return `${base} rounded-[1.35rem] bg-[var(--app-nav-bg)] backdrop-blur-xl border border-[var(--app-nav-border)] shadow-[0_8px_32px_rgba(0,0,0,0.06)] px-2 py-1.5`;
+      return `${base}${themeAccent} rounded-[1.35rem] bg-[var(--app-nav-bg)] backdrop-blur-xl border border-[var(--app-nav-border)] shadow-[0_8px_32px_rgba(0,0,0,0.06)] px-2 py-1.5`;
     case "pill":
       return `${base} rounded-full bg-[var(--app-nav-bg)] backdrop-blur-lg border border-[var(--app-nav-border)] shadow-[0_4px_24px_rgba(0,0,0,0.04)] gap-1 px-3 py-1`;
     case "paper":
@@ -120,8 +121,8 @@ export function getDecorationClass(decoration: ThemeDecoration, active: boolean)
   }
 }
 
-export function getNavLabelClass(active: boolean, _navStyle: ThemeNavStyle): string {
-  const base = "text-[10px] leading-tight font-medium transition-all duration-200";
+export function getNavLabelClass(active: boolean, navStyle: ThemeNavStyle): string {
+  const base = `text-[10px] leading-tight font-medium transition-all duration-200 ${navStyle === "minimal" ? "tracking-wide" : ""}`;
   if (active) {
     return `${base} text-[var(--app-accent)] font-semibold`;
   }
