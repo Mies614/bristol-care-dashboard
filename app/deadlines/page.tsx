@@ -69,8 +69,11 @@ export default function DeadlinesPage() {
     setMessage("已生成日历文件，请在手机日历中导入。如果没有自动下载，请长按或在浏览器中打开。");
   }
 
+  // Filter out soft-deleted deadlines (deletedAt set), then sort by due date ascending
   const sorted = useMemo(
-    () => (data ? [...data.deadlines].sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b)) : []),
+    () => (data ? [...data.deadlines]
+      .filter((d) => !d.deletedAt)
+      .sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b)) : []),
     [data]
   );
   const todayDue = sorted.filter((deadline) => deadline.status !== "done" && getDaysUntilDeadline(deadline) === 0);

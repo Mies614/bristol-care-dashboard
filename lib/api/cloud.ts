@@ -34,7 +34,7 @@ export async function fetchCloudDataByCode(code: string) {
   const supabase = createSupabaseServerClient();
   const [courses, deadlines, settings, loveNotes] = await Promise.all([
     supabase.from("courses").select("*").eq("space_id", space.id).order("day").order("start_time"),
-    supabase.from("deadlines").select("*").eq("space_id", space.id).order("due_date"),
+    supabase.from("deadlines").select("*").eq("space_id", space.id).is("deleted_at", null).order("due_date"),
     supabase.from("settings").select("key,value").eq("space_id", space.id),
     supabase
       .from("love_notes")
