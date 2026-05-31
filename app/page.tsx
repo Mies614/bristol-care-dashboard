@@ -4,28 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
-import { CourseCard } from "@/components/CourseCard";
-import { DeadlineCard } from "@/components/DeadlineCard";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { OnboardingCard } from "@/components/OnboardingCard";
-import { OutfitCard } from "@/components/OutfitCard";
-import { WeatherCard, useWeather } from "@/components/WeatherCard";
-import { formatCountdown, getDaysUntilDeadline } from "@/lib/date";
-import { getCurrentDayName, getNextCourse, hasEveningClass } from "@/lib/schedule";
+import { useWeather } from "@/components/WeatherCard";
+import { formatCountdown } from "@/lib/date";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
-import { getOutfitSuggestion } from "@/lib/outfit";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
-import { calculateNextPeriodStart, DEFAULT_PERIOD_SETTINGS, getDaysUntilNextPeriod } from "@/lib/period";
+import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { PriorityReminderList } from "@/components/PriorityReminderList";
-import { getDailyCare } from "@/lib/dailyCare";
-import { DailyCareCard } from "@/components/DailyCareCard";
 import { DualTimeCard } from "@/components/DualTimeCard";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
+import { TodaySummaryCard, buildTodaySummary } from "@/components/TodaySummaryCard";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 
 function safeBristolDate() {
@@ -55,7 +49,7 @@ export default function HomePage() {
   const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
   const [periodRecords, setPeriodRecords] = useState<PeriodRecord[]>([]);
   const [periodSettings, setPeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
-  const { weather, error } = useWeather();
+  useWeather();
 
   useEffect(() => {
     const emergencyReset = () => {
@@ -131,17 +125,7 @@ export default function HomePage() {
     }
   }, []);
 
-  const nextCourse = useMemo(() => getNextCourse(data.courses), [data]);
-  const nearestDeadlines = useMemo(
-    () =>
-      data.deadlines
-            .filter((deadline) => deadline.status === "todo")
-            .sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b))
-            .slice(0, 5),
-    [data]
-  );
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
-  const todayCourses = useMemo(() => data.courses.filter((course) => course.day === getCurrentDayName()), [data.courses]);
   const priorityReminders = useMemo(() => getTodayPriorityReminders({
     courses: data.courses,
     deadlines: data.deadlines,
@@ -153,8 +137,6 @@ export default function HomePage() {
     return (favorites.length ? favorites : albumItems).slice(0, 3);
   }, [albumItems]);
   const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
-  const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
-  const daysUntilPeriod = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const todayLabel = useMemo(safeBristolDate, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
 
@@ -182,35 +164,37 @@ export default function HomePage() {
       setSyncMessage(result.error || "刷新失败，已保留本地小纸条。");
     }
   }
-  const outfit = useMemo(
-    () =>
-      weather
-        ? getOutfitSuggestion({
-            temperature: weather.temperature,
-            apparentTemperature: weather.apparentTemperature,
-            rainProbability: weather.rainProbability,
-            windSpeed: weather.windSpeed,
-            weatherCode: weather.weatherCode,
-            hasEveningClass: hasEveningClass(data.courses)
-          })
-        : undefined,
-    [weather, data]
-  );
-  const dailyCare = useMemo(() => getDailyCare({
-    weather,
-    outfit,
-    todayCourses,
-    deadlines: nearestDeadlines,
+  const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
+  const todaySummary = useMemo(() => buildTodaySummary({
+    courses: data.courses,
+    deadlines: data.deadlines,
     periodRecords,
     periodSettings,
+    unreadMissYouCount,
     featuredNote: featuredLoveNote,
     randomMemory
-  }), [weather, outfit, todayCourses, nearestDeadlines, periodRecords, periodSettings, featuredLoveNote, randomMemory]);
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
+
+  // Fetch miss-you unread count independently (non-blocking)
+  useEffect(() => {
+    const localDate = new Date().toISOString().slice(0, 10);
+    fetch(`/api/miss-you?code=${encodeURIComponent(getDefaultSpaceCode())}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`)
+      .then((res) => res.json())
+      .then((payload) => {
+        if (payload.ok && typeof payload.unreadFromOtherCount === "number") {
+          setUnreadMissYouCount(payload.unreadFromOtherCount);
+        }
+      })
+      .catch(() => {
+        // Non-blocking
+      });
+  }, []);
 
   const reduceMotion = useAccessibleMotion();
 
   return (
     <AppShell>
+      {/* ── Hero ── */}
       <motion.header
         className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 p-5 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
         variants={safeVariants(fadeInScale, reduceMotion)}
@@ -247,10 +231,10 @@ export default function HomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
-        {/* 1. Daily Care - 今日关怀摘要，最重要的信息区块 */}
-        <DailyCareCard care={dailyCare} />
+        {/* 1. TodaySummaryCard - 智能今日摘要 */}
+        <TodaySummaryCard summary={todaySummary} />
 
-        {/* 2. Priority - 今日重点提醒，时间敏感事项 */}
+        {/* 2. Priority - 今日重点提醒 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -262,79 +246,24 @@ export default function HomePage() {
           <PriorityReminderList reminders={priorityReminders} limit={3} />
         </section>
 
-        {/* 3. Schedule - 今日课程 */}
-        <section className="soft-card">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="section-kicker mb-1">Schedule</p>
-              <h2 className="font-semibold text-cocoa">今日课程</h2>
-            </div>
-            <Link className="text-sm text-sage" href="/records">查看全部</Link>
-          </div>
-          {nextCourse ? (
-            <CourseCard course={nextCourse} compact />
-          ) : (
-            <p className="empty-state text-left">今天后面没有课程，可以慢慢安排自己的节奏。</p>
-          )}
-        </section>
+        {/* 3. Countdown - 下次见面 */}
+        <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
+          <p className="section-kicker mb-1">Countdown</p>
+          <h2 className="font-semibold text-cocoa">下次见面</h2>
+          <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
+        </div>
 
-        {/* 4. Deadlines - 紧急截止日期 */}
-        <section className="soft-card">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="section-kicker mb-1">Deadlines</p>
-              <h2 className="font-semibold text-cocoa">最近 Deadline</h2>
-            </div>
-            <Link className="text-sm text-sage" href="/records">查看全部</Link>
-          </div>
-          {nearestDeadlines.length ? (
-            <div className="space-y-2">
-              {nearestDeadlines.slice(0, 3).map((deadline) => (
-                <DeadlineCard deadline={deadline} key={deadline.id} />
-              ))}
-            </div>
-          ) : null}
-          {!nearestDeadlines.length ? <p className="empty-state text-left">最近没有未完成的 deadline。</p> : null}
-        </section>
+        {/* 4. Love Note - 小纸条 */}
+        <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+        <div className="grid grid-cols-2 gap-2">
+          <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
+          <Link className="btn-secondary text-center" href="/notes">写一张</Link>
+        </div>
 
-        {/* 5. Cycle - 经期提醒，身体状态 */}
-        <section className="soft-card bg-gradient-to-br from-white/78 to-lilac/35">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-kicker mb-1">Cycle</p>
-              <h2 className="font-semibold text-cocoa">经期提醒</h2>
-              <p className="mt-2 text-sm leading-6 text-cocoa/70">
-                {nextPeriodStart
-                  ? `预计 ${nextPeriodStart} 开始${daysUntilPeriod === null ? "" : daysUntilPeriod >= 0 ? `，还有 ${daysUntilPeriod} 天。` : `，已过 ${Math.abs(daysUntilPeriod)} 天。`}`
-                  : "还没有记录，可以去补一条。"}
-              </p>
-            </div>
-            <Link className="btn-secondary btn-small shrink-0" href="/period">记录</Link>
-          </div>
-        </section>
+        {/* 5. Miss You - 想你按钮，情感连接在纸条之后更自然 */}
+        <MissYouButton />
 
-        {/* 6. Weather & Outfit - 天气及穿搭，环境信息 */}
-        <section className="space-y-3.5">
-          <WeatherCard weather={weather} error={error} />
-          {outfit ? <OutfitCard suggestion={outfit} /> : null}
-        </section>
-
-        {/* 7. Love - 下次见面、Miss You、小纸条，情感中心 */}
-        <section className="space-y-3.5">
-          <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
-            <p className="section-kicker mb-1">Countdown</p>
-            <h2 className="font-semibold text-cocoa">下次见面</h2>
-            <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
-          </div>
-          <MissYouButton />
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
-          <div className="grid grid-cols-2 gap-2">
-            <Link className="btn-primary text-center" href="/notes">查看小纸条墙</Link>
-            <Link className="btn-secondary text-center" href="/notes">写一张</Link>
-          </div>
-        </section>
-
-        {/* 8. Memories - 最近回忆，低优先级 */}
+        {/* 6. Memories - 最近回忆，移动端改为2列 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -344,7 +273,7 @@ export default function HomePage() {
             <Link className="text-sm text-sage" href="/albums">相册</Link>
           </div>
           {recentMemories.length ? (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {recentMemories.map((item) => (
                 <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
                   {item.imageUrl ? (
@@ -360,7 +289,7 @@ export default function HomePage() {
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
 
-        {/* 9. Onboarding - 引导卡，末位 */}
+        {/* 7. Onboarding - 引导卡，末位 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>

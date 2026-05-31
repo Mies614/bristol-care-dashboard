@@ -148,7 +148,27 @@ export default function SettingsPage() {
       <PageHeader title="设置" subtitle="这里管理外观、背景、云同步和数据。" />
 
       <div className="flex w-full min-w-0 flex-col gap-4">
-        {/* ──────────────────── 1. Appearance / Theme ──────────────────── */}
+        {/* ──────────────────── 1. Profile - 日常最常用 ──────────────────── */}
+        <SettingsSection title="常用设置" subtitle="昵称、见面日期和备注">
+          <label className="block text-sm text-[var(--app-muted)]">
+            昵称
+            <Input className="mt-1" value={data.nickname || "小乖"} onChange={(e) => update({ ...data, nickname: e.target.value || "小乖" })} />
+          </label>
+          <label className="block text-sm text-[var(--app-muted)]">
+            下次见面日期
+            <Input className="mt-1" type="date" value={data.nextMeetDate} onChange={(e) => update({ ...data, nextMeetDate: e.target.value })} />
+          </label>
+          <label className="block text-sm text-[var(--app-muted)]">
+            学期结束日期
+            <Input className="mt-1" type="date" value={data.semesterEndDate || ""} onChange={(e) => update({ ...data, semesterEndDate: e.target.value })} />
+          </label>
+          <label className="block text-sm text-[var(--app-muted)]">
+            本地小纸条 fallback
+            <Textarea className="mt-1 min-h-28" value={data.note} onChange={(e) => update({ ...data, note: e.target.value })} />
+          </label>
+        </SettingsSection>
+
+        {/* ──────────────────── 2. Appearance / Theme ──────────────────── */}
         <SettingsSection title="外观风格" subtitle="主题和卡片样式">
           <div className="mt-2"><AutoSyncStatusBadge /></div>
           <ThemeStylePicker
@@ -206,7 +226,7 @@ export default function SettingsPage() {
           <AppButton variant="secondary" className="w-full" onClick={() => updateTheme(DEFAULT_THEME_SETTINGS)}>恢复默认风格</AppButton>
         </SettingsSection>
 
-        {/* ──────────────────── 2. Background ──────────────────── */}
+        {/* ──────────────────── 3. Background ──────────────────── */}
         <SettingsSection title="背景" subtitle="上传背景图后会同步到云端">
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--app-muted)]">预设背景</p>
@@ -464,27 +484,6 @@ export default function SettingsPage() {
           <AppButton variant="secondary" className="w-full" onClick={() => { setColorDraft("#fff8f0"); setImageUrlDraft(""); updateBackground(DEFAULT_BACKGROUND_SETTINGS); }}>
             恢复默认背景
           </AppButton>
-        </SettingsSection>
-
-        {/* ──────────────────── 3. Profile ──────────────────── */}
-        <SettingsSection title="常用设置" subtitle="昵称、见面日期和备注">
-          <div className="mt-2"><AutoSyncStatusBadge /></div>
-          <label className="block text-sm text-[var(--app-muted)]">
-            昵称
-            <Input className="mt-1" value={data.nickname || "小乖"} onChange={(e) => update({ ...data, nickname: e.target.value || "小乖" })} />
-          </label>
-          <label className="block text-sm text-[var(--app-muted)]">
-            下次见面日期
-            <Input className="mt-1" type="date" value={data.nextMeetDate} onChange={(e) => update({ ...data, nextMeetDate: e.target.value })} />
-          </label>
-          <label className="block text-sm text-[var(--app-muted)]">
-            学期结束日期
-            <Input className="mt-1" type="date" value={data.semesterEndDate || ""} onChange={(e) => update({ ...data, semesterEndDate: e.target.value })} />
-          </label>
-          <label className="block text-sm text-[var(--app-muted)]">
-            本地小纸条 fallback
-            <Textarea className="mt-1 min-h-28" value={data.note} onChange={(e) => update({ ...data, note: e.target.value })} />
-          </label>
         </SettingsSection>
 
         {/* ──────────────────── 4. Cloud Sync ──────────────────── */}

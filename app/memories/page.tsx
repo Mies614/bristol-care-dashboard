@@ -107,7 +107,7 @@ export default function MemoriesPage() {
               <Link className="btn-secondary btn-small" href="/albums">进入</Link>
             </div>
             {albumSummary.length ? (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {albumSummary.map((item) => (
                   <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
                     {item.imageUrl ? (
@@ -166,18 +166,18 @@ export default function MemoriesPage() {
                 {timelineGroups.map((group) => (
                   <div key={group.month}>
                     <p className="mb-2 text-sm font-semibold text-cocoa/70">{group.month}</p>
-                    <div className="space-y-2 border-l border-roseSoft/45 pl-3">
-                      {group.items.slice(0, 5).map((item) => (
-                        <Link className="block rounded-[1.2rem] border border-white/70 bg-white/58 p-3 shadow-sm" href={item.href} key={item.id}>
-                          <div className="flex gap-3">
-                            {item.imageUrl ? <img className="h-14 w-14 shrink-0 rounded-2xl object-cover" src={item.imageUrl} alt={item.title} /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blush/65 text-xs text-cocoa/65">{item.type}</div>}
-                            <div className="min-w-0">
-                              <p className="font-medium text-cocoa">{item.title}</p>
-                              <p className="mt-1 text-xs text-cocoa/50">{new Date(item.date).toLocaleDateString("zh-CN")}</p>
-                              {item.content ? <p className="mt-1 line-clamp-2 text-sm leading-5 text-cocoa/65">{item.content}</p> : null}
-                            </div>
-                          </div>
-                        </Link>
+                <div className="space-y-2 border-l-2 border-roseSoft/35 pl-3 sm:pl-4">
+                  {group.items.slice(0, 5).map((item) => (
+                    <Link className="block rounded-[1.2rem] border border-white/70 bg-white/58 p-2.5 sm:p-3 shadow-sm" href={item.href} key={item.id}>
+                      <div className="flex gap-2 sm:gap-3">
+                        {item.imageUrl ? <img className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-2xl object-cover" src={item.imageUrl} alt={item.title} /> : <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-blush/65 text-xs text-cocoa/65">{item.type}</div>}
+                        <div className="min-w-0">
+                          <p className="text-sm sm:text-base font-medium text-cocoa">{item.title}</p>
+                          <p className="mt-0.5 text-xs text-cocoa/50">{new Date(item.date).toLocaleDateString("zh-CN")}</p>
+                          {item.content ? <p className="mt-1 line-clamp-2 text-xs sm:text-sm leading-5 text-cocoa/65">{item.content}</p> : null}
+                        </div>
+                      </div>
+                    </Link>
                       ))}
                     </div>
                   </div>

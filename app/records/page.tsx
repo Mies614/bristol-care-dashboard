@@ -72,28 +72,6 @@ export default function RecordsPage() {
   const periodDays = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
 
-  function exportCourseCalendar() {
-    if (!data) return;
-    const courses = data.courses.filter(isCourseCalendarExportable);
-    if (!courses.length) return setMessage("没有可导出的课程提醒。");
-    downloadIcs("bristol-weekly-courses.ics", createAllCoursesIcs(courses, { semesterEndDate: data.semesterEndDate }));
-    setMessage("已生成课程日历文件。");
-  }
-
-  function exportDeadlineCalendar() {
-    if (!data) return;
-    const deadlines = data.deadlines.filter((deadline) => deadline.status !== "done" && isDeadlineCalendarExportable(deadline));
-    if (!deadlines.length) return setMessage("没有可导出的 DDL 提醒。");
-    downloadIcs("bristol-deadlines.ics", createAllDeadlinesIcs(deadlines));
-    setMessage("已生成 DDL 日历文件。");
-  }
-
-  function exportPeriodCalendar() {
-    if (!nextPeriodStart) return setMessage("需要先添加经期记录，才能生成提醒。");
-    downloadIcs("bristol-period-reminder.ics", createPeriodReminderIcs(nextPeriodStart, periodSettings));
-    setMessage("已生成经期提醒日历文件。");
-  }
-
   function exportAllCalendar() {
     if (!data) return;
     const courses = data.courses.filter(isCourseCalendarExportable);
