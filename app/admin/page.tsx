@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,7 +14,6 @@ import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { AppCard } from "@/components/ui/AppCard";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem } from "@/lib/design/motion";
-import { motion } from "framer-motion";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AppData | null>(null);
@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
   const [missYouCounts, setMissYouCounts] = useState({ xiaoguai: 0, admin: 0 });
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [pushStatus, setPushStatus] = useState<Record<string, unknown> | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
     const space = getDefaultSpaceCode();
@@ -116,13 +117,13 @@ export default function AdminDashboardPage() {
             </button>
             {(missYouCounts.admin > 0 || missYouCounts.xiaoguai > 0) && (
               <p className="mt-2 text-xs text-cocoa/40">
-                小乖按了 {missYouCounts.xiaoguai} 次 | 我按了 {missYouCounts.admin} 次
+                小乖按了 {missYouCounts.xiaoguai} 次 · 我按了 {missYouCounts.admin} 次
               </p>
             )}
           </div>
         </motion.div>
 
-        {/* ── 2. 今日照顾摘要 —— 今天的核心信息 ── */}
+        {/* ── 2. 今日状态总览 —— 她的核心信息 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AdminOverviewCard
             careData={data}
@@ -134,7 +135,7 @@ export default function AdminDashboardPage() {
           />
         </motion.div>
 
-        {/* ── 3. 今日课程摘要（非今日不展示） ── */}
+        {/* ── 3. 她的课程摘要 ── */}
         {todayCourses.length > 0 && (
           <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
             <AppCard>
@@ -157,13 +158,13 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* ── 4. DDL 摘要 —— 只展示数量，详情去 DDL 页 ── */}
+        {/* ── 4. 她的 DDL 摘要 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AppCard>
             <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="section-kicker mb-1">📋 她的 DDL</p>
-                <h2 className="font-semibold text-cocoa">{incompleteCount > 0 ? `${incompleteCount} 个未完成` : "全部完成"}</h2>
+                <h2 className="font-semibold text-cocoa">{incompleteCount > 0 ? `${incompleteCount} 个未完成` : "全部完成 ✅"}</h2>
               </div>
               <Link className="text-xs font-medium text-sage hover:underline" href="/deadlines">管理 →</Link>
             </div>
@@ -178,6 +179,9 @@ export default function AdminDashboardPage() {
                 </div>
               );
             })}
+            {incompleteCount === 0 && (
+              <p className="text-sm text-cocoa/40">最近没有未完成 DDL，真棒。</p>
+            )}
           </AppCard>
         </motion.div>
 
@@ -200,7 +204,7 @@ export default function AdminDashboardPage() {
           </AppCard>
         </motion.div>
 
-        {/* ── 6. 最近小纸条 —— 仅展示置顶或最新 ── */}
+        {/* ── 6. 最近小纸条 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AppCard>
             <div className="flex items-center justify-between mb-2">
@@ -242,43 +246,51 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* ── 8. 系统诊断摘要 —— 简洁状态，详细诊断去 /debug ── */}
+        {/* ── 8. 系统诊断 —— 折叠到后面 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AppCard>
-            <div className="flex items-center justify-between mb-2">
-              <div>
+            <button
+              className="flex w-full items-center justify-between mb-2"
+              onClick={() => setShowDiagnostics((v) => !v)}
+            >
+              <div className="text-left">
                 <p className="section-kicker mb-1">🔧 系统状态</p>
-                <h2 className="font-semibold text-cocoa">诊断摘要</h2>
+                <h2 className="font-semibold text-cocoa">
+                  {pushStatus ? "推送正常" : "推送状态加载中"}
+                </h2>
               </div>
-              <Link className="text-xs font-medium text-sage hover:underline" href="/debug">
-                完整诊断 →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-cocoa/60">
-              <div className="rounded-xl bg-white/55 px-3 py-2">
-                <span className="text-cocoa/40">Supabase</span>
-                <span className="ml-1.5 text-emerald font-medium">ok</span>
+              <span className="text-xs text-cocoa/40">{showDiagnostics ? "收起 ↑" : "展开 ↓"}</span>
+            </button>
+
+            {showDiagnostics && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs text-cocoa/60">
+                  <div className="rounded-xl bg-white/55 px-3 py-2">
+                    <span className="text-cocoa/40">Supabase</span>
+                    <span className="ml-1.5 text-emerald font-medium">ok</span>
+                  </div>
+                  <div className="rounded-xl bg-white/55 px-3 py-2">
+                    <span className="text-cocoa/40">Cloud Sync</span>
+                    <span className="ml-1.5 text-emerald font-medium">ok</span>
+                  </div>
+                  <div className="rounded-xl bg-white/55 px-3 py-2">
+                    <span className="text-cocoa/40">Push</span>
+                    {pushStatus ? (
+                      <span className="ml-1.5 text-emerald font-medium">ok</span>
+                    ) : (
+                      <span className="ml-1.5 text-cocoa/40">--</span>
+                    )}
+                  </div>
+                  <div className="rounded-xl bg-white/55 px-3 py-2">
+                    <span className="text-cocoa/40">最近错误</span>
+                    <span className="ml-1.5 text-cocoa/40">无</span>
+                  </div>
+                </div>
+                <Link className="inline-block text-xs text-sage/70 hover:underline" href="/debug">
+                  查看详细诊断报告 →
+                </Link>
               </div>
-              <div className="rounded-xl bg-white/55 px-3 py-2">
-                <span className="text-cocoa/40">Cloud Sync</span>
-                <span className="ml-1.5 text-emerald font-medium">ok</span>
-              </div>
-              <div className="rounded-xl bg-white/55 px-3 py-2">
-                <span className="text-cocoa/40">Push</span>
-                {pushStatus ? (
-                  <span className="ml-1.5 text-emerald font-medium">ok</span>
-                ) : (
-                  <span className="ml-1.5 text-cocoa/40">--</span>
-                )}
-              </div>
-              <div className="rounded-xl bg-white/55 px-3 py-2">
-                <span className="text-cocoa/40">最近错误</span>
-                <span className="ml-1.5 text-cocoa/40">无</span>
-              </div>
-            </div>
-            <Link className="mt-3 inline-block text-xs text-sage/70 hover:underline" href="/debug">
-              查看详细诊断报告 →
-            </Link>
+            )}
           </AppCard>
         </motion.div>
       </motion.div>

@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
-import { formatCountdown } from "@/lib/date";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
@@ -23,26 +22,14 @@ import type { NextImportantResult } from "@/components/NextImportantCard";
 import { getCurrentDayName } from "@/lib/schedule";
 import { getDaysUntilNextPeriod } from "@/lib/period";
 import { getDaysUntil } from "@/lib/ddlPriority";
-import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
+import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
 
-function safeBristolDate() {
+function safeTodayLabel() {
   try {
-    return new Date().toLocaleDateString("zh-CN", { timeZone: "Europe/London", month: "long", day: "numeric", weekday: "long" });
+    return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
   } catch {
     return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
   }
-}
-
-function safeBristolStatus() {
-  try {
-    const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hour12: false }).format(new Date()));
-    if (hour < 6) return "Bristol 还在安静的夜里";
-    if (hour < 12) return "Bristol 的早晨开始啦";
-    if (hour < 18) return "Bristol 午后适合慢慢推进";
-  } catch {
-    return "Bristol 的一天正在慢慢展开";
-  }
-  return "Bristol 晚上记得早点休息";
 }
 
 export default function HomePage() {
@@ -134,8 +121,7 @@ export default function HomePage() {
     return (favorites.length ? favorites : albumItems).slice(0, 4);
   }, [albumItems]);
   const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
-  const todayLabel = useMemo(safeBristolDate, []);
-  const bristolStatus = useMemo(safeBristolStatus, []);
+  const todayLabel = useMemo(safeTodayLabel, []);
   const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
   const now = useMemo(() => new Date(), []);
 
@@ -204,7 +190,6 @@ export default function HomePage() {
     const items: CareStripItem[] = [];
     const todayDay = getCurrentDayName(now);
 
-    // 今日课程
     const todaysCourses = data.courses
       .filter((c) => c.day === todayDay)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -216,7 +201,6 @@ export default function HomePage() {
       href: "/schedule"
     });
 
-    // 最近 DDL
     const allExcludedIds = new Set(excludedDdlIds);
     if (nextImportant.selectedDdlId) allExcludedIds.add(nextImportant.selectedDdlId);
 
@@ -244,7 +228,6 @@ export default function HomePage() {
       });
     }
 
-    // 经期状态
     const daysUntil = getDaysUntilNextPeriod(periodRecords, periodSettings, now);
     if (daysUntil !== null) {
       if (daysUntil === 0) {
@@ -260,7 +243,6 @@ export default function HomePage() {
       items.push({ id: "period-no-data", icon: "🌿", label: "经期", value: "—", href: "/period" });
     }
 
-    // 未读想念
     items.push({
       id: "miss-you-status",
       icon: "💕",
@@ -292,32 +274,26 @@ export default function HomePage() {
     <AppShell>
       {/* ── Hero ── */}
       <motion.header
-        className="mb-4 overflow-hidden rounded-[2.15rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 px-4 py-4 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
+        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 px-4 py-4 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
         variants={safeVariants(fadeInScale, reduceMotion)}
         initial="hidden"
         animate="visible"
         transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="section-kicker">今日照顾 · Bristol Care</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="section-kicker">今日照顾</p>
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
               小乖，今天也好
             </h1>
           </div>
           <div className="shrink-0 rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-1.5 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
             <div>{todayLabel}</div>
-            <div className="font-semibold text-cocoa">今日照顾</div>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">今天也慢慢来</span>
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">
-            下次见面：{formatCountdown(data.nextMeetDate)}
-          </span>
-        </div>
-        <p className="mt-3 text-sm leading-5 text-cocoa/65">打开就能看今天该关心什么，不急不赶。</p>
+        <p className="mt-2.5 text-sm leading-5 text-cocoa/65">
+          打开就能看今天该关心什么，不急不赶。
+        </p>
       </motion.header>
 
       <motion.div
@@ -329,53 +305,65 @@ export default function HomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
-        {/* 0. 本地天气 + 两地时间 */}
+        {/* 1. 今日最重要事项 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <TodaySummaryCard summary={todaySummary} />
+        </motion.div>
+
+        {/* 2. 下一件重要事项（不重复 TodaySummaryCard 内容） */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <NextImportantCard next={nextImportant} />
+        </motion.div>
+
+        {/* 3. 想你按钮 + 未读想念 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <MissYouButton />
+        </motion.div>
+
+        {/* 4. 天气 & 时间 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <WeatherCareCard state={weatherState} />
         </motion.div>
 
-        {/* 1. 今日最重要事项 - TodaySummaryCard */}
-        <TodaySummaryCard summary={todaySummary} />
+        {/* 5. 今日照顾数字行（课程 / DDL / 经期 / 想念） */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <TodayCareStrip items={careStrip} />
+        </motion.div>
 
-        {/* 1b. 下一件重要事项 - NextImportantCard（不重复展示 TodaySummaryCard 已覆盖的内容） */}
-        <NextImportantCard next={nextImportant} />
+        {/* 6. 置顶小纸条 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+        </motion.div>
 
-        {/* 2. 想你按钮 / 未读想念 */}
-        <MissYouButton />
-
-        {/* 3. 今日照顾数字行（课程 / DDL / 经期 / 想念） */}
-        <TodayCareStrip items={careStrip} />
-
-        {/* 4. 置顶小纸条 */}
-        <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
-
-        {/* 5. 最近回忆 */}
-        <section className="soft-card">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="section-kicker mb-1">Memories</p>
-              <h2 className="font-semibold text-cocoa">最近回忆</h2>
+        {/* 7. 最近回忆 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <section className="soft-card">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="section-kicker mb-1">Memories</p>
+                <h2 className="font-semibold text-cocoa">最近回忆</h2>
+              </div>
+              <Link className="text-sm text-sage" href="/albums">相册</Link>
             </div>
-            <Link className="text-sm text-sage" href="/albums">相册</Link>
-          </div>
-          {recentMemories.length ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {recentMemories.map((item) => (
-                <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
-                  {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" />
-                  ) : (
-                    <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>
-                  )}
-                  {item.isFavorite ? <span className="absolute right-1 top-1 rounded-full bg-white/75 px-1.5 text-xs">♡</span> : null}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>
-          )}
-        </section>
+            {recentMemories.length ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {recentMemories.map((item) => (
+                  <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>
+                    )}
+                    {item.isFavorite ? <span className="absolute right-1 top-1 rounded-full bg-white/75 px-1.5 text-xs">♡</span> : null}
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>
+            )}
+          </section>
+        </motion.div>
       </motion.div>
     </AppShell>
   );
