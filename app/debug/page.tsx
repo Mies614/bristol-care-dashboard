@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 
-type Check = { name: string; ok: boolean; detail?: string };
+type Check = { name: string; ok: boolean; detail?: string; optional?: boolean };
 
 interface FetchError {
   status?: number;
@@ -162,12 +162,38 @@ export default function DebugPage() {
 
           {!loading && !fetchError && checks !== null && checks.length > 0 && (
             <div className="space-y-2">
-              {checks.map((check) => (
-                <p className={check.ok ? "text-emerald-700" : "text-rose-700"} key={check.name}>
-                  {check.ok ? "✓" : "×"} {check.name}
-                  {check.detail ? <span className="text-[var(--app-muted)]">：{check.detail}</span> : null}
-                </p>
-              ))}
+              {(() => {
+                const passed = checks.filter((c) => c.ok);
+                const failed = checks.filter((c) => !c.ok && !c.optional);
+                const optionalChecks = checks.filter((c) => !c.ok && c.optional);
+                const displayOrder = [...checks.filter((c) => c.ok || !c.optional), ...optionalChecks];
+                return (
+                  <>
+                    {passed.length + failed.length + optionalChecks.length > 0 && (
+                      <p className="mb-2 text-xs text-[var(--app-muted)]">
+                        ✓ {passed.length} passed{optionalChecks.length > 0 ? ` · ⚠ ${optionalChecks.length} optional` : ""}{failed.length > 0 ? ` · ✗ ${failed.length} failed` : ""}
+                      </p>
+                    )}
+                    {displayOrder.map((check) => {
+                      if (check.optional && !check.ok) {
+                        return (
+                          <p className="text-stone-500" key={check.name}>
+                            ⚠ {check.name}
+                            {check.detail ? <span className="text-[var(--app-muted)]">：{check.detail}</span> : null}
+                            <span className="ml-1 text-[10px] text-stone-400">(optional)</span>
+                          </p>
+                        );
+                      }
+                      return (
+                        <p className={check.ok ? "text-emerald-700" : "text-rose-700"} key={check.name}>
+                          {check.ok ? "✓" : "×"} {check.name}
+                          {check.detail ? <span className="text-[var(--app-muted)]">：{check.detail}</span> : null}
+                        </p>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
