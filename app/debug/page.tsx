@@ -46,6 +46,7 @@ function getLevelStyle(level: CheckLevel): string {
 
 export default function DebugPage() {
   const [client, setClient] = useState({ userAgent: "", storage: false, keyCount: 0, env: process.env.NODE_ENV || "unknown" });
+  const [clientReady, setClientReady] = useState(false);
   const [checks, setChecks] = useState<Check[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<FetchError | null>(null);
@@ -66,6 +67,7 @@ export default function DebugPage() {
     } catch {
       setClient({ userAgent: navigator.userAgent, storage: false, keyCount: 0, env: process.env.NODE_ENV || "unknown" });
     }
+    setClientReady(true);
   }
 
   async function refresh() {
@@ -185,7 +187,7 @@ export default function DebugPage() {
   return (
     <AppShell>
       <AppCard className="bg-gradient-to-br from-white/88 via-blush/55 to-skySoft/60 p-5">
-        <p className="section-kicker mb-1">Debug</p>
+        <p className="section-kicker mb-1">诊断</p>
         <h1 className="text-2xl font-semibold text-cocoa">Bristol Care 诊断</h1>
         <p className="mt-2 text-sm leading-6 text-cocoa/60">
           检查 Supabase 连接、localStorage 状态和各项服务。
@@ -204,7 +206,7 @@ export default function DebugPage() {
           <div className="grid gap-2 text-sm text-cocoa/70">
             <p><span className="font-medium text-cocoa/50">环境：</span>{client.env}</p>
             <p className="break-all"><span className="font-medium text-cocoa/50">UA：</span>{client.userAgent || "加载中…"}</p>
-            <p><span className="font-medium text-cocoa/50">localStorage：</span>{client.storage ? `可用 (${client.keyCount} 个键)` : "不可用"}</p>
+            <p><span className="font-medium text-cocoa/50">localStorage：</span>{clientReady ? (client.storage ? `可用 (${client.keyCount} 个键)` : "不可用") : "等待浏览器检测…"}</p>
           </div>
         </AppCard>
 

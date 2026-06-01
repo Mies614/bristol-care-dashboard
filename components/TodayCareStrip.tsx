@@ -31,7 +31,7 @@ export function TodayCareStrip({ items }: TodayCareStripProps) {
 
   return (
     <section className="soft-card">
-      <p className="section-kicker mb-1">Today Care</p>
+      <p className="section-kicker mb-1">今日照顾</p>
       <h2 className="font-semibold text-cocoa mb-3">今日照顾</h2>
       <div className="flex justify-around gap-1">
         {items.slice(0, 4).map((item) => (

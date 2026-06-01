@@ -101,7 +101,7 @@ export default function SchedulePage() {
         animate="visible"
         transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
       >
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Schedule</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">课程表</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">一周课程表</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把 Bristol 的课程、地点和小提醒放在一个地方。</p>
       </motion.header>
@@ -115,7 +115,7 @@ export default function SchedulePage() {
 
       {/* Today summary */}
       <AppCard className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Today</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">今日课程</p>
         <h2 className="font-semibold text-[var(--app-text)]">今日课程</h2>
         <p className="mt-2 text-sm text-[var(--app-muted)]">今天 {todayCourses.length} 门课{nextCourse ? `，下一节是 ${nextCourse.name} ${nextCourse.startTime}` : "。"}</p>
       </AppCard>
@@ -124,7 +124,7 @@ export default function SchedulePage() {
       <form className="mb-4 space-y-3" onSubmit={submit}>
         <AppCard className="space-y-3 bg-gradient-to-br from-white/85 to-blush/45">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Course</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">课程</p>
             <h2 className="font-semibold text-[var(--app-text)]">{editingId ? "编辑课程" : "添加课程"}</h2>
           </div>
           <Input placeholder="课程名称" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
@@ -154,7 +154,7 @@ export default function SchedulePage() {
 
       {/* Tools */}
       <AppCard className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Tools</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">工具</p>
         <h2 className="mb-3 font-semibold text-[var(--app-text)]">课程表工具</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <AppButton variant="secondary" className="w-full" onClick={() => persist(sampleCourses)}>导入示例</AppButton>

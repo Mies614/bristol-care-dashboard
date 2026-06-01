@@ -71,7 +71,7 @@ export default function MemoriesPage() {
     <SharedAccessGate>
       <AppShell>
         <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-skySoft/60 p-5 shadow-float backdrop-blur-xl">
-          <p className="section-kicker mb-1">Memories</p>
+          <p className="section-kicker mb-1">回忆</p>
           <h1 className="text-2xl font-semibold text-cocoa">回忆中心</h1>
           <p className="mt-2 text-sm leading-6 text-cocoa/65">翻一翻以前说过的话、放进去的照片，就知道我们已经走了多远。</p>
         </header>
@@ -178,7 +178,7 @@ export default function MemoriesPage() {
 
           <section className="soft-card">
             <div className="mb-3">
-              <p className="section-kicker mb-1">Timeline</p>
+              <p className="section-kicker mb-1">时间线</p>
               <h2 className="font-semibold text-cocoa">关系时间线</h2>
             </div>
             {timelineGroups.length ? (
