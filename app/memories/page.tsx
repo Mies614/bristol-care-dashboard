@@ -73,7 +73,7 @@ export default function MemoriesPage() {
         <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-skySoft/60 p-5 shadow-float backdrop-blur-xl">
           <p className="section-kicker mb-1">Memories</p>
           <h1 className="text-2xl font-semibold text-cocoa">回忆中心</h1>
-          <p className="mt-2 text-sm leading-6 text-cocoa/65">把喜欢的瞬间和想说的话慢慢收起来。</p>
+          <p className="mt-2 text-sm leading-6 text-cocoa/65">翻一翻以前说过的话、放进去的照片，就知道我们已经走了多远。</p>
         </header>
 
         <div className="space-y-4">
@@ -83,8 +83,8 @@ export default function MemoriesPage() {
           <section className="soft-card bg-gradient-to-br from-white/88 via-blush/38 to-lilac/45">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="section-kicker mb-1">✨ Random</p>
-                <h2 className="font-semibold text-cocoa">随机看一张回忆</h2>
+                <p className="section-kicker mb-1">✨ 翻一张回忆</p>
+                <h2 className="font-semibold text-cocoa">随机看一张</h2>
               </div>
               <button
                 className={`btn-secondary btn-small transition ${randomBusy ? "opacity-60" : ""}`}
@@ -92,7 +92,7 @@ export default function MemoriesPage() {
                 onClick={refreshRandomMemory}
                 type="button"
               >
-                {randomBusy ? "正在换…" : "↻ 换一张"}
+                {randomBusy ? "正在换…" : "↻ 再翻一张"}
               </button>
             </div>
             {randomMemory ? (
@@ -105,7 +105,7 @@ export default function MemoriesPage() {
                   <img className="max-h-72 w-full object-cover" src={randomMemory.imageUrl} alt={randomMemory.title || "随机回忆"} />
                 ) : (
                   <div className="flex h-44 items-center justify-center bg-gradient-to-br from-cocoa/75 to-lilac/70 text-white">
-                    {randomMemory.type === "audio" ? "AUDIO" : randomMemory.type === "video" || randomMemory.type === "live_photo" ? "▶" : "💌"}
+                    {randomMemory.type === "audio" ? "🎤 语音纸条" : randomMemory.type === "video" || randomMemory.type === "live_photo" ? "▶ 视频回忆" : "💌 小纸条"}
                   </div>
                 )}
                 <div className="p-3">
@@ -121,16 +121,16 @@ export default function MemoriesPage() {
                 </div>
               </Link>
             ) : (
-              <p className="py-6 text-center text-sm text-cocoa/45">还没有可以随机看的回忆，先去相册和小纸条墙添一些吧。</p>
+              <p className="py-6 text-center text-sm text-cocoa/45">等这里攒了一些回忆之后，就可以随手翻一张看了。</p>
             )}
           </section>
 
-          {/* 2. 置顶小纸条 — 最想让你看到的 */}
+          {/* 2. 小纸条 — 仅展示最近摘要，不再全量展示 */}
           <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="section-kicker mb-1">💌 Notes</p>
-                <h2 className="font-semibold text-cocoa">小纸条墙</h2>
+                <p className="section-kicker mb-1">💌 最近纸条</p>
+                <h2 className="font-semibold text-cocoa">小纸条</h2>
               </div>
               <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href="/notes">
                 全部
@@ -149,8 +149,8 @@ export default function MemoriesPage() {
           <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="section-kicker mb-1">📷 Albums</p>
-                <h2 className="font-semibold text-cocoa">最近相册</h2>
+                <p className="section-kicker mb-1">📷 最近照片</p>
+                <h2 className="font-semibold text-cocoa">相册</h2>
               </div>
               <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href="/albums">
                 全部
@@ -172,7 +172,7 @@ export default function MemoriesPage() {
                 ))}
               </div>
             ) : (
-              <p className="py-4 text-center text-sm text-cocoa/45">还没有放进相册的回忆，有空慢慢补上。</p>
+              <p className="py-4 text-center text-sm text-cocoa/45">照片会慢慢变多，到时候想翻就能翻到。</p>
             )}
           </section>
 
@@ -203,7 +203,7 @@ export default function MemoriesPage() {
                   </div>
                 ))}
               </div>
-            ) : <p className="empty-state text-left">时间线还在等第一条回忆。</p>}
+            ) : <p className="py-6 text-center text-sm text-cocoa/45">等第一条回忆进来，时间线就会自己长出来。</p>}
           </section>
         </div>
       </AppShell>

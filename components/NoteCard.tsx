@@ -32,7 +32,7 @@ export function NoteCard({
     romantic: "rounded-[1.8rem] border-blush/60 bg-gradient-to-br from-blush/75 via-white/75 to-lilac/65 p-4"
   }[style];
   const pinnedClass = note.pinned
-    ? "ring-2 ring-[var(--app-accent)]/40 shadow-[0_0_18px_rgba(232,169,155,0.25)]"
+    ? "ring-1 ring-[var(--app-accent)]/25 shadow-[0_0_10px_rgba(232,169,155,0.12)]"
     : "";
   const type = note.noteType || (note.videoUrl ? "video" : note.audioUrl ? "audio" : note.imageUrl ? "image" : "text");
   const bubbleAlign = style === "bubble" ? (note.author === "xiaoguai" || note.author === "user" ? "ml-auto" : "mr-auto") : "";
@@ -43,8 +43,8 @@ export function NoteCard({
         <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
         <span>{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚"}</span>
       </div>
-      {note.imageUrl ? <img className="mb-3 max-h-64 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} loading="lazy" /> : null}
-      {note.videoUrl ? <video className="mb-3 max-h-64 w-full rounded-[1.25rem] bg-black" src={note.videoUrl} controls onClick={(event) => event.stopPropagation()} preload="metadata" /> : null}
+      {note.imageUrl ? <img className="mb-3 max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} loading="lazy" /> : null}
+      {note.videoUrl ? <video className="mb-3 max-h-56 w-full rounded-[1.25rem] bg-black" src={note.videoUrl} controls onClick={(event) => event.stopPropagation()} preload="metadata" /> : null}
       {note.audioUrl ? <audio className="mb-3 w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} /> : null}
       {note.content ? <p className="whitespace-pre-wrap text-sm leading-7 text-cocoa/78">{note.content}</p> : null}
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -53,11 +53,11 @@ export function NoteCard({
         {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-[11px] text-cocoa/65">置顶</span> : null}
       </div>
       {onPatch ? (
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
-          <button className="btn-secondary btn-small" disabled={busy} onClick={onEdit} type="button">编辑</button>
-          <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
-          <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
-          <select className="field h-8 w-16 min-w-0 py-0.5 text-[10px]" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
+          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={onEdit} type="button">编辑</button>
+          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
+          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
+          <select className="field h-7 w-14 min-w-0 py-0 text-[10px]" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
             <option value="sticky">便签</option>
             <option value="postcard">明信片</option>
             <option value="bubble">气泡</option>
@@ -66,7 +66,7 @@ export function NoteCard({
             <option value="minimal">极简</option>
             <option value="romantic">浪漫</option>
           </select>
-          <button className="btn-danger btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
+          <button className="btn-danger btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
         </div>
       ) : null}
     </article>

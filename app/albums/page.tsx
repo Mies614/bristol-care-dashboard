@@ -413,13 +413,14 @@ export default function AlbumsPage() {
               {selected.location ? <p>{selected.location}</p> : null}
               {selected.note ? <p className="leading-6">{selected.note}</p> : null}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
               <AppButton variant="secondary" size="sm" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>
                 {selected.isFavorite ? "取消精选" : "设为精选"}
               </AppButton>
               <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
                 删除
               </AppButton>
+              <div className="flex-1" />
               <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>
                 关闭
               </AppButton>
