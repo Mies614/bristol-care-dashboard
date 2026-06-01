@@ -4,11 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
-import { CourseCard } from "@/components/CourseCard";
-import { DeadlineCard } from "@/components/DeadlineCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getDaysUntilDeadline } from "@/lib/date";
 import { createAllCoursesIcs, createAllDeadlinesIcs, downloadIcs, isCourseCalendarExportable, isDeadlineCalendarExportable } from "@/lib/ics";
 import { calculateNextPeriodStart, createPeriodReminderIcs, DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { getTodayCourses } from "@/lib/schedule";
@@ -57,14 +54,9 @@ export default function RecordsPage() {
   }, []);
 
   const todayCourses = useMemo(() => data ? getTodayCourses(data.courses) : [], [data]);
-  const incompleteDeadlines = useMemo(() => data ? data.deadlines.filter((deadline) => deadline.status !== "done").sort((a, b) => getDaysUntilDeadline(a) - getDaysUntilDeadline(b)) : [], [data]);
-  const todayDue = incompleteDeadlines.filter((deadline) => getDaysUntilDeadline(deadline) === 0);
-  const soonDue = incompleteDeadlines.filter((deadline) => {
-    const days = getDaysUntilDeadline(deadline);
-    return days > 0 && days <= 3;
-  });
+  const incompleteDeadlines = useMemo(() => data ? data.deadlines.filter((deadline) => deadline.status !== "done") : [], [data]);
   const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
-  const periodDays = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
+  const periodDaysUntil = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
 
   function exportAllCalendar() {
@@ -80,29 +72,6 @@ export default function RecordsPage() {
     setMessage("已生成日历文件。");
   }
 
-  // ── 今日概述摘要文案 ──
-  const overviewSummary = useMemo(() => {
-    const parts: string[] = [];
-    if (todayCourses.length > 0) {
-      const next = todayCourses[0];
-      parts.push(`下一节课「${next.name}」${next.startTime} 开始`);
-    }
-    if (todayDue.length > 0) {
-      parts.push(`今天有 ${todayDue.length} 个 DDL 到期`);
-    } else if (soonDue.length > 0) {
-      parts.push(`${soonDue.length} 个 DDL 在 3 天内`);
-    } else {
-      parts.push("最近没有紧急 DDL");
-    }
-    if (cycleDay) {
-      parts.push(`经期第 ${cycleDay} 天`);
-      if (periodDays !== null && periodDays >= 0) {
-        parts.push(`距下次约 ${periodDays} 天`);
-      }
-    }
-    return parts.join(" · ");
-  }, [todayCourses, todayDue, soonDue, cycleDay, periodDays]);
-
   const reduceMotion = useAccessibleMotion();
 
   if (!data) return <AppShell><div className="soft-card">正在加载…</div></AppShell>;
@@ -117,7 +86,7 @@ export default function RecordsPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* ── 1. 今日总览 —— 一行概述 + 三格计数 ── */}
+        {/* ── 1. 今日总览 —— 三格计数 + 摘要文案 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AppCard className="bg-gradient-to-br from-white/88 via-butter/45 to-lilac/50">
             <p className="section-kicker mb-1">{todayLabel()}</p>
@@ -136,19 +105,21 @@ export default function RecordsPage() {
                 <p className="text-xs text-cocoa/55">周期天数</p>
               </Link>
             </div>
-            {overviewSummary && (
-              <p className="mt-3 text-sm leading-6 text-cocoa/65">{overviewSummary}</p>
-            )}
+            <p className="mt-3 text-sm leading-6 text-cocoa/65">
+              {todayCourses.length > 0 ? `今天 ${todayCourses.length} 节课 · ` : "今天没课 · "}
+              {incompleteDeadlines.length > 0 ? `${incompleteDeadlines.length} 个 DDL 待办 · ` : "无待办 DDL · "}
+              {cycleDay ? `经期第 ${cycleDay} 天` : "暂无经期记录"}
+            </p>
           </AppCard>
         </motion.div>
 
-        {/* ── 2. 快速操作 —— 少而精的三类 ── */}
+        {/* ── 2. 快速操作 —— 添加 + 导出 ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <AppCard>
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="section-kicker mb-1">Quick Add</p>
-                <h2 className="font-semibold text-cocoa">快速添加</h2>
+                <p className="section-kicker mb-1">Quick Actions</p>
+                <h2 className="font-semibold text-cocoa">快速操作</h2>
               </div>
               <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
             </div>
@@ -192,7 +163,14 @@ export default function RecordsPage() {
             {todayCourses.length > 0 ? (
               <>
                 <p className="mb-2 text-xs text-cocoa/50">共 {todayCourses.length} 节课</p>
-                <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div>
+                <div className="space-y-1.5">
+                  {todayCourses.map((course) => (
+                    <div key={course.id} className="flex items-center justify-between rounded-xl bg-white/55 px-3 py-2 text-sm">
+                      <span className="text-cocoa font-medium truncate">{course.name}</span>
+                      <span className="text-xs text-cocoa/45 shrink-0 ml-2">{course.startTime}–{course.endTime}</span>
+                    </div>
+                  ))}
+                </div>
               </>
             ) : (
               <p className="empty-state py-4 text-left text-sm">今天没有课，属于自己的节奏。</p>
@@ -213,9 +191,14 @@ export default function RecordsPage() {
             {incompleteDeadlines.length > 0 ? (
               <>
                 <p className="mb-2 text-xs text-cocoa/50">共 {incompleteDeadlines.length} 个未完成</p>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {incompleteDeadlines.slice(0, 5).map((deadline) => (
-                    <DeadlineCard deadline={deadline} key={deadline.id} />
+                    <div key={deadline.id} className="rounded-xl bg-white/55 px-3 py-2 text-sm">
+                      <span className="text-cocoa font-medium">{deadline.title}</span>
+                      {deadline.note ? (
+                        <span className="ml-1.5 text-xs text-cocoa/40">{deadline.note}</span>
+                      ) : null}
+                    </div>
                   ))}
                   {incompleteDeadlines.length > 5 && (
                     <p className="text-xs text-cocoa/40 pt-1">还有 {incompleteDeadlines.length - 5} 个未展示。</p>
@@ -248,7 +231,7 @@ export default function RecordsPage() {
                 </div>
                 <div className="rounded-2xl bg-white/58 p-3">
                   <p className="text-xs text-cocoa/45">距离现在</p>
-                  <p className="font-semibold text-cocoa">{periodDays === null ? "—" : `${periodDays} 天`}</p>
+                  <p className="font-semibold text-cocoa">{periodDaysUntil === null ? "—" : `${periodDaysUntil} 天`}</p>
                 </div>
                 <div className="col-span-2 rounded-2xl bg-white/58 p-3">
                   <p className="text-xs text-cocoa/45">当前周期</p>

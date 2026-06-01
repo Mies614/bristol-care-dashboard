@@ -13,7 +13,7 @@ import { getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { AppCard } from "@/components/ui/AppCard";
-import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem } from "@/lib/design/motion";
+import { safeVariants, staggerContainer, staggerItem, fadeInScale } from "@/lib/design/motion";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AppData | null>(null);
@@ -24,6 +24,7 @@ export default function AdminDashboardPage() {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [pushStatus, setPushStatus] = useState<Record<string, unknown> | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [justClickedMissYou, setJustClickedMissYou] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
     const space = getDefaultSpaceCode();
@@ -70,8 +71,6 @@ export default function AdminDashboardPage() {
   const incompleteCount = useMemo(() => (data ? data.deadlines.filter((d) => d.status !== "done").length : 0), [data]);
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
   const periodDaysUntil = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
-  const reduceMotion = useAccessibleMotion();
-  const latestNote = notes.length && notes[0].content ? notes[0].content.slice(0, 40) : undefined;
 
   if (!data) return <AppShell><div className="soft-card">正在加载…</div></AppShell>;
 
@@ -81,17 +80,25 @@ export default function AdminDashboardPage() {
 
       <motion.div
         className="space-y-4"
-        variants={safeVariants(staggerContainer, reduceMotion)}
+        variants={safeVariants(staggerContainer, false)}
         initial="hidden"
         animate="visible"
       >
-        {/* ── 1. 想她一下 —— 首屏最高优先级 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <div className="soft-card text-center">
+        {/* ── 1. 想她一下 —— 首屏最高优先级操作 ── */}
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <motion.div
+            className="soft-card text-center bg-gradient-to-br from-blush/45 via-white/88 to-rose/20"
+            variants={safeVariants(fadeInScale, false)}
+            initial="hidden"
+            animate="visible"
+          >
             <p className="section-kicker mb-1">Miss You</p>
             <h2 className="text-lg font-semibold text-cocoa">想她一下</h2>
-            <button
-              className="btn-primary mt-4 min-w-32"
+            <p className="mt-1.5 text-sm text-cocoa/55">
+              按一下就好，她那边会知道。
+            </p>
+            <motion.button
+              className="btn-primary mt-4 min-w-36"
               onClick={async () => {
                 try {
                   const space = getDefaultSpaceCode();
@@ -109,27 +116,32 @@ export default function AdminDashboardPage() {
                   const payload = await res.json();
                   if (payload.ok) {
                     setMissYouCounts((prev) => ({ ...prev, admin: (prev.admin || 0) + 1 }));
+                    setJustClickedMissYou(true);
+                    setTimeout(() => setJustClickedMissYou(false), 800);
                   }
                 } catch {}
               }}
+              whileTap={{ scale: 0.94 }}
+              animate={justClickedMissYou ? { scale: [1, 1.06, 1] } : {}}
+              transition={{ duration: 0.25 }}
             >
               想她一下 💕
-            </button>
+            </motion.button>
             {(missYouCounts.admin > 0 || missYouCounts.xiaoguai > 0) && (
-              <p className="mt-2 text-xs text-cocoa/40">
+              <p className="mt-2 text-xs text-cocoa/45">
                 小乖按了 {missYouCounts.xiaoguai} 次 · 我按了 {missYouCounts.admin} 次
               </p>
             )}
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* ── 2. 今日状态总览 —— 她的核心信息 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+        <motion.div variants={safeVariants(staggerItem, false)}>
           <AdminOverviewCard
             careData={data}
             carePeriods={periodRecords}
             carePeriodSettings={periodSettings}
-            latestNote={latestNote}
+            latestNote={notes.length ? notes[0].content?.slice(0, 40) : undefined}
             missYouCounts={missYouCounts}
             onRefresh={fetchAdminData}
           />
@@ -137,8 +149,8 @@ export default function AdminDashboardPage() {
 
         {/* ── 3. 她的课程摘要 ── */}
         {todayCourses.length > 0 && (
-          <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-            <AppCard>
+          <motion.div variants={safeVariants(staggerItem, false)}>
+            <AppCard className="bg-gradient-to-br from-white/85 via-skySoft/25 to-white/80">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="section-kicker mb-1">📚 她的课程</p>
@@ -149,8 +161,8 @@ export default function AdminDashboardPage() {
               <div className="space-y-1.5">
                 {todayCourses.map((c) => (
                   <div key={c.id} className="flex items-center justify-between rounded-xl bg-white/55 px-3 py-2 text-sm">
-                    <span className="text-cocoa font-medium">{c.name}</span>
-                    <span className="text-xs text-cocoa/40">{c.startTime}–{c.endTime}</span>
+                    <span className="text-cocoa font-medium truncate">{c.name}</span>
+                    <span className="text-xs text-cocoa/45 shrink-0 ml-2">{c.startTime}–{c.endTime}</span>
                   </div>
                 ))}
               </div>
@@ -159,8 +171,8 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ── 4. 她的 DDL 摘要 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <AppCard>
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <AppCard className="bg-gradient-to-br from-white/85 via-amber-50/30 to-white/80">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="section-kicker mb-1">📋 她的 DDL</p>
@@ -186,11 +198,11 @@ export default function AdminDashboardPage() {
         </motion.div>
 
         {/* ── 5. 经期摘要 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <AppCard>
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <AppCard className="bg-gradient-to-br from-white/85 via-blush/30 to-white/80">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <p className="section-kicker mb-1">🌸 经期状态</p>
+                <p className="section-kicker mb-1">🌸 她的经期</p>
                 <h2 className="font-semibold text-cocoa">
                   {cycleDay ? `第 ${cycleDay} 天` : "暂无记录"}
                   {periodDaysUntil !== null && ` · 距下次 ${periodDaysUntil} 天`}
@@ -199,13 +211,13 @@ export default function AdminDashboardPage() {
               <Link className="text-xs font-medium text-sage hover:underline" href="/period">记录 →</Link>
             </div>
             {periodRecords.length === 0 && (
-              <p className="text-sm text-cocoa/40">还没有经期记录，建议她先补上。</p>
+              <p className="text-sm text-cocoa/40">还没有经期记录，可以提醒她补上。</p>
             )}
           </AppCard>
         </motion.div>
 
         {/* ── 6. 最近小纸条 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+        <motion.div variants={safeVariants(staggerItem, false)}>
           <AppCard>
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -233,22 +245,34 @@ export default function AdminDashboardPage() {
 
         {/* ── 7. 最近相册 ── */}
         {albums.length > 0 && (
-          <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <motion.div variants={safeVariants(staggerItem, false)}>
             <AppCard>
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="section-kicker mb-1">📷 相册</p>
-                  <h2 className="font-semibold text-cocoa">最近 {albums.length} 张</h2>
+                  <h2 className="font-semibold text-cocoa">她的相册</h2>
                 </div>
                 <Link className="text-xs font-medium text-sage hover:underline" href="/albums">全部 →</Link>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {albums.map((item) => (
+                  <Link className="relative overflow-hidden rounded-xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="aspect-square w-full object-cover" src={item.imageUrl} alt="相册照片" loading="lazy" />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white text-sm">📷</div>
+                    )}
+                  </Link>
+                ))}
               </div>
             </AppCard>
           </motion.div>
         )}
 
-        {/* ── 8. 系统诊断 —— 折叠到后面 ── */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <AppCard>
+        {/* ── 8. 系统状态 —— 折叠到最后，管理/诊断靠后 ── */}
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <AppCard className="opacity-75">
             <button
               className="flex w-full items-center justify-between mb-2"
               onClick={() => setShowDiagnostics((v) => !v)}
@@ -256,7 +280,7 @@ export default function AdminDashboardPage() {
               <div className="text-left">
                 <p className="section-kicker mb-1">🔧 系统状态</p>
                 <h2 className="font-semibold text-cocoa">
-                  {pushStatus ? "推送正常" : "推送状态加载中"}
+                  {pushStatus ? "运行正常" : "加载中…"}
                 </h2>
               </div>
               <span className="text-xs text-cocoa/40">{showDiagnostics ? "收起 ↑" : "展开 ↓"}</span>
@@ -287,7 +311,7 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
                 <Link className="inline-block text-xs text-sage/70 hover:underline" href="/debug">
-                  查看详细诊断报告 →
+                  查看详细诊断 →
                 </Link>
               </div>
             )}

@@ -11,16 +11,14 @@ import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/typ
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
-import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
+import { DEFAULT_PERIOD_SETTINGS, calculateNextPeriodStart, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
-import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { buildNextImportant, NextImportantCard } from "@/components/NextImportantCard";
 import type { NextImportantResult } from "@/components/NextImportantCard";
 import { getCurrentDayName } from "@/lib/schedule";
-import { getDaysUntilNextPeriod } from "@/lib/period";
 import { getDaysUntil } from "@/lib/ddlPriority";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
 
@@ -185,74 +183,32 @@ export default function HomePage() {
     now
   }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, excludedDdlIds, now]);
 
-  // ──── 今日照顾数字行（紧凑 4 格：课程 / DDL / 经期 / 想念） ────
-  const careStrip = useMemo((): CareStripItem[] => {
-    const items: CareStripItem[] = [];
+  // ──── 今日课程摘要 ────
+  const todayCourses = useMemo(() => {
     const todayDay = getCurrentDayName(now);
-
-    const todaysCourses = data.courses
+    return data.courses
       .filter((c) => c.day === todayDay)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    items.push({
-      id: "today-courses",
-      icon: todaysCourses.length > 0 ? "📖" : "☁️",
-      label: "今日课",
-      value: `${todaysCourses.length}`,
-      href: "/schedule"
-    });
+  }, [data.courses, now]);
 
+  // ──── 最近 DDL 摘要（排除已在 TodaySummaryCard 和 NextImportantCard 中展示的）───
+  const ddlSummary = useMemo(() => {
     const allExcludedIds = new Set(excludedDdlIds);
     if (nextImportant.selectedDdlId) allExcludedIds.add(nextImportant.selectedDdlId);
-
-    const activeDdls = data.deadlines
+    return data.deadlines
       .filter((d) => d.status !== "done" && !allExcludedIds.has(d.id))
       .map((d) => ({ d, days: getDaysUntil(d, now) }))
-      .sort((a, b) => a.days - b.days);
-    if (activeDdls.length > 0) {
-      const next = activeDdls[0];
-      const urgency = next.days <= 0 ? "⚠️" : next.days <= 3 ? "⏳" : "📋";
-      items.push({
-        id: "next-ddl",
-        icon: urgency,
-        label: "最近DDL",
-        value: next.days <= 0 ? "今" : `${next.days}d`,
-        href: "/deadlines"
-      });
-    } else {
-      items.push({
-        id: "no-ddl",
-        icon: "✅",
-        label: "DDL",
-        value: "0",
-        href: "/deadlines"
-      });
-    }
+      .sort((a, b) => a.days - b.days)
+      .slice(0, 3);
+  }, [data.deadlines, excludedDdlIds, nextImportant.selectedDdlId, now]);
 
+  // ──── 经期状态摘要 ────
+  const periodSummary = useMemo(() => {
+    const cycleDay = getCurrentCycleDay(periodRecords);
     const daysUntil = getDaysUntilNextPeriod(periodRecords, periodSettings, now);
-    if (daysUntil !== null) {
-      if (daysUntil === 0) {
-        items.push({ id: "period-today", icon: "🌸", label: "经期", value: "今天", href: "/period" });
-      } else if (daysUntil > 0 && daysUntil <= 3) {
-        items.push({ id: "period-soon", icon: "🌸", label: "经期", value: `${daysUntil}d`, href: "/period" });
-      } else if (daysUntil < 0) {
-        items.push({ id: "period-late", icon: "🌸", label: "经期", value: `+${Math.abs(daysUntil)}`, href: "/period" });
-      } else {
-        items.push({ id: "period-far", icon: "🌿", label: "经期", value: `${daysUntil}d`, href: "/period" });
-      }
-    } else {
-      items.push({ id: "period-no-data", icon: "🌿", label: "经期", value: "—", href: "/period" });
-    }
-
-    items.push({
-      id: "miss-you-status",
-      icon: "💕",
-      label: "未读想念",
-      value: `${unreadMissYouCount}`,
-      href: undefined
-    });
-
-    return items;
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, excludedDdlIds, nextImportant.selectedDdlId, unreadMissYouCount]);
+    const nextStart = calculateNextPeriodStart(periodRecords, periodSettings);
+    return { cycleDay, daysUntil, nextStart, hasRecords: periodRecords.length > 0 };
+  }, [periodRecords, periodSettings, now]);
 
   useEffect(() => {
     const localDate = now.toISOString().slice(0, 10);
@@ -320,22 +276,113 @@ export default function HomePage() {
           <MissYouButton />
         </motion.div>
 
-        {/* 4. 天气 & 时间（紧凑模式：摘要 + 穿衣一句话 + 时间） */}
+        {/* 4. 今日课程 —— 独立摘要卡片 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <section className="soft-card bg-gradient-to-br from-white/85 via-skySoft/30 to-white/80">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="section-kicker mb-1">📚 今日课程</p>
+                <h2 className="font-semibold text-cocoa">
+                  {todayCourses.length > 0 ? `${todayCourses.length} 节课` : "今天没课"}
+                </h2>
+              </div>
+              <Link className="text-xs font-medium text-sage hover:underline" href="/schedule">课表 →</Link>
+            </div>
+            {todayCourses.length > 0 ? (
+              <div className="space-y-1.5">
+                {todayCourses.slice(0, 3).map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-white/55 px-3 py-2 text-sm">
+                    <span className="text-cocoa font-medium truncate">{c.name}</span>
+                    <span className="text-xs text-cocoa/45 shrink-0 ml-2">{c.startTime}–{c.endTime}</span>
+                  </div>
+                ))}
+                {todayCourses.length > 3 && (
+                  <p className="text-xs text-cocoa/40 pt-0.5">还有 {todayCourses.length - 3} 节，去课表看全部。</p>
+                )}
+              </div>
+            ) : (
+              <p className="empty-state py-3 text-left text-sm">今天没有课，属于自己的节奏。</p>
+            )}
+          </section>
+        </motion.div>
+
+        {/* 5. 最近 DDL —— 独立摘要卡片（排除已展示的） */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <section className="soft-card bg-gradient-to-br from-white/85 via-amber-50/35 to-white/80">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="section-kicker mb-1">📋 最近 DDL</p>
+                <h2 className="font-semibold text-cocoa">
+                  {ddlSummary.length > 0 ? `${ddlSummary.length} 个待办` : "全部完成 ✅"}
+                </h2>
+              </div>
+              <Link className="text-xs font-medium text-sage hover:underline" href="/deadlines">管理 →</Link>
+            </div>
+            {ddlSummary.length > 0 ? (
+              <div className="space-y-1.5">
+                {ddlSummary.map(({ d, days }) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-xl bg-white/55 px-3 py-2 text-sm">
+                    <span className="text-cocoa truncate">{d.title}</span>
+                    <span className={`text-xs shrink-0 ml-2 ${days <= 1 ? "text-rose font-semibold" : "text-cocoa/40"}`}>
+                      {days === 0 ? "今天" : days < 0 ? `超 ${Math.abs(days)} 天` : `${days} 天`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state py-3 text-left text-sm">最近没有未完成 DDL，真棒。</p>
+            )}
+          </section>
+        </motion.div>
+
+        {/* 6. 经期状态 —— 独立摘要卡片 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <section className="soft-card bg-gradient-to-br from-white/85 via-blush/35 to-white/80">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="section-kicker mb-1">🌸 经期状态</p>
+                <h2 className="font-semibold text-cocoa">
+                  {periodSummary.hasRecords
+                    ? periodSummary.cycleDay
+                      ? `第 ${periodSummary.cycleDay} 天`
+                      : "不在经期"
+                    : "暂无记录"}
+                </h2>
+              </div>
+              <Link className="text-xs font-medium text-sage hover:underline" href="/period">记录 →</Link>
+            </div>
+            {periodSummary.hasRecords ? (
+              <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
+                <div className="rounded-2xl bg-white/58 px-3 py-2.5">
+                  <p className="text-xs text-cocoa/45">预计开始</p>
+                  <p className="font-semibold text-cocoa">{periodSummary.nextStart || "—"}</p>
+                </div>
+                <div className="rounded-2xl bg-white/58 px-3 py-2.5">
+                  <p className="text-xs text-cocoa/45">距离下次</p>
+                  <p className="font-semibold text-cocoa">
+                    {periodSummary.daysUntil === null ? "—"
+                      : periodSummary.daysUntil >= 0 ? `${periodSummary.daysUntil} 天`
+                      : `过 ${Math.abs(periodSummary.daysUntil)} 天`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="empty-state py-3 text-left text-sm">还没有经期记录，可以先补一条。</p>
+            )}
+          </section>
+        </motion.div>
+
+        {/* 7. 天气 & 时间（compact 模式） */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <WeatherCareCard state={weatherState} compact />
         </motion.div>
 
-        {/* 5. 今日照顾数字行（课程 / DDL / 经期 / 想念） */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <TodayCareStrip items={careStrip} />
-        </motion.div>
-
-        {/* 6. 置顶小纸条 */}
+        {/* 8. 置顶小纸条 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
         </motion.div>
 
-        {/* 7. 最近回忆 */}
+        {/* 9. 最近回忆 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
