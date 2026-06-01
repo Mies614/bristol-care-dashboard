@@ -32,7 +32,7 @@ import {
   setLastSyncTime,
   uploadLocalDataToCloud,
 } from "@/lib/cloudSync";
-import { markLocalChange, runAutoSyncNow, scheduleAutoSync } from "@/lib/autoSync";
+import { markLocalChange, runAutoSyncNow, scheduleAutoSync, getPendingSyncState, clearPendingSyncState } from "@/lib/autoSync";
 import { loadAppData, resetAppData, saveAppData } from "@/lib/storage";
 import { DEFAULT_THEME_SETTINGS, getThemeDefaultsForStyle, getThemeSettings, saveThemeSettings } from "@/lib/theme";
 import type { AppData, BackgroundSettings, ThemeSettings } from "@/lib/types";
@@ -44,8 +44,10 @@ export default function SettingsPage() {
   const [cloudCode, setCloudCode] = useState(getDefaultSpaceCode());
   const [cloudMessage, setCloudMessage] = useState("");
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState("");
   const [colorDraft, setColorDraft] = useState("#fff8f0");
   const [imageUrlDraft, setImageUrlDraft] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const current = loadAppData();
@@ -57,6 +59,8 @@ export default function SettingsPage() {
     const connection = getCloudConnection();
     if (connection) setCloudCode(connection.code);
     setLastSync(getLastSyncTime());
+    const state = getPendingSyncState();
+    if (state.lastError) setSyncError(state.lastError);
   }, []);
 
   const counts = useMemo(() => ({
@@ -130,14 +134,43 @@ export default function SettingsPage() {
   }
 
   async function manualSync() {
-    const result = await pullAndPersistCloudData(cloudCode.trim());
-    if (result.ok && result.data) {
-      setData(result.data);
+    setSyncing(true);
+    setCloudMessage("");
+    setSyncError("");
+    try {
+      await runAutoSyncNow("manual");
       setLastSync(getLastSyncTime());
-      setCloudMessage("同步成功。");
-    } else {
-      setCloudMessage(result.error || "同步失败，本地数据已保留。");
+      const state = getPendingSyncState();
+      if (state.lastError) setSyncError(state.lastError);
+      setCloudMessage(state.status === "synced" || !state.pending ? "同步成功。" : "同步中，稍后生效。");
+    } catch {
+      setCloudMessage("同步失败。");
+    } finally {
+      setSyncing(false);
     }
+  }
+
+  async function manualRetry() {
+    setSyncing(true);
+    setCloudMessage("");
+    setSyncError("");
+    try {
+      await runAutoSyncNow("manual_retry");
+      setLastSync(getLastSyncTime());
+      const state = getPendingSyncState();
+      if (state.lastError) setSyncError(state.lastError);
+      setCloudMessage(state.status === "synced" ? "同步成功。" : "已重试，检查下方状态。");
+    } catch {
+      setCloudMessage("重试失败。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function clearSyncError() {
+    clearPendingSyncState();
+    setSyncError("");
+    setCloudMessage("同步错误已清除。");
   }
 
   if (!data) return <AppShell><AppCard className="text-center py-12 text-[var(--app-muted)]">正在加载设置...</AppCard></AppShell>;
@@ -167,44 +200,7 @@ export default function SettingsPage() {
           </label>
         </SettingsSection>
 
-        {/* ──────────────────── 2. Cloud Sync — 同步状态靠前 ──────────────────── */}
-        <SettingsSection title="同步与备份" subtitle="云同步状态和操作" defaultOpen={true}>
-          <div className="space-y-2">
-            <AutoSyncStatusBadge />
-          </div>
-          {lastSync ? <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : <p className="text-xs text-[var(--app-muted)]">尚未同步过</p>}
-          <div className="flex flex-wrap gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/55 p-3 shadow-sm mt-2">
-            <Badge variant="outline">课程 {counts.courses}</Badge>
-            <Badge variant="outline">Deadline {counts.deadlines}</Badge>
-            <Badge variant="outline">小纸条 {counts.loveNotes}</Badge>
-            <Badge variant="outline">经期记录 {data.periodRecords?.length || 0}</Badge>
-          </div>
-          <label className="block text-sm text-[var(--app-muted)] mt-3">
-            访问码
-            <Input className="mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
-          </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-2">
-            <AppButton variant="secondary" className="w-full" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</AppButton>
-            {isCloudConfigured() ? (
-              <>
-                <AppButton variant="secondary" className="w-full" onClick={manualSync}>手动同步</AppButton>
-                <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传本地到云端</AppButton>
-                <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
-              </>
-            ) : null}
-          </div>
-          {isCloudConfigured() ? (
-            <AppButton variant="danger" className="w-full mt-2" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</AppButton>
-          ) : null}
-          {cloudMessage ? (
-            <details className="mt-2 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words whitespace-pre-wrap">
-              <summary className="cursor-pointer font-medium">同步消息（点击展开）</summary>
-              <p className="mt-2">{cloudMessage}</p>
-            </details>
-          ) : null}
-        </SettingsSection>
-
-        {/* ──────────────────── 3. Appearance / Theme ──────────────────── */}
+        {/* ──────────────────── 2. Appearance / Theme ──────────────────── */}
         <SettingsSection title="外观风格" subtitle="主题和卡片样式">
           <ThemeStylePicker
             currentStyle={data.themeSettings.style}
@@ -521,8 +517,63 @@ export default function SettingsPage() {
           </AppButton>
         </SettingsSection>
 
-        {/* ──────────────────── 4. Local Data — 危险区，独立分组 ──────────────────── */}
-        <SettingsSection title="本地数据" subtitle="导出、导入和重置（危险操作）">
+        {/* ──────────────────── 4. Cloud Sync ──────────────────── */}
+        <SettingsSection title="云同步" subtitle="同步状态、手动操作和错误诊断">
+          <div className="space-y-1">
+            <AutoSyncStatusBadge />
+          </div>
+          {lastSync ? (
+            <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p>
+          ) : (
+            <p className="text-xs text-[var(--app-muted)]">尚未同步过</p>
+          )}
+          {syncError ? (
+            <details className="mt-2 rounded-[var(--app-radius)] border border-amber-200 bg-amber-50/80 p-3 text-sm">
+              <summary className="cursor-pointer font-medium text-amber-700 text-xs">⚠ 最近同步错误（点击展开）</summary>
+              <p className="mt-2 text-xs text-amber-800 break-words whitespace-pre-wrap max-h-32 overflow-auto">{syncError}</p>
+              <div className="mt-2 flex gap-2">
+                <AppButton variant="secondary" size="sm" onClick={manualRetry} disabled={syncing}>
+                  {syncing ? "重试中..." : "🔄 手动重试"}
+                </AppButton>
+                <AppButton variant="secondary" size="sm" onClick={clearSyncError}>
+                  清除记录
+                </AppButton>
+              </div>
+            </details>
+          ) : null}
+          <div className="flex flex-wrap gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/55 p-3 shadow-sm mt-2">
+            <Badge variant="outline">课程 {counts.courses}</Badge>
+            <Badge variant="outline">Deadline {counts.deadlines}</Badge>
+            <Badge variant="outline">小纸条 {counts.loveNotes}</Badge>
+            <Badge variant="outline">经期记录 {data.periodRecords?.length || 0}</Badge>
+          </div>
+          <label className="block text-sm text-[var(--app-muted)] mt-3">
+            访问码
+            <Input className="mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-2">
+            <AppButton variant="secondary" className="w-full" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</AppButton>
+            {isCloudConfigured() ? (
+              <>
+                <AppButton variant="secondary" className="w-full" onClick={manualSync}>手动同步</AppButton>
+                <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传本地到云端</AppButton>
+                <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
+              </>
+            ) : null}
+          </div>
+          {isCloudConfigured() ? (
+            <AppButton variant="danger" className="w-full mt-2" onClick={() => { clearCloudConnection(); setLastSync(null); setSyncError(""); setCloudMessage("已关闭云同步。"); }}>关闭云同步</AppButton>
+          ) : null}
+          {cloudMessage ? (
+            <details className="mt-2 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words whitespace-pre-wrap">
+              <summary className="cursor-pointer font-medium">同步消息（点击展开）</summary>
+              <p className="mt-2">{cloudMessage}</p>
+            </details>
+          ) : null}
+        </SettingsSection>
+
+        {/* ──────────────────── 5. Local Data ──────────────────── */}
+        <SettingsSection title="本地数据" subtitle="导出、导入和重置" defaultOpen={false}>
           <div className="rounded-[var(--app-radius)] border border-[var(--app-danger)]/25 bg-[var(--app-danger)]/6 p-3 text-sm text-[var(--app-text)]">
             <p className="font-medium">⚠️ 危险操作区</p>
             <p className="mt-1 text-xs text-[var(--app-muted)]">导入和重置会覆盖当前本地数据，操作前建议先导出 JSON 备份。</p>
@@ -558,7 +609,7 @@ export default function SettingsPage() {
 
         {/* ──────────────────── 5. Advanced (collapsed) ──────────────────── */}
         <SettingsSection title="高级设置" subtitle="高级数据操作" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">高级操作已移至上方「同步与备份」区域。如需手动上传/恢复，请展开此区域。</p>
+          <p className="text-xs text-[var(--app-muted)] mb-3">同步操作已移至上方「云同步」区域。如需手动上传/恢复，请展开此区域。</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传到云端</AppButton>
             <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>

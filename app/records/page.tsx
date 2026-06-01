@@ -114,12 +114,13 @@ export default function RecordsPage() {
         <AppCard>
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Quick Add</p>
-              <h2 className="font-semibold text-cocoa">快速添加 / 导出</h2>
+              <p className="section-kicker mb-1">Quick Care</p>
+              <h2 className="font-semibold text-cocoa">快速操作</h2>
             </div>
             <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
           </div>
           {message ? <p className="notice mb-3">{message}</p> : null}
+          <p className="mb-2 text-[11px] text-cocoa/40">添加课程、DDL 或经期记录</p>
           <div className="grid grid-cols-3 gap-2">
             <Link className="rounded-2xl border border-white/70 bg-[var(--app-card-bg)] px-3 py-3 text-center text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-white/80" href="/schedule">📚 课程</Link>
             <Link className="rounded-2xl border border-white/70 bg-[var(--app-card-bg)] px-3 py-3 text-center text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-white/80" href="/deadlines">📋 DDL</Link>

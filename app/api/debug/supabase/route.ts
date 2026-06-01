@@ -288,15 +288,15 @@ export async function GET() {
           }
 
         } else {
-          // Space not found, mark remaining checks as skipped
-          checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "settings readable", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no space)" });
-          checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no space)" });
+          // Space not found, mark remaining checks as optional (not fatal)
+          checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "settings readable", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no space)", optional: true });
         }
       } catch (err) {
         checks.push({ name: "DB connection", ok: false, detail: String(err) });
@@ -311,15 +311,15 @@ export async function GET() {
         checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "DB connection failed" });
       }
     } else {
-      checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "settings readable", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no supabase connection)" });
-      checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no supabase connection)" });
+      checks.push({ name: "xiaoguai520 space exists", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "settings upsert test", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "background_settings upsert test", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "theme_settings upsert test", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "miss_you_events readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "settings readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
     }
 
     checks.push({ name: "cloud upload route exists", ok: true, detail: "/api/cloud/upload" });
