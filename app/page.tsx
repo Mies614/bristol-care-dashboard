@@ -21,6 +21,9 @@ import { buildTodayCareSegments } from "@/components/TodayCareSummary";
 import type { TodayCareSegment } from "@/components/TodayCareSummary";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
+import { NextImportantCard } from "@/components/NextImportantCard";
+import type { NextImportantResult } from "@/components/NextImportantCard";
+import { buildNextImportant } from "@/components/TodayCareSummary";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 
 function safeBristolDate() {
@@ -178,16 +181,51 @@ export default function HomePage() {
     randomMemory
   }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
 
-  const careSegments = useMemo((): TodayCareSegment[] => buildTodayCareSegments({
+  const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,
-    periodSettings,
-    unreadMissYouCount,
-    featuredNote: featuredLoveNote,
-    randomMemory,
-    topPriorityReminder: null // 避免与 TodaySummaryCard 重复
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
+    periodSettings
+  }), [data.courses, data.deadlines, periodRecords, periodSettings]);
+
+  // 过滤 TodayCareSummary 片段，移除与 TodaySummaryCard / NextImportantCard 重复的类型
+  const careSegments = useMemo((): TodayCareSegment[] => {
+    const all = buildTodayCareSegments({
+      courses: data.courses,
+      deadlines: data.deadlines,
+      periodRecords,
+      periodSettings,
+      unreadMissYouCount,
+      featuredNote: featuredLoveNote,
+      randomMemory,
+      topPriorityReminder: null
+    });
+    // 移除与今天最重要事项重复的片段
+    const excludeIds = new Set<string>();
+    if (todaySummary.type === "ddl") excludeIds.add("next-ddl");
+    if (todaySummary.type === "course") excludeIds.add("today-courses");
+    if (todaySummary.type === "period") {
+      excludeIds.add("period-today");
+      excludeIds.add("period-soon");
+      excludeIds.add("period-late");
+    }
+    if (todaySummary.type === "missyou") excludeIds.add("miss-you-unread");
+    if (todaySummary.type === "memory") {
+      excludeIds.add("pinned-note");
+      excludeIds.add("random-memory");
+    }
+    // 也移除与 NextImportantCard 重复的
+    if (nextImportant.type === "course") {
+      excludeIds.add("today-courses");
+      excludeIds.add("no-course-today");
+    }
+    if (nextImportant.type === "deadline") excludeIds.add("next-ddl");
+    if (nextImportant.type === "period") {
+      excludeIds.add("period-today");
+      excludeIds.add("period-soon");
+    }
+    return all.filter((seg) => !excludeIds.has(seg.id));
+  }, [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, nextImportant.type]);
 
   useEffect(() => {
     const localDate = new Date().toISOString().slice(0, 10);
@@ -246,20 +284,21 @@ export default function HomePage() {
         {/* 1. 今日最重要事项 - TodaySummaryCard */}
         <TodaySummaryCard summary={todaySummary} />
 
-        {/* 2. Miss You - 想你按钮 */}
+        {/* 2. 下一件重要事项 - NextImportantCard（不重复 TodaySummaryCard） */}
+        <NextImportantCard result={nextImportant} />
+
+        {/* 3. 想你按钮 / 未读想念 */}
         <MissYouButton />
 
-        {/* 3. 今日照顾片段（课程/DDL/经期/纸条/回忆 - 统一摘要） */}
-        <section className="soft-card">
-          <div className="mb-3">
-            <p className="section-kicker mb-1">Today Care</p>
-            <h2 className="font-semibold text-cocoa">今日照顾</h2>
-          </div>
-          <div className="divide-y divide-white/60">
-            {careSegments.length === 0 ? (
-              <p className="py-4 text-sm text-cocoa/55">今天一切平和，慢慢来就好。</p>
-            ) : (
-              careSegments.map((seg) => (
+        {/* 4. 今日照顾摘要（课程/DDL/经期/纸条/回忆 — 已去除与上面重复的） */}
+        {careSegments.length > 0 && (
+          <section className="soft-card">
+            <div className="mb-3">
+              <p className="section-kicker mb-1">Today Care</p>
+              <h2 className="font-semibold text-cocoa">今日照顾</h2>
+            </div>
+            <div className="divide-y divide-white/60">
+              {careSegments.map((seg) => (
                 <div key={seg.id} className="flex items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0">
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-cocoa">{seg.label}</p>
@@ -277,27 +316,27 @@ export default function HomePage() {
                     </Link>
                   ) : null}
                 </div>
-              ))
-            )}
-          </div>
-          <Link className="mt-3 inline-block text-xs text-sage hover:underline" href="/records">更多详情 →</Link>
-        </section>
+              ))}
+            </div>
+            <Link className="mt-3 inline-block text-xs text-sage hover:underline" href="/records">更多详情 →</Link>
+          </section>
+        )}
 
-        {/* 4. Countdown - 下次见面 */}
+        {/* 5. Countdown - 下次见面 */}
         <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
           <p className="section-kicker mb-1">Countdown</p>
           <h2 className="font-semibold text-cocoa">下次见面</h2>
           <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
         </div>
 
-        {/* 5. Love Note - 置顶小纸条 */}
+        {/* 6. Love Note - 置顶小纸条 */}
         <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
         <div className="grid grid-cols-2 gap-2">
           <Link className="btn-primary text-center" href="/notes">小纸条墙</Link>
           <Link className="btn-secondary text-center" href="/notes">写一张</Link>
         </div>
 
-        {/* 6. Memories - 最近回忆 */}
+        {/* 7. Memories - 最近回忆 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -323,7 +362,7 @@ export default function HomePage() {
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
 
-        {/* 7. Onboarding - 引导卡 */}
+        {/* 8. Onboarding - 引导卡 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>
