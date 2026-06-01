@@ -295,7 +295,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       </div>
 
       {/* ── 第三行：穿衣建议 ── */}
-      <p className="mt-1.5 text-sm font-medium leading-relaxed text-cocoa/80 break-words">{clothing}</p>
+      <p className="mt-1.5 text-base font-medium leading-relaxed text-cocoa/80 break-words">{clothing}</p>
 
       {/* ── 第四行：降雨提示 ── */}
       {rainPrediction ? (
