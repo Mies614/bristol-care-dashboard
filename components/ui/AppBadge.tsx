@@ -26,7 +26,7 @@ export function AppBadge({ children, variant = "default", size = "sm", className
       variant="outline"
       className={cn(
         "gap-1 font-medium border",
-        size === "sm" ? "text-[10px] px-2 py-0.5" : "text-xs px-2.5 py-1",
+        size === "sm" ? "text-xs px-2 py-1" : "text-sm px-2.5 py-1.5",
         variantClasses[variant],
         className
       )}

@@ -122,7 +122,7 @@ export function getDecorationClass(decoration: ThemeDecoration, active: boolean)
 }
 
 export function getNavLabelClass(active: boolean, navStyle: ThemeNavStyle): string {
-  const base = `text-[10px] leading-tight font-medium transition-all duration-200 ${navStyle === "minimal" ? "tracking-wide" : ""}`;
+  const base = `text-xs leading-tight font-medium transition-all duration-200 ${navStyle === "minimal" ? "tracking-wide" : ""}`;
   if (active) {
     return `${base} text-[var(--app-accent)] font-semibold`;
   }

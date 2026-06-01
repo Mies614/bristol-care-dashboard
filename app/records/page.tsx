@@ -92,15 +92,15 @@ export default function RecordsPage() {
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <Link href="/schedule" className="rounded-xl bg-white/55 p-3 transition hover:bg-white/80 hover:shadow-sm">
               <p className="text-lg font-semibold text-cocoa">{todayCourses.length}</p>
-              <p className="text-[11px] text-cocoa/55">今日课</p>
+              <p className="text-xs text-cocoa/55">今日课</p>
             </Link>
             <Link href="/deadlines" className="rounded-xl bg-white/55 p-3 transition hover:bg-white/80 hover:shadow-sm">
               <p className="text-lg font-semibold text-cocoa">{incompleteDeadlines.length}</p>
-              <p className="text-[11px] text-cocoa/55">未完成</p>
+              <p className="text-xs text-cocoa/55">未完成</p>
             </Link>
             <Link href="/period" className="rounded-xl bg-white/55 p-3 transition hover:bg-white/80 hover:shadow-sm">
               <p className="text-lg font-semibold text-cocoa">{cycleDay || "—"}</p>
-              <p className="text-[11px] text-cocoa/55">周期天数</p>
+              <p className="text-xs text-cocoa/55">周期天数</p>
             </Link>
           </div>
           <p className="mt-3 text-sm leading-6 text-cocoa/65">
@@ -120,7 +120,7 @@ export default function RecordsPage() {
             <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
           </div>
           {message ? <p className="notice mb-3">{message}</p> : null}
-          <p className="mb-2 text-[11px] text-cocoa/40">添加课程、DDL 或经期记录</p>
+          <p className="mb-2 text-xs text-cocoa/50">添加课程、DDL 或经期记录</p>
           <div className="grid grid-cols-3 gap-2">
             <Link className="rounded-2xl border border-white/70 bg-[var(--app-card-bg)] px-3 py-3 text-center text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-white/80" href="/schedule">📚 课程</Link>
             <Link className="rounded-2xl border border-white/70 bg-[var(--app-card-bg)] px-3 py-3 text-center text-sm font-medium text-[var(--app-text)] shadow-sm transition hover:bg-white/80" href="/deadlines">📋 DDL</Link>
@@ -187,15 +187,15 @@ export default function RecordsPage() {
           ) : (
             <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
               <div className="rounded-2xl bg-white/58 p-3">
-                <p className="text-[11px] text-cocoa/45">预计开始</p>
+                <p className="text-xs text-cocoa/45">预计开始</p>
                 <p className="font-semibold text-cocoa">{nextPeriodStart || "计算中"}</p>
               </div>
               <div className="rounded-2xl bg-white/58 p-3">
-                <p className="text-[11px] text-cocoa/45">距离现在</p>
+                <p className="text-xs text-cocoa/45">距离现在</p>
                 <p className="font-semibold text-cocoa">{periodDays === null ? "—" : `${periodDays} 天`}</p>
               </div>
               <div className="col-span-2 rounded-2xl bg-white/58 p-3">
-                <p className="text-[11px] text-cocoa/45">当前周期</p>
+                <p className="text-xs text-cocoa/45">当前周期</p>
                 <p className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "—"}</p>
               </div>
             </div>

@@ -262,13 +262,13 @@ export function ThemePreviewCard({ config, selected, onClick }: Props) {
           {config.name}
         </p>
         <p
-          className="mt-0.5 text-[11px] leading-4"
+          className="mt-0.5 text-xs leading-5"
           style={{ color: isDark ? "rgba(247,241,255,0.55)" : "rgba(95,75,68,0.55)" }}
         >
           {config.description}
         </p>
         <p
-          className="mt-1 text-[10px] leading-3 opacity-50"
+          className="mt-1 text-xs leading-4 opacity-50"
           style={{ color: isDark ? "rgba(247,241,255,0.4)" : "rgba(95,75,68,0.4)" }}
         >
           {config.tagline}

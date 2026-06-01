@@ -361,19 +361,19 @@ export default function HomePage() {
               小乖，今天也好
             </h1>
           </div>
-          <div className="shrink-0 rounded-[1.25rem] border border-white/70 bg-white/62 px-2.5 py-1.5 text-right text-[11px] leading-5 text-cocoa/62 shadow-sm">
+          <div className="shrink-0 rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-1.5 text-right text-xs leading-5 text-cocoa/62 shadow-sm">
             <div>{todayLabel}</div>
             <div className="font-semibold text-cocoa">今日照顾</div>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">今天也慢慢来</span>
-          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">今天也慢慢来</span>
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-xs font-medium text-cocoa/70 shadow-sm">
             下次见面：{formatCountdown(data.nextMeetDate)}
           </span>
         </div>
-        <p className="mt-3 text-[13px] leading-5 text-cocoa/65">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
+        <p className="mt-3 text-sm leading-5 text-cocoa/65">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
       </motion.header>
 
       <motion.div

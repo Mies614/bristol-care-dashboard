@@ -48,16 +48,16 @@ export function NoteCard({
       {note.audioUrl ? <audio className="mb-3 w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} /> : null}
       {note.content ? <p className="whitespace-pre-wrap text-sm leading-7 text-cocoa/78">{note.content}</p> : null}
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {note.mood ? <span className="rounded-full bg-white/60 px-2.5 py-1 text-[11px] text-cocoa/62">{note.mood}</span> : null}
-        <span className="rounded-full bg-cocoa/8 px-2.5 py-1 text-[11px] uppercase text-cocoa/55">{type}</span>
-        {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-[11px] text-cocoa/65">置顶</span> : null}
+        {note.mood ? <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/62">{note.mood}</span> : null}
+        <span className="rounded-full bg-cocoa/8 px-2.5 py-1 text-xs uppercase text-cocoa/55">{type}</span>
+        {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-xs text-cocoa/65">置顶</span> : null}
       </div>
       {onPatch ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
-          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={onEdit} type="button">编辑</button>
-          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
-          <button className="btn-secondary btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
-          <select className="field h-7 w-14 min-w-0 py-0 text-[10px]" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
+          <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={onEdit} type="button">编辑</button>
+          <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
+          <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
+          <select className="field h-7 w-14 min-w-0 py-0 text-xs" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
             <option value="sticky">便签</option>
             <option value="postcard">明信片</option>
             <option value="bubble">气泡</option>
@@ -66,7 +66,7 @@ export function NoteCard({
             <option value="minimal">极简</option>
             <option value="romantic">浪漫</option>
           </select>
-          <button className="btn-danger btn-small text-[11px]" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
+          <button className="btn-danger btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
         </div>
       ) : null}
     </article>

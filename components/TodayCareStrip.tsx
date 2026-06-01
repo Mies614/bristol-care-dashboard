@@ -40,7 +40,7 @@ export function TodayCareStrip({ items }: TodayCareStripProps) {
             className="flex flex-col gap-1 rounded-2xl bg-white/55 p-3 transition hover:bg-white/80 hover:shadow-sm"
           >
             <span className="text-lg">{item.icon}</span>
-            <span className="text-[11px] font-semibold text-cocoa/60">{item.label}</span>
+            <span className="text-xs font-semibold text-cocoa/60">{item.label}</span>
             <span className="text-xs leading-5 text-cocoa/70 line-clamp-2">{item.summary}</span>
           </Link>
         ))}

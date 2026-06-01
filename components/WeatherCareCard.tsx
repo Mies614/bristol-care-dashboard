@@ -268,7 +268,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       {/* ── 第一行：天气描述 + 当前温度 ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-sage/70 mb-0.5">
+          <p className="text-[13px] font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
             {weatherLabel}
           </p>
           <h2 className="text-base font-semibold text-cocoa">
@@ -281,7 +281,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       </div>
 
       {/* ── 第二行：体感 / 降雨概率 / 风速 ── */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-cocoa/55">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-cocoa/60">
         <span>体感 {Math.round(w.apparentTemperature)}°</span>
         <span className="text-cocoa/25">·</span>
         <span>降雨 {w.rainProbability}%</span>
@@ -290,22 +290,22 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       </div>
 
       {/* ── 第三行：穿衣建议 ── */}
-      <p className="mt-1.5 text-xs leading-5 text-cocoa/65 break-words">{clothing}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-cocoa/70 break-words">{clothing}</p>
 
       {/* ── 第四行：降雨提示 ── */}
       {rainPrediction ? (
-          <p className="mt-1 text-[11px] leading-5 text-blue-700/80 break-words">
+          <p className="mt-1 text-xs leading-5 text-blue-700/80 break-words">
           {rainPrediction.hoursUntil <= 0
             ? "当前时段可能有雨"
             : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
           {rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}
         </p>
       ) : (
-        <p className="mt-1 text-[11px] leading-5 text-cocoa/40 break-words">未来几小时无明显降雨</p>
+        <p className="mt-1 text-xs leading-5 text-cocoa/50 break-words">未来几小时无明显降雨</p>
       )}
 
       {/* ── 第五行：当地时间 · 北京时间 · 日落 ── */}
-      <div className="mt-2 flex items-center gap-x-2 text-[11px] text-cocoa/50">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-cocoa/50">
         {isBeijingLocal ? (
           <>
             <span className="font-semibold text-cocoa/70">北京时间</span>
@@ -329,7 +329,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
           </>
         ) : null}
         {state.isFallback && (
-          <span className="text-cocoa/35 text-[10px]">· 未获取定位</span>
+          <span className="text-cocoa/40 text-xs">· 未获取定位</span>
         )}
       </div>
     </section>

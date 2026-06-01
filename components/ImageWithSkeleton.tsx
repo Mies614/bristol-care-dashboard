@@ -67,7 +67,7 @@ export function ImageWithSkeleton({
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--app-card-bg)] text-[var(--app-muted)]">
           <span className="text-2xl">{showPlayIcon ? "▶" : "🖼"}</span>
-          <span className="mt-1 text-[10px]">图片加载失败</span>
+          <span className="mt-1 text-xs">图片加载失败</span>
         </div>
       ) : (
         <motion.img

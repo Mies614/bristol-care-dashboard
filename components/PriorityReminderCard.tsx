@@ -23,8 +23,8 @@ export function PriorityReminderCard({ reminder, compact = false }: { reminder: 
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/62 px-2 py-0.5 text-[11px] font-medium text-cocoa/62">{typeLabel[reminder.type]}</span>
-            <span className="rounded-full bg-cocoa/8 px-2 py-0.5 text-[11px] font-medium uppercase text-cocoa/52">{reminder.priority}</span>
+            <span className="rounded-full bg-white/62 px-2 py-1 text-xs font-medium text-cocoa/62">{typeLabel[reminder.type]}</span>
+            <span className="rounded-full bg-cocoa/8 px-2 py-1 text-xs font-medium uppercase text-cocoa/52">{reminder.priority}</span>
           </div>
           <h3 className="mt-1 font-semibold leading-6 text-cocoa">{reminder.title}</h3>
           {reminder.subtitle ? <p className="mt-1 text-sm leading-5 text-cocoa/68">{reminder.subtitle}</p> : null}

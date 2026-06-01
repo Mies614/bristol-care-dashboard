@@ -29,17 +29,17 @@ export function NextImportantCard({ result }: { result: NextImportantResult }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sage">{result.label}</p>
-            <span className="text-[11px] text-cocoa/45">·</span>
-            <p className="text-[13px] font-semibold text-cocoa truncate">{result.title}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sage">{result.label}</p>
+            <span className="text-xs text-cocoa/45">·</span>
+            <p className="text-sm font-semibold text-cocoa truncate">{result.title}</p>
           </div>
           {result.detail ? (
-            <p className="mt-0.5 text-[11px] leading-5 text-cocoa/55 truncate">{result.detail}</p>
+            <p className="mt-0.5 text-xs leading-5 text-cocoa/60 truncate">{result.detail}</p>
           ) : null}
         </div>
         {result.href ? (
           <Link
-            className="shrink-0 rounded-full border border-white/70 bg-white/62 px-2.5 py-0.5 text-[11px] font-medium text-sage shadow-sm hover:bg-white/80 transition"
+            className="shrink-0 rounded-full border border-white/70 bg-white/62 px-3 py-1 text-xs font-medium text-sage shadow-sm hover:bg-white/80 transition"
             href={result.href}
           >
             去看看
