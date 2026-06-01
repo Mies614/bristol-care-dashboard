@@ -282,7 +282,7 @@ export default function HomePage() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="section-kicker">Bristol Care</p>
+            <p className="section-kicker">今日照顾 · Bristol Care</p>
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
               小乖，今天也好
             </h1>
@@ -299,7 +299,7 @@ export default function HomePage() {
             下次见面：{formatCountdown(data.nextMeetDate)}
           </span>
         </div>
-        <p className="mt-3 text-sm leading-5 text-cocoa/65">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
+        <p className="mt-3 text-sm leading-5 text-cocoa/65">打开就能看今天该关心什么，不急不赶。</p>
       </motion.header>
 
       <motion.div

@@ -607,18 +607,25 @@ export default function SettingsPage() {
           {importMessage ? <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{importMessage}</div> : null}
         </SettingsSection>
 
-        {/* ──────────────────── 5. Advanced (collapsed) ──────────────────── */}
-        <SettingsSection title="高级设置" subtitle="高级数据操作" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">同步操作已移至上方「云同步」区域。如需手动上传/恢复，请展开此区域。</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传到云端</AppButton>
-            <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
+        {/* ──────────────────── 6. Notifications ──────────────────── */}
+        <SettingsSection title="通知" subtitle="推送和提醒偏好" defaultOpen={false}>
+          <p className="text-xs text-[var(--app-muted)] mb-3">通知功能依赖云同步和浏览器推送。开启推送后，可在本设备收到重要提醒。</p>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+              <input type="checkbox" className="accent-[var(--app-accent)]" disabled />
+              <span className="text-sm text-[var(--app-muted)]">想你提醒（开发中）</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+              <input type="checkbox" className="accent-[var(--app-accent)]" disabled />
+              <span className="text-sm text-[var(--app-muted)]">DDL 临近提醒（开发中）</span>
+            </label>
+            <p className="text-xs text-[var(--app-muted)]/60">提醒功能将在后续版本中开放。</p>
           </div>
         </SettingsSection>
 
-        {/* ──────────────────── 6. Debug ──────────────────── */}
-        <SettingsSection title="诊断入口" subtitle="调试和问题排查" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可以检查 Supabase 连接、localStorage 状态等。</p>
+        {/* ──────────────────── 7. Advanced ──────────────────── */}
+        <SettingsSection title="高级" subtitle="诊断和调试入口" defaultOpen={false}>
+          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可检查 Supabase 连接、localStorage 状态和服务的各项健康指标。</p>
           <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">🔍 打开诊断页面</AppButton></a>
         </SettingsSection>
       </div>

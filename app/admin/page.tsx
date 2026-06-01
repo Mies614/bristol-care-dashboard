@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { fadeInScale, staggerContainer, useAccessibleMotion, safeTransition, safeVariants } from "@/lib/design/motion";
 import { AdminNotice } from "@/components/admin/AdminNotice";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
-import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
+import { getDefaultSpaceCode, getLastSyncTime, isCloudConfigured } from "@/lib/cloudSync";
 import { validateImageFile } from "@/lib/imageValidation";
 import { getUserFacingAuthorLabel } from "@/lib/identity";
 import { defaultAppData } from "@/lib/sampleData";
@@ -47,6 +47,8 @@ export default function AdminPage() {
   const [imageAlt, setImageAlt] = useState("");
   const [activeTab, setActiveTab] = useState<AdminTab>("care");
   const [missYouCounts, setMissYouCounts] = useState({ xiaoguai: 0, admin: 0 });
+  const [pushCount, setPushCount] = useState(0);
+  const [lastSyncState, setLastSyncState] = useState<{ status: string; time: string | null; error: string | null }>({ status: "unknown", time: null, error: null });
   const [settings, setSettings] = useState({
     girlfriendName: "小乖",
     nextMeetingDate: "",
@@ -121,6 +123,35 @@ export default function AdminPage() {
     setLoggedIn(true);
     await loadNotes(password);
     await loadCareSummary();
+    await loadDiagnostics();
+  }
+
+  async function loadDiagnostics() {
+    try {
+      // Load push subscriptions count
+      const pushResp = await fetch(`/api/debug/supabase`).then((r) => r.json()).catch(() => ({ ok: false }));
+      if (pushResp.ok && Array.isArray(pushResp.checks)) {
+        const pushCheck = pushResp.checks.find((c: { name: string }) => c.name === "push_subscriptions readable");
+        if (pushCheck?.detail) {
+          const match = pushCheck.detail.match(/(\d+) rows/);
+          if (match) setPushCount(parseInt(match[1]));
+        }
+      }
+
+      // Load last sync time from localStorage
+      try {
+        const lastTime = getLastSyncTime();
+        setLastSyncState({
+          status: lastTime ? "synced" : "unknown",
+          time: lastTime || null,
+          error: null
+        });
+      } catch {
+        setLastSyncState({ status: "unknown", time: null, error: null });
+      }
+    } catch {
+      // diagnostics are best-effort
+    }
   }
 
   async function loadNotes(pass = adminPassword || password) {
@@ -556,6 +587,8 @@ export default function AdminPage() {
                 <h2 className="font-semibold text-cocoa">系统状态摘要</h2>
                 <div className="mt-3 grid gap-2 text-sm text-cocoa/70">
                   <p><span className="font-medium text-cocoa/50">云同步：</span>{isCloudConfigured() ? "已配置" : "未配置"}</p>
+                  <p><span className="font-medium text-cocoa/50">同步状态：</span>{lastSyncState.status}{lastSyncState.time ? ` · ${new Date(lastSyncState.time).toLocaleString("zh-CN")}` : ""}{lastSyncState.error ? ` · ⚠️ 有错误` : ""}</p>
+                  <p><span className="font-medium text-cocoa/50">推送订阅：</span>{pushCount} 个设备</p>
                   <p><span className="font-medium text-cocoa/50">空间码：</span>{code}</p>
                   <p><span className="font-medium text-cocoa/50">课程数：</span>{careData.courses.length}</p>
                   <p><span className="font-medium text-cocoa/50">DDL 数：</span>{careData.deadlines.length}</p>

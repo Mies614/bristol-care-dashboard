@@ -204,6 +204,29 @@ export async function GET() {
 
           await addReadableCheck("courses readable", "courses");
           await addReadableCheck("deadlines sync check", "deadlines");
+
+          // deadlines.raw_payload column - optional check
+          try {
+            const { error: rawPayloadErr } = await supabase
+              .from("deadlines")
+              .select("id, raw_payload")
+              .eq("space_id", spaceId)
+              .limit(1);
+            checks.push({
+              name: "deadlines.raw_payload column",
+              ok: !rawPayloadErr,
+              detail: rawPayloadErr ? `column missing or inaccessible: ${rawPayloadErr.message}` : "column present",
+              optional: true
+            });
+          } catch (err) {
+            checks.push({
+              name: "deadlines.raw_payload column",
+              ok: false,
+              detail: `check failed: ${err instanceof Error ? err.message : String(err)}`,
+              optional: true
+            });
+          }
+
           await addReadableCheck("miss_you_seen_state readable", "miss_you_seen_state");
 
 
@@ -296,6 +319,7 @@ export async function GET() {
           checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no space)", optional: true });
           checks.push({ name: "settings readable", ok: false, detail: "skipped (no space)", optional: true });
           checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no space)", optional: true });
+          checks.push({ name: "deadlines.raw_payload column", ok: false, detail: "skipped (no space)", optional: true });
           checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no space)", optional: true });
         }
       } catch (err) {
@@ -308,6 +332,7 @@ export async function GET() {
         checks.push({ name: "push_subscriptions readable", ok: false, detail: "DB connection failed" });
         checks.push({ name: "settings readable", ok: false, detail: "DB connection failed" });
         checks.push({ name: "deadlines sync check", ok: false, detail: "DB connection failed" });
+        checks.push({ name: "deadlines.raw_payload column", ok: false, detail: "DB connection failed", optional: true });
         checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "DB connection failed" });
       }
     } else {
@@ -319,6 +344,7 @@ export async function GET() {
       checks.push({ name: "push_subscriptions readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
       checks.push({ name: "settings readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
       checks.push({ name: "deadlines sync check", ok: false, detail: "skipped (no supabase connection)", optional: true });
+      checks.push({ name: "deadlines.raw_payload column", ok: false, detail: "skipped (no supabase connection)", optional: true });
       checks.push({ name: "miss_you_seen_state readable", ok: false, detail: "skipped (no supabase connection)", optional: true });
     }
 
