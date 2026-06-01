@@ -5,14 +5,10 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
+import { normalizeChecks, summarizeDebugHealth, formatDebugCopyText } from "@/lib/debug-classify";
+import type { CheckLevel, CheckOutput } from "@/lib/debug-classify";
 
-type CheckLevel = "success" | "warning" | "optional" | "failed";
-
-type Check = {
-  name: string;
-  level: CheckLevel;
-  detail?: string;
-};
+type Check = CheckOutput;
 
 interface FetchError {
   status?: number;
@@ -46,35 +42,6 @@ function getLevelStyle(level: CheckLevel): string {
     case "optional": return "border-stone-200 bg-stone-50 text-stone-500";
     case "failed": return "border-rose-200 bg-rose-50 text-rose-700";
   }
-}
-
-/**
- * Map older API response (with { ok: boolean; optional?: boolean })
- * to the new CheckLevel type.
- */
-function normalizeChecks(rawChecks: Array<Record<string, unknown>>): Check[] {
-  return rawChecks.map((c) => {
-    const ok = Boolean(c.ok);
-    const optional = Boolean(c.optional);
-    // If the API already sends a "level" field, use it
-    if (c.level && ["success", "warning", "optional", "failed"].includes(c.level as string)) {
-      return {
-        name: String(c.name || "未知"),
-        level: c.level as CheckLevel,
-        detail: typeof c.detail === "string" ? c.detail : undefined,
-      };
-    }
-    // Derive level from ok/optional flags
-    let level: CheckLevel;
-    if (ok) level = "success";
-    else if (optional) level = "optional";
-    else level = "failed";
-    return {
-      name: String(c.name || "未知"),
-      level,
-      detail: typeof c.detail === "string" ? c.detail : undefined,
-    };
-  });
 }
 
 export default function DebugPage() {
@@ -188,44 +155,21 @@ export default function DebugPage() {
   // Calculate health status
   const healthStatus = useMemo(() => {
     if (!checks) return { label: "检查中", color: "text-cocoa/50" };
-    const failed = checks.filter((c) => c.level === "failed").length;
-    const warning = checks.filter((c) => c.level === "warning").length;
-    if (failed > 0) return { label: "需要关注", color: "text-rose" };
-    if (warning > 0) return { label: "有警告", color: "text-amber" };
+    const status = summarizeDebugHealth(checks);
+    if (status === "needs_attention") return { label: "需要关注", color: "text-rose" };
+    if (status === "warning") return { label: "有警告", color: "text-amber" };
     return { label: "健康", color: "text-emerald" };
   }, [checks]);
 
   // Diagnostic report for clipboard
   const diagnosticReport = useMemo(() => {
-    const lines: string[] = [];
-    lines.push("=== Bristol Care Diagnostics ===");
-    lines.push(`Time: ${new Date().toLocaleString("zh-CN")}`);
-    lines.push(`Env: ${client.env}`);
-    lines.push(`UserAgent: ${client.userAgent}`);
-    lines.push(`localStorage: ${client.storage ? "available" : "unavailable"} (${client.keyCount} keys)`);
-    lines.push("");
-
-    if (fetchError) {
-      lines.push("--- Fetch Error ---");
-      if (fetchError.status) lines.push(`Status: ${fetchError.status} ${fetchError.statusText}`);
-      if (fetchError.message) lines.push(`Message: ${fetchError.message}`);
-      lines.push("");
-    }
-
-    if (sortedChecks.length) {
-      const failed = sortedChecks.filter((c) => c.level === "failed").length;
-      const warning = sortedChecks.filter((c) => c.level === "warning").length;
-      const optional = sortedChecks.filter((c) => c.level === "optional").length;
-      const success = sortedChecks.filter((c) => c.level === "success").length;
-      lines.push("--- Health: " + healthStatus.label + " ---");
-      lines.push(`Checks: ${success} success${failed ? `, ${failed} failed` : ""}${warning ? `, ${warning} warning` : ""}${optional ? `, ${optional} optional` : ""}`);
-      for (const check of sortedChecks) {
-        lines.push(`[${getLevelLabel(check.level).toUpperCase()}] ${check.name}${check.detail ? " - " + check.detail : ""}`);
-      }
-    }
-
-    return lines.join("\n");
-  }, [sortedChecks, fetchError, client, healthStatus]);
+    if (!checks) return "";
+    return formatDebugCopyText(
+      checks,
+      { env: client.env, userAgent: client.userAgent, storage: client.storage, keyCount: client.keyCount },
+      fetchError ? { status: fetchError.status, statusText: fetchError.statusText, message: fetchError.message } : null
+    );
+  }, [checks, client, fetchError]);
 
   async function copyReport() {
     try {

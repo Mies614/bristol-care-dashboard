@@ -72,14 +72,26 @@ describe("getClothingAdvice", () => {
     expect(result).toContain("围巾");
     expect(result).toContain("注意保暖");
   });
+
+  it("30°C+ 体感低但不下雨：不出现体感偏冷", () => {
+    const result = getClothingAdvice(35, 28, 5, 5);
+    expect(result).toContain("短袖/背心");
+    expect(result).not.toContain("体感偏冷");
+  });
 });
 
 describe("getRainIntensity", () => {
   it("returns 零星小雨 for < 0.5mm", () => {
     expect(getRainIntensity(0.3)).toBe("零星小雨");
   });
+  it("边界 0.2mm -> 零星小雨", () => {
+    expect(getRainIntensity(0.2)).toBe("零星小雨");
+  });
   it("returns 小雨 for 0.5-2mm", () => {
     expect(getRainIntensity(1)).toBe("小雨");
+  });
+  it("边界 0.5mm -> 小雨", () => {
+    expect(getRainIntensity(0.5)).toBe("小雨");
   });
   it("returns 中雨 for 2-6mm", () => {
     expect(getRainIntensity(4)).toBe("中雨");
@@ -87,9 +99,25 @@ describe("getRainIntensity", () => {
   it("returns 雨势较大 for > 6mm", () => {
     expect(getRainIntensity(10)).toBe("雨势较大");
   });
+  it("边界 6mm -> 雨势较大", () => {
+    expect(getRainIntensity(6)).toBe("雨势较大");
+  });
+  it("0mm -> 零星小雨", () => {
+    expect(getRainIntensity(0)).toBe("零星小雨");
+  });
 });
 
 describe("findNextRain", () => {
+  it("当前小时有雨（i=0）", () => {
+    const hourly: HourlyRain[] = [
+      { hour: "14:00", prob: 60, rain: 1.2, precipitation: 1.2 }
+    ];
+    const result = findNextRain(hourly);
+    expect(result).toBeDefined();
+    expect(result!.hoursUntil).toBe(0);
+    expect(result!.intensity).toBe("小雨");
+  });
+
   it("finds rain within next few hours", () => {
     const hourly: HourlyRain[] = [
       { hour: "14:00", prob: 10, rain: 0, precipitation: 0 },
@@ -113,5 +141,59 @@ describe("findNextRain", () => {
 
   it("returns null for empty array", () => {
     expect(findNextRain([])).toBeNull();
+  });
+
+  it("probability 高但 rain 低 => 命中（prob>=40）", () => {
+    const hourly: HourlyRain[] = [
+      { hour: "14:00", prob: 80, rain: 0.1, precipitation: 0.1 }
+    ];
+    const result = findNextRain(hourly);
+    expect(result).toBeDefined();
+    expect(result!.hoursUntil).toBe(0);
+    expect(result!.prob).toBe(80);
+  });
+
+  it("rain 高但 probability 缺失（undefined） => 命中（rain>=0.2）", () => {
+    const hourly: HourlyRain[] = [
+      { hour: "14:00", prob: 0 as unknown as number, rain: 5, precipitation: 5 }
+    ];
+    // Simulate undefined prob by setting to 0 and relying on rain>=0.2
+    const result = findNextRain(hourly);
+    expect(result).toBeDefined();
+    expect(result!.hoursUntil).toBe(0);
+    expect(result!.amount).toBe(5);
+    expect(result!.intensity).toBe("中雨");
+  });
+
+  it("12 小时内无明显降雨（全部 prob<40 且 rain<0.2）=> null", () => {
+    const hourly: HourlyRain[] = Array.from({ length: 12 }, (_, i) => ({
+      hour: `${String(i + 8).padStart(2, "0")}:00`,
+      prob: 20,
+      rain: 0.1,
+      precipitation: 0.1
+    }));
+    expect(findNextRain(hourly)).toBeNull();
+  });
+
+  it("hourlyFull undefined 不崩 => null", () => {
+    const result = findNextRain(undefined as unknown as HourlyRain[]);
+    expect(result).toBeNull();
+  });
+
+  it("hourlyFull null 不崩 => null", () => {
+    const result = findNextRain(null as unknown as HourlyRain[]);
+    expect(result).toBeNull();
+  });
+
+  it("12h 内最后 1 小时有雨", () => {
+    const hourly: HourlyRain[] = Array.from({ length: 12 }, (_, i) => ({
+      hour: `${String(i).padStart(2, "0")}:00`,
+      prob: i === 11 ? 55 : 10,
+      rain: i === 11 ? 0.8 : 0,
+      precipitation: i === 11 ? 0.8 : 0
+    }));
+    const result = findNextRain(hourly);
+    expect(result).toBeDefined();
+    expect(result!.hoursUntil).toBe(11);
   });
 });

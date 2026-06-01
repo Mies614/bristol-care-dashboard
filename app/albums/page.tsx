@@ -13,6 +13,7 @@ import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import { createThumbnailFileFromVideo, shouldGenerateVideoThumbnail } from "@/lib/videoThumbnail";
+import { cleanupVideoElement } from "@/lib/media-utils";
 import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
@@ -382,11 +383,7 @@ export default function AlbumsPage() {
                 // 关闭后释放视频 src，避免后台消耗资源
                 if (definition === "exit" || definition === undefined) {
                   setPlaying(false);
-                  if (videoRef.current) {
-                    videoRef.current.pause();
-                    videoRef.current.removeAttribute("src");
-                    videoRef.current.load();
-                  }
+                  cleanupVideoElement(videoRef.current);
                 }
               }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
