@@ -163,16 +163,16 @@ export function getClothingAdvice(
     parts.push("体感偏冷，外套别太薄");
   }
 
+  // 大风：风速 >= 25km/h
+  if (windSpeed >= 25) {
+    parts.push("风有点大，外套别太轻");
+  }
+
   // 降雨
   if (rainProb >= 60) {
     parts.push("带伞，鞋子选防滑一点");
   } else if (rainProb >= 30) {
     parts.push("可以带一把小伞");
-  }
-
-  // 大风：风速 >= 25km/h
-  if (windSpeed >= 25) {
-    parts.push("风有点大，外套别太轻");
   }
 
   return parts.join("，") + "。";
@@ -228,7 +228,7 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
   // 天气获取失败
   if (!state.weather) {
     const label = state.isFallback
-      ? "Bristol 天气暂时看不了，但也要舒舒服服的。"
+      ? "未获取定位 · 以下为 Bristol, UK 天气"
       : "允许定位后可显示本地天气。Bristol 今天也要照顾好自己。";
     return (
       <section className="soft-card bg-gradient-to-br from-white/82 to-skySoft/55">
@@ -271,7 +271,7 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
       : "无雨";
 
     const timeLine = isBeijingLocal
-      ? `北京时间 ${beijingTime}`
+      ? `北京时间 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`
       : `${state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)} ${localTime} · 北京 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`;
 
     return (
@@ -326,8 +326,10 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
       {rainPrediction ? (
           <p className="mt-1 text-sm leading-5 text-blue-700/80 break-words">
           {rainPrediction.hoursUntil <= 0
-            ? "当前时段可能有雨"
-            : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
+            ? `快下雨了，当前时段${rainPrediction.intensity}`
+            : rainPrediction.hoursUntil === 1
+              ? `约 1 小时后${rainPrediction.intensity}`
+              : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
           {rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}
         </p>
       ) : (

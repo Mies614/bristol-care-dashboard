@@ -78,6 +78,19 @@ describe("getClothingAdvice", () => {
     expect(result).toContain("短袖/背心");
     expect(result).not.toContain("体感偏冷");
   });
+
+  it("体感偏冷+大风+有雨同时触发：追加顺序为体感偏冷→防风→带伞", () => {
+    // temp=8, apparent=3 (delta=-5°C, <=20) 触发体感偏冷
+    // windSpeed=28 触发防风
+    // rainProb=70 触发带伞
+    const result = getClothingAdvice(8, 3, 28, 70);
+    const coldIdx = result.indexOf("体感偏冷，外套别太薄");
+    const windIdx = result.indexOf("风有点大，外套别太轻");
+    const rainIdx = result.indexOf("带伞，鞋子选防滑一点");
+    expect(coldIdx).toBeGreaterThanOrEqual(0);
+    expect(windIdx).toBeGreaterThan(coldIdx);
+    expect(rainIdx).toBeGreaterThan(windIdx);
+  });
 });
 
 describe("getRainIntensity", () => {
