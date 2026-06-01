@@ -83,6 +83,7 @@ export function ImageWithSkeleton({
           onLoad={handleLoad}
           onError={handleError}
           loading="lazy"
+          decoding="async"
         />
       )}
 

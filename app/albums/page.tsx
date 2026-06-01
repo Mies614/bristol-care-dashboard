@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -51,6 +51,7 @@ function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "uploa
 }
 
 export default function AlbumsPage() {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [items, setItems] = useState<AlbumItem[]>([]);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
@@ -377,16 +378,29 @@ export default function AlbumsPage() {
               className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              onAnimationComplete={(definition) => {
+                // 关闭后释放视频 src，避免后台消耗资源
+                if (definition === "exit" || definition === undefined) {
+                  setPlaying(false);
+                  if (videoRef.current) {
+                    videoRef.current.pause();
+                    videoRef.current.removeAttribute("src");
+                    videoRef.current.load();
+                  }
+                }
+              }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={safeTransition({ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }, reduceMotion)}
+              transition={safeTransition({ duration: 0.22, ease: [0.25, 0.25, 0.25, 1] }, reduceMotion)}
             >
             {selected.videoUrl && (playing || !selected.imageUrl) ? (
               <video
+                ref={videoRef}
                 className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
                 src={selected.videoUrl}
                 controls
                 autoPlay
+                preload="metadata"
                 onEnded={() => setPlaying(false)}
               />
             ) : selected.imageUrl ? (
