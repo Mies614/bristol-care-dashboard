@@ -6,15 +6,14 @@ import { AppShell } from "@/components/AppShell";
 import { CourseCard } from "@/components/CourseCard";
 import { DeadlineCard } from "@/components/DeadlineCard";
 import { PageHeader } from "@/components/PageHeader";
-import { PriorityReminderList } from "@/components/PriorityReminderList";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { getDaysUntilDeadline } from "@/lib/date";
 import { createAllCoursesIcs, createAllDeadlinesIcs, downloadIcs, isCourseCalendarExportable, isDeadlineCalendarExportable } from "@/lib/ics";
 import { calculateNextPeriodStart, createPeriodReminderIcs, DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
-import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { getNextCourse, getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
+import { AppCard } from "@/components/ui/AppCard";
 
 function todayLabel() {
   return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
@@ -62,12 +61,6 @@ export default function RecordsPage() {
     const days = getDaysUntilDeadline(deadline);
     return days > 0 && days <= 3;
   });
-  const reminders = useMemo(() => getTodayPriorityReminders({
-    courses: data?.courses || [],
-    deadlines: data?.deadlines || [],
-    periodRecords,
-    periodSettings
-  }), [data, periodRecords, periodSettings]);
   const nextPeriodStart = useMemo(() => calculateNextPeriodStart(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const periodDays = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
@@ -85,81 +78,109 @@ export default function RecordsPage() {
     setMessage("已生成日历文件。");
   }
 
-  if (!data) return <AppShell><div className="soft-card">正在加载记录中心...</div></AppShell>;
+  if (!data) return <AppShell><div className="soft-card">正在加载…</div></AppShell>;
 
   return (
     <AppShell>
-      <PageHeader title="记录中心" subtitle="课程、DDL 和身体状态都放在这里。" />
-      <div className="space-y-3.5">
-        {/* 1. Hero - 今日摘要 */}
-        <section className="rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-butter/50 to-lilac/55 p-5 shadow-float backdrop-blur-xl">
+      <PageHeader title="生活安排" subtitle="课程、DDL 和身体状态，按类看得清楚。" />
+
+      <div className="space-y-4">
+        {/* ── 1. 今日总览卡片 ── */}
+        <AppCard className="bg-gradient-to-br from-white/88 via-butter/45 to-lilac/50">
           <p className="section-kicker mb-1">{todayLabel()}</p>
-          <h1 className="text-2xl font-semibold text-cocoa">今日重点 {reminders.filter((item) => item.priority === "urgent" || item.priority === "soon").length} 条</h1>
-          <p className="mt-2 text-sm leading-6 text-cocoa/65">先看最靠近时间的事，剩下的慢慢来。</p>
-        </section>
-
-        {/* 2. Priority - 醒目提醒 */}
-        <section className="soft-card">
-          <div className="mb-3">
-            <p className="section-kicker mb-1">Priority</p>
-            <h2 className="font-semibold text-cocoa">醒目提醒</h2>
+          <h1 className="text-xl font-semibold text-cocoa">今日总览</h1>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl bg-white/55 p-2">
+              <p className="text-lg font-semibold text-cocoa">{todayCourses.length}</p>
+              <p className="text-[11px] text-cocoa/55">今日课</p>
+            </div>
+            <div className="rounded-xl bg-white/55 p-2">
+              <p className="text-lg font-semibold text-cocoa">{incompleteDeadlines.length}</p>
+              <p className="text-[11px] text-cocoa/55">未完成 DDL</p>
+            </div>
+            <div className="rounded-xl bg-white/55 p-2">
+              <p className="text-lg font-semibold text-cocoa">{cycleDay || "—"}</p>
+              <p className="text-[11px] text-cocoa/55">周期第几天</p>
+            </div>
           </div>
-          <PriorityReminderList reminders={reminders} limit={5} />
-        </section>
+          <p className="mt-3 text-sm leading-6 text-cocoa/65">
+            今天截止 {todayDue.length} 个 DDL，{soonDue.length} 个在 3 天内。{nextCourse ? `下一节：${nextCourse.name} ${nextCourse.startTime} 开始。` : ""}
+          </p>
+        </AppCard>
 
-        {/* 3. Quick Actions - 快速操作，紧跟提醒之后 */}
-        <section className="soft-card">
-          <p className="section-kicker mb-1">Quick Actions</p>
-          <h2 className="mb-3 font-semibold text-cocoa">快速操作</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <Link className="btn-secondary text-center" href="/schedule">添加课程</Link>
-            <Link className="btn-secondary text-center" href="/deadlines">添加 DDL</Link>
-            <Link className="btn-secondary text-center" href="/period">添加经期记录</Link>
-            <button className="btn-primary" onClick={exportAllCalendar}>导出日历提醒</button>
+        {/* ── 2. 快速添加 ── */}
+        <AppCard>
+          <p className="section-kicker mb-1">Quick Add</p>
+          <h2 className="mb-3 font-semibold text-cocoa">快速添加</h2>
+          <div className="grid grid-cols-3 gap-2">
+            <Link className="btn-secondary text-center text-xs py-2" href="/schedule">+ 课程</Link>
+            <Link className="btn-secondary text-center text-xs py-2" href="/deadlines">+ DDL</Link>
+            <Link className="btn-secondary text-center text-xs py-2" href="/period">+ 经期</Link>
           </div>
+          <button className="btn-primary w-full mt-2 text-xs" onClick={exportAllCalendar}>导出日历提醒</button>
           {message ? <p className="notice mt-3">{message}</p> : null}
-        </section>
+        </AppCard>
 
-        {/* 4. Schedule - 今日课程 */}
+        {/* ── 3. 今日课程 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Schedule</p>
+              <p className="section-kicker mb-1">Courses</p>
               <h2 className="font-semibold text-cocoa">今日课程</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/schedule">查看全部</Link>
+            <Link className="btn-secondary btn-small" href="/schedule">全部</Link>
           </div>
-          {nextCourse ? <p className="notice mb-3">下一节：{nextCourse.name}，{nextCourse.startTime} 开始。</p> : null}
-          {todayCourses.length ? <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div> : <p className="empty-state text-left">今天没有课，可以慢慢安排自己的节奏。</p>}
+          {todayCourses.length ? (
+            <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div>
+          ) : (
+            <p className="empty-state text-left">今天没有课，属于自己的节奏。</p>
+          )}
         </section>
 
-        {/* 5. Deadlines - DDL 摘要 */}
+        {/* ── 4. DDL 摘要 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="section-kicker mb-1">Deadlines</p>
-              <h2 className="font-semibold text-cocoa">DDL 摘要</h2>
+              <h2 className="font-semibold text-cocoa">DDL 列表</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/deadlines">查看全部</Link>
+            <Link className="btn-secondary btn-small" href="/deadlines">全部</Link>
           </div>
-          <p className="mb-3 text-sm text-cocoa/65">今天截止 {todayDue.length} 个，3 天内截止 {soonDue.length} 个。</p>
-          {incompleteDeadlines.length ? <div className="space-y-2">{incompleteDeadlines.slice(0, 3).map((deadline) => <DeadlineCard deadline={deadline} key={deadline.id} />)}</div> : <p className="empty-state text-left">最近没有未完成 DDL。</p>}
+          {incompleteDeadlines.length ? (
+            <div className="space-y-2">
+              {incompleteDeadlines.slice(0, 5).map((deadline) => (
+                <DeadlineCard deadline={deadline} key={deadline.id} />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state text-left">最近没有未完成 DDL，真棒。</p>
+          )}
         </section>
 
-        {/* 6. Cycle - 经期记录 */}
+        {/* ── 5. 经期状态 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="section-kicker mb-1">Cycle</p>
-              <h2 className="font-semibold text-cocoa">经期记录</h2>
+              <h2 className="font-semibold text-cocoa">经期状态</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/period">查看记录</Link>
+            <Link className="btn-secondary btn-small" href="/period">记录</Link>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
-            <div className="rounded-2xl bg-white/58 p-3">预计：<span className="font-semibold text-cocoa">{nextPeriodStart || "待记录"}</span></div>
-            <div className="rounded-2xl bg-white/58 p-3">剩余：<span className="font-semibold text-cocoa">{periodDays === null ? "待记录" : `${periodDays} 天`}</span></div>
-            <div className="col-span-2 rounded-2xl bg-white/58 p-3">当前周期：<span className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "待记录"}</span></div>
-          </div>
+          {periodRecords.length === 0 ? (
+            <p className="empty-state text-left">还没有经期记录，可以先去补一条。</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
+              <div className="rounded-2xl bg-white/58 p-3">
+                预计：<span className="font-semibold text-cocoa">{nextPeriodStart || "计算中"}</span>
+              </div>
+              <div className="rounded-2xl bg-white/58 p-3">
+                距离：<span className="font-semibold text-cocoa">{periodDays === null ? "—" : `${periodDays} 天`}</span>
+              </div>
+              <div className="col-span-2 rounded-2xl bg-white/58 p-3">
+                当前周期：<span className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "—"}</span>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </AppShell>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
-import { fadeInScale, useAccessibleMotion, safeTransition } from "@/lib/design/motion";
+import { fadeInScale, staggerContainer, useAccessibleMotion, safeTransition, safeVariants } from "@/lib/design/motion";
 import { AdminNotice } from "@/components/admin/AdminNotice";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { getDefaultSpaceCode, isCloudConfigured } from "@/lib/cloudSync";
@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const ADMIN_PASSWORD_KEY = "bristol-care-admin-password-v1";
 
-type AdminTab = "overview" | "notes" | "albums" | "missyou" | "settings" | "diagnostics";
+type AdminTab = "care" | "notes" | "settings" | "diagnostics";
 
 export default function AdminPage() {
   const [password, setPassword] = useState("");
@@ -45,13 +45,16 @@ export default function AdminPage() {
   const [visibleFrom, setVisibleFrom] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imageAlt, setImageAlt] = useState("");
-  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [activeTab, setActiveTab] = useState<AdminTab>("care");
   const [missYouCounts, setMissYouCounts] = useState({ xiaoguai: 0, admin: 0 });
   const [settings, setSettings] = useState({
     girlfriendName: "小乖",
     nextMeetingDate: "",
     semesterEndDate: ""
   });
+
+  // Recent album items for the care tab
+  const [recentAlbums, setRecentAlbums] = useState<AlbumItem[]>([]);
 
   useEffect(() => {
     try {
@@ -81,7 +84,12 @@ export default function AdminPage() {
       fetch(`/api/period?code=${encodeURIComponent(code)}`).then((r) => r.json()).catch(() => ({}))
     ]);
     if (cloudPayload.data) setCareData(cloudPayload.data);
-    if (Array.isArray(albumPayload.items)) setCareAlbums(albumPayload.items);
+    if (Array.isArray(albumPayload.items)) {
+      setCareAlbums(albumPayload.items);
+      // 仅展示最近 4 张喜欢的收藏
+      const favs = albumPayload.items.filter((item: AlbumItem) => item.isFavorite).slice(0, 4);
+      setRecentAlbums(favs.length ? favs : albumPayload.items.slice(0, 4));
+    }
     if (Array.isArray(periodPayload.records)) setCarePeriods(periodPayload.records);
     if (periodPayload.settings) setCarePeriodSettings(periodPayload.settings);
     // Load miss-you counts
@@ -282,7 +290,7 @@ export default function AdminPage() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-[var(--app-text)] shadow-sm">
-            {isCloudConfigured() ? "☁️ 云同步已连接" : "📱 本地模式"}
+            ☁️ 云同步已连接
           </span>
           <span className="rounded-full border border-white/70 bg-white/58 px-3 py-1.5 text-xs font-medium text-[var(--app-text)] shadow-sm">
             code: {code}
@@ -309,41 +317,107 @@ export default function AdminPage() {
         </form>
       ) : (
         <>
-          {/* Tab bar */}
-          <div className="mb-4 flex flex-wrap gap-2">
-            <TabButton tab="overview" label="总览" />
-            <TabButton tab="notes" label="小纸条" />
-            <TabButton tab="missyou" label="想你" />
-            <TabButton tab="settings" label="设置同步" />
-            <TabButton tab="diagnostics" label="诊断" />
+          {/* ── 首屏优先：操作按钮在前 ── */}
+          <div className="mb-4 space-y-3">
+            {/* 想她一下 */}
+            <MissYouAdminCard />
+
+            {/* Space code */}
+            <label className="flex items-center gap-2 text-sm text-[var(--app-muted)]">
+              管理空间
+              <Input className="w-32" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => { loadNotes(); loadCareSummary(); }} />
+              <AppButton variant="secondary" size="sm" onClick={loadCareSummary}>刷新数据</AppButton>
+            </label>
           </div>
 
-          {/* Space info bar */}
-          <section className="mb-4 flex items-center justify-between gap-3">
-            <AppCard compact className="flex-1 bg-gradient-to-br from-white/85 to-skySoft/55">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Space</p>
-                <h2 className="font-semibold text-[var(--app-text)]">当前管理空间</h2>
-              </div>
-            </AppCard>
-            <label className="flex items-center gap-2 text-sm text-[var(--app-muted)]">
-              code
-              <Input className="w-32" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => loadNotes()} />
-            </label>
-          </section>
+          {/* ── Tab bar: 管理优先级 — 照顾在前，诊断在后 ── */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <TabButton tab="care" label="💕 照顾面板" />
+            <TabButton tab="notes" label="💌 小纸条" />
+            <TabButton tab="settings" label="⚙️ 设置" />
+            <TabButton tab="diagnostics" label="🔍 诊断" />
+          </div>
 
-          {/* ── Overview Tab ── */}
-          {activeTab === "overview" && (
-            <>
+          {/* ── Care Tab: 今日总览 + 课程/DDL/经期 + 相册摘要 ── */}
+          {activeTab === "care" && (
+            <motion.div
+              className="space-y-4"
+              variants={safeVariants(staggerContainer, reduceMotion)}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* 今日状态总览 */}
               <AdminOverviewCard
                 careData={careData}
                 carePeriods={carePeriods}
                 carePeriodSettings={carePeriodSettings}
-                latestNote={latestNote?.content?.slice(0, 20)}
+                latestNote={latestNote?.content?.slice(0, 30)}
                 missYouCounts={missYouCounts}
                 onRefresh={loadCareSummary}
               />
-            </>
+
+              {/* 最近小纸条摘要 */}
+              <AppCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="section-kicker mb-1">Latest Note</p>
+                    <h2 className="font-semibold text-cocoa">最近小纸条</h2>
+                  </div>
+                  <AppButton variant="secondary" size="sm" onClick={() => { setActiveTab("notes"); }}>管理纸条</AppButton>
+                </div>
+                {latestNote ? (
+                  <div className="mt-3 rounded-2xl bg-white/55 p-3">
+                    <p className="text-sm leading-6 text-cocoa">{latestNote.content}</p>
+                    <p className="mt-2 text-xs text-cocoa/45">
+                      {latestNote.createdAt ? new Date(latestNote.createdAt).toLocaleString("zh-CN") : "无时间"} · {getUserFacingAuthorLabel(latestNote.author)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="empty-state mt-3">还没有小纸条。</p>
+                )}
+              </AppCard>
+
+              {/* 最近相册 */}
+              <AppCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="section-kicker mb-1">Album</p>
+                    <h2 className="font-semibold text-cocoa">最近相册</h2>
+                  </div>
+                </div>
+                {recentAlbums.length ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {recentAlbums.map((item) => (
+                      <div className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" key={item.id}>
+                        {item.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" />
+                        ) : (
+                          <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>
+                        )}
+                        {item.isFavorite ? <span className="absolute right-1 top-1 rounded-full bg-white/75 px-1.5 text-xs">♡</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty-state mt-3">还没有相册照片。</p>
+                )}
+              </AppCard>
+
+              {/* 推送状态 - 折叠到末尾 */}
+              <AppCard>
+                <details>
+                  <summary className="cursor-pointer font-medium text-cocoa text-sm">推送状态</summary>
+                  <div className="mt-3 space-y-2 text-xs text-cocoa/60">
+                    <p>想你次数：小乖 {missYouCounts.xiaoguai} 次，我 {missYouCounts.admin} 次。</p>
+                    <p>未完成 DDL：{careData.deadlines.filter((d) => d.status !== "done").length} 个。</p>
+                    <p>今日课程：{careData.courses.filter((c) => c.day === new Date().toLocaleDateString("en-US", { weekday: "long" })).length} 节。</p>
+                    <p>纸条总数：{notes.length} 条。</p>
+                    <p className="pt-2 font-medium">💡 提示：如需更详细诊断，前往「诊断」标签页。</p>
+                  </div>
+                </details>
+              </AppCard>
+            </motion.div>
           )}
 
           {/* ── Notes Tab ── */}
@@ -422,7 +496,7 @@ export default function AdminPage() {
                           <p className="mt-2 text-xs text-[var(--app-muted)]">{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN") : "无时间"}</p>
                         </div>
                         {note.imageUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img className="h-16 w-16 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm" src={note.imageUrl} alt={note.imageAlt || ""} />
                         ) : null}
                       </div>
@@ -454,11 +528,6 @@ export default function AdminPage() {
                 </div>
               </AppCard>
             </div>
-          )}
-
-          {/* ── MissYou Tab ── */}
-          {activeTab === "missyou" && (
-            <MissYouAdminCard />
           )}
 
           {/* ── Settings Tab ── */}
