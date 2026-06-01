@@ -284,8 +284,8 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
             <h2 className="text-base font-semibold text-cocoa">
               {weatherCodeText(w.weatherCode)} · {Math.round(w.temperature)}° 体感 {Math.round(w.apparentTemperature)}°
             </h2>
-            <p className="mt-1 text-sm leading-5 text-cocoa/70 break-words">{clothing}</p>
-            <p className="mt-1 text-xs text-cocoa/45">{timeLine}</p>
+            <p className="mt-1 text-sm leading-5 text-cocoa/80 break-words">{clothing}</p>
+            <p className="mt-1 text-xs text-cocoa/50">{timeLine}</p>
           </div>
         </div>
       </section>
