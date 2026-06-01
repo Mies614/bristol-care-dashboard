@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
-import { OnboardingCard } from "@/components/OnboardingCard";
 import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
 import { formatCountdown } from "@/lib/date";
 import { loadAppData } from "@/lib/storage";
@@ -327,10 +326,6 @@ export default function HomePage() {
 
         {/* 4. 置顶小纸条 */}
         <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
-        <div className="grid grid-cols-2 gap-2">
-          <Link className="btn-primary text-center" href="/notes">小纸条墙</Link>
-          <Link className="btn-secondary text-center" href="/notes">写一张</Link>
-        </div>
 
         {/* 5. 最近回忆 */}
         <section className="soft-card">
@@ -355,13 +350,10 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-          ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
+          ) : (
+            <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>
+          )}
         </section>
-
-        {/* 6. 引导卡 */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <OnboardingCard />
-        </motion.div>
       </motion.div>
     </AppShell>
   );
