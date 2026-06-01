@@ -207,18 +207,18 @@ export default function AlbumsPage() {
       >
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Albums</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">我们的相册</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把喜欢的瞬间慢慢收起来。</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">每张照片都是一个很小的故事，慢慢翻才会发现。</p>
       </motion.header>
 
       <div className="space-y-4">
-        {/* Upload */}
+        {/* Upload — 轻量化折叠入口 */}
         <AppCard className="bg-gradient-to-br from-white/85 to-blush/40">
           <button className="flex w-full items-center justify-between text-left" onClick={() => setUploadOpen((value) => !value)} type="button">
             <span>
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1 block">Upload</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1 block">+ Add Memory</span>
               <span className="font-semibold text-[var(--app-text)]">添加一张回忆</span>
             </span>
-            <AppButton variant="secondary" size="sm" type="button">{uploadOpen ? "收起" : "展开"}</AppButton>
+            <AppButton variant={uploadOpen ? "secondary" : "primary"} size="sm" type="button">{uploadOpen ? "收起" : "添加"}</AppButton>
           </button>
           <form className={`grid transition-all duration-300 ${uploadOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} onSubmit={upload}>
             <div className="space-y-3 overflow-hidden">
@@ -291,7 +291,14 @@ export default function AlbumsPage() {
               </AppButton>
             ))}
           </div>
-          {message ? (
+          {/* 上传状态提示 — 醒目但轻量 */}
+          {uploading ? (
+            <div className="mb-3 flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] px-4 py-3 text-sm text-[var(--app-accent)]">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--app-accent)]" />
+              <span>{uploadStage || "准备上传…"}</span>
+            </div>
+          ) : null}
+          {message && !uploading ? (
             <div className="mb-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
               {message}
             </div>
@@ -320,26 +327,31 @@ export default function AlbumsPage() {
                       className="transition group-hover:scale-105"
                     />
                   ) : item.videoUrl ? (
-                    <ImageWithSkeleton
-                      src=""
-                      alt={item.title || "视频"}
-                      aspectRatio="portrait"
-                      showPlayIcon
-                    />
-                  ) : null}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-2 text-left text-white">
-                    <p className="truncate text-sm font-medium">{item.title || "未命名回忆"}</p>
-                    <p className="text-xs opacity-80">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
-                  </div>
-                  {item.type === "live_photo" ? (
-                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">LIVE</span>
-                  ) : null}
+                    <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/65 to-lilac/60">
+                      <span className="text-4xl text-white/80 drop-shadow-lg">▶</span>
+                    </div>
+                  ) : (
+                    <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/40 to-blush/35">
+                      <span className="text-3xl text-white/60">🖼</span>
+                    </div>
+                  )}
+                  {/* 类型标签 — 清晰但不遮挡内容 */}
                   {item.type === "video" ? (
-                    <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">VIDEO</span>
+                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
+                      ▶ VIDEO
+                    </span>
+                  ) : item.type === "live_photo" ? (
+                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
+                      ◉ LIVE
+                    </span>
                   ) : null}
                   {item.isFavorite ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-white/75 px-2 py-1 text-xs">♡</span>
+                    <span className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium text-cocoa shadow-sm">★</span>
                   ) : null}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-2.5 text-left text-white">
+                    <p className="truncate text-sm font-medium leading-snug">{item.title || "未命名回忆"}</p>
+                    <p className="mt-0.5 text-[11px] opacity-70">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
+                  </div>
                 </motion.button>
               ))}
             </motion.div>

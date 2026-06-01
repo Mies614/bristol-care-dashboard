@@ -57,7 +57,7 @@ export function NoteCard({
           <button className="btn-secondary btn-small" disabled={busy} onClick={onEdit} type="button">编辑</button>
           <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
           <button className="btn-secondary btn-small" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: !note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
-          <select className="field h-9 w-auto min-w-24 py-1 text-xs" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
+          <select className="field h-8 w-16 min-w-0 py-0.5 text-[10px]" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
             <option value="sticky">便签</option>
             <option value="postcard">明信片</option>
             <option value="bubble">气泡</option>

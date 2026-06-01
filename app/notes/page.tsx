@@ -91,7 +91,7 @@ export default function NotesPage() {
       <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Note Wall</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">小纸条墙</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把想说的话、当下的声音和照片都放在这里。</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">像便签和明信片一样，把想说的轻轻贴在这里。</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {["✎ 写文字", "🎤 录语音", "📷 发照片", "🎬 发视频"].map((item) => (
             <span className="rounded-full bg-white/60 px-3 py-1.5 text-xs text-[var(--app-muted)]" key={item}>{item}</span>
@@ -101,13 +101,13 @@ export default function NotesPage() {
 
       <div className="space-y-3.5">
         {/* Composer - 写纸条区，优先放置 */}
-        <AppCard>
+        <AppCard className="bg-gradient-to-br from-white/85 to-blush/40">
           <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((v) => !v)} type="button">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Compose</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">✎ New Note</p>
               <p className="font-semibold text-[var(--app-text)]">写一张小纸条</p>
             </div>
-            <AppButton variant="secondary" size="sm" type="button">{composerOpen ? "收起" : "展开"}</AppButton>
+            <AppButton variant={composerOpen ? "secondary" : "primary"} size="sm" type="button">{composerOpen ? "收起" : "写一张"}</AppButton>
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
@@ -118,7 +118,7 @@ export default function NotesPage() {
 
         {/* Filters - 筛选区，移动端优先展示高频筛选项 */}
         <AppCard>
-          {/* 快速筛选标签 - 移动端可横向滑动 */}
+          {/* 快速筛选标签 - 移动端横向滑动 */}
           <div className="-mx-1 mb-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
             {filters.map(([value, label]) => (
               <AppButton
