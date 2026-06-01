@@ -125,9 +125,15 @@ export function getRainIntensity(amount: number): string {
 // ── 穿衣建议 ──
 
 /**
- * 穿衣建议。
+ * 穿衣建议（具体衣物版）。
  *
- * 结合：当前温度、体感温度、风速、是否下雨/雨概率。
+ * 规则：
+ *   - 基于实际温度推荐具体衣物
+ *   - 仅 temp <= 20 且体感比实际低 3°C 以上时追加体感偏冷
+ *   - 降雨概率 >= 60%：追加带伞+防滑鞋
+ *   - 降雨概率 30-60%：追加带小伞
+ *   - 风速 >= 25km/h：追加防风外套提醒
+ *   - 高温不下雨不出现体感偏冷
  */
 export function getClothingAdvice(
   temp: number,
@@ -137,40 +143,39 @@ export function getClothingAdvice(
 ): string {
   const parts: string[] = [];
 
-  // 基于实际温度
+  // 基础穿衣建议（基于实际温度）
   if (temp < 5) {
-    parts.push("很冷，厚外套和围巾最合适");
+    parts.push("厚羽绒服/厚大衣 + 毛衣/卫衣 + 围巾，注意保暖");
   } else if (temp < 12) {
-    parts.push("偏冷，外套加内搭刚好");
+    parts.push("厚外套/大衣 + 卫衣或针织衫，怕冷可加围巾");
   } else if (temp < 18) {
-    parts.push("微凉，薄外套就可以");
-  } else if (temp < 26) {
-    parts.push("舒适，轻薄衣物最舒服");
+    parts.push("薄外套/风衣/夹克 + 长袖，早晚可加一层");
+  } else if (temp < 24) {
+    parts.push("长袖衬衫/T恤 + 薄外套，白天可单穿");
+  } else if (temp < 30) {
+    parts.push("短袖/T恤 + 轻薄长裤或半裙，注意防晒");
   } else {
-    parts.push("炎热，轻薄透气，注意防晒补水");
+    parts.push("短袖/背心 + 轻薄裤裙，带水，注意防晒补水");
   }
 
-  // 体感偏冷提示：仅在温度不高于 20°C 且体感比实际低 3°C 以上时提示
+  // 体感偏冷提示：仅 temp <= 20 且体感比实际低 3°C 以上
   if (temp <= 20 && apparentTemp < temp - 3) {
-    const idx = parts[0].endsWith("。") ? parts[0].length - 1 : parts[0].length;
-    parts[0] = parts[0].slice(0, idx) + "，体感偏冷";
+    parts.push("体感偏冷，外套别太薄");
   }
 
   // 降雨
   if (rainProb >= 60) {
-    parts.push("记得带伞，鞋子选防滑一点");
+    parts.push("带伞，鞋子选防滑一点");
   } else if (rainProb >= 30) {
-    parts.push("可能飘点雨，带把小伞更安心");
+    parts.push("可以带一把小伞");
   }
 
-  // 大风
+  // 大风：风速 >= 25km/h
   if (windSpeed >= 25) {
-    parts.push("风比较大，外套别太薄");
-  } else if (windSpeed >= 15 && temp < 15) {
-    parts.push("有风，注意防风");
+    parts.push("风有点大，外套别太轻");
   }
 
-  return parts.join("。") + "。";
+  return parts.join("，") + "。";
 }
 
 // ── 时间格式化 ──
@@ -276,12 +281,12 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
           </h2>
         </div>
         <div className="shrink-0 rounded-[1rem] bg-white/65 px-2.5 py-1.5 text-right shadow-sm">
-          <p className="text-2xl font-semibold text-cocoa leading-none">{Math.round(w.temperature)}°</p>
+          <p className="text-3xl font-semibold text-cocoa leading-none">{Math.round(w.temperature)}°</p>
         </div>
       </div>
 
       {/* ── 第二行：体感 / 降雨概率 / 风速 ── */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-cocoa/60">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-cocoa/60">
         <span>体感 {Math.round(w.apparentTemperature)}°</span>
         <span className="text-cocoa/25">·</span>
         <span>降雨 {w.rainProbability}%</span>
@@ -290,22 +295,22 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       </div>
 
       {/* ── 第三行：穿衣建议 ── */}
-      <p className="mt-1.5 text-sm leading-relaxed text-cocoa/70 break-words">{clothing}</p>
+      <p className="mt-1.5 text-sm font-medium leading-relaxed text-cocoa/80 break-words">{clothing}</p>
 
       {/* ── 第四行：降雨提示 ── */}
       {rainPrediction ? (
-          <p className="mt-1 text-xs leading-5 text-blue-700/80 break-words">
+          <p className="mt-1 text-sm leading-5 text-blue-700/80 break-words">
           {rainPrediction.hoursUntil <= 0
             ? "当前时段可能有雨"
             : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
           {rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}
         </p>
       ) : (
-        <p className="mt-1 text-xs leading-5 text-cocoa/50 break-words">未来几小时无明显降雨</p>
+        <p className="mt-1 text-sm leading-5 text-cocoa/50 break-words">未来几小时无明显降雨</p>
       )}
 
       {/* ── 第五行：当地时间 · 北京时间 · 日落 ── */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-cocoa/50">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-cocoa/50">
         {isBeijingLocal ? (
           <>
             <span className="font-semibold text-cocoa/70">北京时间</span>
@@ -329,7 +334,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
           </>
         ) : null}
         {state.isFallback && (
-          <span className="text-cocoa/40 text-xs">· 未获取定位</span>
+          <span className="text-cocoa/40 text-sm">· 未获取定位</span>
         )}
       </div>
     </section>
