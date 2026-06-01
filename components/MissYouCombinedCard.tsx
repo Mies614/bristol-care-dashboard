@@ -293,29 +293,21 @@ export function MissYouCombinedCard() {
       ))}
 
       <div className="relative z-10">
-        <p className="section-kicker mb-1">想你</p>
-
         {/* ── 一行标题 + 计数 ── */}
-        <h2 className="text-lg font-semibold text-cocoa">
+        <p className="text-sm font-semibold text-cocoa/70">
           想你{todaysYouCount > 0 ? ` · 今天已想你 ${todaysYouCount} 次` : ""}
-        </h2>
+        </p>
 
         {/* ── 未读想念（admin 端发来的） ── */}
         {hasUnread && (
-          <div className="mt-2 rounded-2xl bg-white/65 px-3 py-2">
-            <p className="text-sm font-medium text-cocoa">
-              💕 他也在想你（{data.unreadFromOtherCount} 次）
-            </p>
-            {data.unreadFromOtherEvents.length > 0 && (
-              <p className="mt-0.5 text-xs text-cocoa/50">
-                最近：{formatTime(data.unreadFromOtherEvents[0].created_at)}
-              </p>
-            )}
-          </div>
+          <p className="mt-1 text-xs text-cocoa/50">
+            💕 他也在想你 {data.unreadFromOtherCount} 次
+            {data.unreadFromOtherEvents.length > 0 && ` · ${formatTime(data.unreadFromOtherEvents[0].created_at)}`}
+          </p>
         )}
 
         {/* ── 按钮组 ── */}
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           <button
             className={`btn-primary btn-small transition-transform ${animating ? "scale-95" : ""}`}
             disabled={loading}

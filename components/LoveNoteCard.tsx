@@ -9,15 +9,14 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   const content = note?.content || fallback;
 
   return (
-    <section className="soft-card relative overflow-hidden bg-gradient-to-br from-butter/50 via-white/75 to-lilac/35">
+    <section className="soft-card relative overflow-hidden bg-white/55">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="section-kicker mb-1">小纸条</p>
-          <h2 className="font-semibold text-cocoa">今天的小纸条</h2>
+          <h2 className="text-sm font-semibold text-cocoa/60">✉ 今天的小纸条</h2>
         </div>
         {onRefresh ? (
           <div className="flex flex-wrap justify-end gap-2">
-            <Link className="btn-secondary btn-small" href="/notes">去小纸条墙</Link>
+            <Link className="btn-secondary btn-small" href="/notes">小纸条墙</Link>
             <button className="btn-secondary btn-small" onClick={onRefresh}>刷新</button>
           </div>
         ) : null}
