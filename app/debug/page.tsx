@@ -6,13 +6,75 @@ import { AppShell } from "@/components/AppShell";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 
-type Check = { name: string; ok: boolean; detail?: string; optional?: boolean };
+type CheckLevel = "success" | "warning" | "optional" | "failed";
+
+type Check = {
+  name: string;
+  level: CheckLevel;
+  detail?: string;
+};
 
 interface FetchError {
   status?: number;
   statusText?: string;
   message?: string;
   bodyPreview?: string;
+}
+
+function getLevelIcon(level: CheckLevel): string {
+  switch (level) {
+    case "success": return "✓";
+    case "warning": return "⚠";
+    case "optional": return "○";
+    case "failed": return "✗";
+  }
+}
+
+function getLevelLabel(level: CheckLevel): string {
+  switch (level) {
+    case "success": return "通过";
+    case "warning": return "警告";
+    case "optional": return "可选";
+    case "failed": return "失败";
+  }
+}
+
+function getLevelStyle(level: CheckLevel): string {
+  switch (level) {
+    case "success": return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "warning": return "border-amber-200 bg-amber-50 text-amber-700";
+    case "optional": return "border-stone-200 bg-stone-50 text-stone-500";
+    case "failed": return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+}
+
+/**
+ * Map older API response (with { ok: boolean; optional?: boolean })
+ * to the new CheckLevel type.
+ */
+function normalizeChecks(rawChecks: Array<Record<string, unknown>>): Check[] {
+  return rawChecks.map((c) => {
+    const ok = Boolean(c.ok);
+    const optional = Boolean(c.optional);
+    // If the API already sends a "level" field, use it
+    if (c.level && ["success", "warning", "optional", "failed"].includes(c.level as string)) {
+      return {
+        name: String(c.name || "未知"),
+        level: c.level as CheckLevel,
+        detail: typeof c.detail === "string" ? c.detail : undefined,
+      };
+    }
+    // Derive level from ok/optional flags
+    let level: CheckLevel;
+    if (ok) level = "success";
+    else if (optional) level = "optional";
+    else level = "failed";
+    return {
+      name: String(c.name || "未知"),
+      level,
+      detail: typeof c.detail === "string" ? c.detail : undefined,
+    };
+  });
 }
 
 export default function DebugPage() {
@@ -88,7 +150,7 @@ export default function DebugPage() {
       }
 
       if (payload.ok && Array.isArray(payload.checks)) {
-        setChecks(payload.checks);
+        setChecks(normalizeChecks(payload.checks as Array<Record<string, unknown>>));
       } else {
         setFetchError({ message: payload.error || "诊断响应格式不正确" });
       }
@@ -116,13 +178,21 @@ export default function DebugPage() {
     collectClient();
   }
 
-  // Sort: failed (non-optional) first, then optional/warnings, then passed
+  // Sort: failed first, then warning, then optional, then success
   const sortedChecks = useMemo(() => {
     if (!checks) return [];
-    const fatal = checks.filter((c) => !c.ok && !c.optional);
-    const optional = checks.filter((c) => !c.ok && c.optional);
-    const passed = checks.filter((c) => c.ok);
-    return [...fatal, ...optional, ...passed];
+    const order: Record<CheckLevel, number> = { failed: 0, warning: 1, optional: 2, success: 3 };
+    return [...checks].sort((a, b) => (order[a.level] ?? 4) - (order[b.level] ?? 4));
+  }, [checks]);
+
+  // Calculate health status
+  const healthStatus = useMemo(() => {
+    if (!checks) return { label: "检查中", color: "text-cocoa/50" };
+    const failed = checks.filter((c) => c.level === "failed").length;
+    const warning = checks.filter((c) => c.level === "warning").length;
+    if (failed > 0) return { label: "需要关注", color: "text-rose" };
+    if (warning > 0) return { label: "有警告", color: "text-amber" };
+    return { label: "健康", color: "text-emerald" };
   }, [checks]);
 
   // Diagnostic report for clipboard
@@ -143,19 +213,19 @@ export default function DebugPage() {
     }
 
     if (sortedChecks.length) {
-      const fatal = sortedChecks.filter((c) => !c.ok && !c.optional);
-      const optional = sortedChecks.filter((c) => !c.ok && c.optional);
-      const passed = sortedChecks.filter((c) => c.ok);
-      lines.push(`--- Checks: ${passed.length} passed${fatal.length ? `, ${fatal.length} failed` : ""}${optional.length ? `, ${optional.length} optional` : ""} ---`);
+      const failed = sortedChecks.filter((c) => c.level === "failed").length;
+      const warning = sortedChecks.filter((c) => c.level === "warning").length;
+      const optional = sortedChecks.filter((c) => c.level === "optional").length;
+      const success = sortedChecks.filter((c) => c.level === "success").length;
+      lines.push("--- Health: " + healthStatus.label + " ---");
+      lines.push(`Checks: ${success} success${failed ? `, ${failed} failed` : ""}${warning ? `, ${warning} warning` : ""}${optional ? `, ${optional} optional` : ""}`);
       for (const check of sortedChecks) {
-        const icon = check.ok ? "PASS" : check.optional ? "WARN" : "FAIL";
-        const detailSuffix = check.detail ? ` - ${check.detail}` : "";
-        lines.push(`[${icon}] ${check.name}${check.optional ? " (optional)" : ""}${detailSuffix}`);
+        lines.push(`[${getLevelLabel(check.level).toUpperCase()}] ${check.name}${check.detail ? " - " + check.detail : ""}`);
       }
     }
 
     return lines.join("\n");
-  }, [sortedChecks, fetchError, client]);
+  }, [sortedChecks, fetchError, client, healthStatus]);
 
   async function copyReport() {
     try {
@@ -173,7 +243,14 @@ export default function DebugPage() {
       <AppCard className="bg-gradient-to-br from-white/88 via-blush/55 to-skySoft/60 p-5">
         <p className="section-kicker mb-1">Debug</p>
         <h1 className="text-2xl font-semibold text-cocoa">Bristol Care 诊断</h1>
-        <p className="mt-2 text-sm leading-6 text-cocoa/60">检查 Supabase 连接、localStorage 状态和各项服务。</p>
+        <p className="mt-2 text-sm leading-6 text-cocoa/60">
+          检查 Supabase 连接、localStorage 状态和各项服务。
+          {checks && (
+            <span className={`ml-2 font-semibold ${healthStatus.color}`}>
+              · {healthStatus.label}
+            </span>
+          )}
+        </p>
       </AppCard>
 
       <div className="space-y-4 mt-4">
@@ -206,25 +283,25 @@ export default function DebugPage() {
 
         {/* Supabase Checks */}
         <AppCard>
-          <h2 className="font-semibold text-cocoa mb-3">Supabase 检查</h2>
+          <h2 className="font-semibold text-cocoa mb-3">服务检查</h2>
 
           {loading && (
             <p className="text-sm text-cocoa/50">正在检查...</p>
           )}
 
           {!loading && fetchError && (
-            <div className="space-y-2 rounded-2xl border border-[var(--app-danger)]/30 bg-[var(--app-danger)]/8 p-3">
-              <p className="font-medium text-cocoa">诊断请求失败</p>
+            <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+              <p className="font-medium text-rose-700">诊断请求失败</p>
               {fetchError.status ? (
-                <p className="text-sm text-[var(--app-danger)] break-all">status: {fetchError.status} {fetchError.statusText}</p>
+                <p className="text-sm text-rose-600 break-all">status: {fetchError.status} {fetchError.statusText}</p>
               ) : null}
               {fetchError.message ? (
-                <p className="text-sm text-[var(--app-danger)] break-words">{fetchError.message}</p>
+                <p className="text-sm text-rose-600 break-words">{fetchError.message}</p>
               ) : null}
               {fetchError.bodyPreview ? (
                 <details className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-xs leading-5">
-                  <summary className="cursor-pointer font-medium text-[var(--app-danger)]">查看返回内容预览</summary>
-                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words text-[var(--app-danger)]">{fetchError.bodyPreview}</pre>
+                  <summary className="cursor-pointer font-medium text-rose-600">查看返回内容预览</summary>
+                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words text-rose-600">{fetchError.bodyPreview}</pre>
                 </details>
               ) : null}
             </div>
@@ -238,54 +315,49 @@ export default function DebugPage() {
             <div>
               {/* Summary bar */}
               {(() => {
-                const fatal = sortedChecks.filter((c) => !c.ok && !c.optional);
-                const optional = sortedChecks.filter((c) => !c.ok && c.optional);
-                const passed = sortedChecks.filter((c) => c.ok);
+                const failed = sortedChecks.filter((c) => c.level === "failed").length;
+                const warning = sortedChecks.filter((c) => c.level === "warning").length;
+                const optional = sortedChecks.filter((c) => c.level === "optional").length;
+                const success = sortedChecks.filter((c) => c.level === "success").length;
                 return (
                   <p className="mb-3 text-xs text-cocoa/50 leading-5">
-                    ✓ {passed.length} 通过{fatal.length > 0 ? ` · ✗ ${fatal.length} 失败` : ""}{optional.length > 0 ? ` · ⚠ ${optional.length} 无可选数据` : ""}
+                    ✓ {success} 项通过
+                    {failed > 0 && <span className="text-rose ml-2">· ✗ {failed} 项失败</span>}
+                    {warning > 0 && <span className="text-amber ml-2">· ⚠ {warning} 项警告</span>}
+                    {optional > 0 && <span className="text-stone-400 ml-2">· ○ {optional} 项可选</span>}
                   </p>
                 );
               })()}
 
-              {/* Check list - failures first, optional after, passed last */}
+              {/* Check list - failed first, then warning, optional, success */}
               <div className="space-y-2">
-                {sortedChecks.map((check) => {
-                  if (check.optional && !check.ok) {
-                    return (
-                      <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2" key={check.name}>
-                        <p className="text-sm text-stone-500">
-                          <span className="font-medium">⚠ {check.name}</span>
-                          <span className="ml-1.5 text-[10px] text-stone-400">(optional)</span>
-                        </p>
-                        {check.detail ? (
-                          <p className="mt-1 text-xs text-stone-400 break-words">{check.detail}</p>
-                        ) : (
-                          <p className="mt-1 text-xs text-stone-400">暂无数据，不影响核心功能</p>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      className={`rounded-xl border px-3 py-2 ${check.ok ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}
-                      key={check.name}
-                    >
-                      <p className={`text-sm font-medium ${check.ok ? "text-emerald-700" : "text-rose-700"}`}>
-                        {check.ok ? "✓" : "✗"} {check.name}
+                {sortedChecks.map((check) => (
+                  <details
+                    className={`rounded-xl border px-3 py-2 ${getLevelStyle(check.level)}`}
+                    key={check.name}
+                    open={check.level === "failed"}
+                  >
+                    <summary className="cursor-pointer text-sm font-medium select-none">
+                      {getLevelIcon(check.level)} {check.name}
+                      {check.level !== "success" && (
+                        <span className="ml-1.5 text-[10px] opacity-60">({getLevelLabel(check.level)})</span>
+                      )}
+                    </summary>
+                    {check.detail ? (
+                      <p className="mt-1.5 text-xs opacity-80 break-words whitespace-pre-wrap max-h-40 overflow-auto">
+                        {check.detail}
                       </p>
-                      {check.detail ? (
-                        <p className="mt-1 text-xs break-words text-cocoa/50">{check.detail}</p>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                    ) : check.level === "optional" ? (
+                      <p className="mt-1.5 text-xs opacity-60">暂无数据，不影响核心功能</p>
+                    ) : null}
+                  </details>
+                ))}
               </div>
             </div>
           )}
         </AppCard>
 
-        {/* Raw Report (for manual copy) */}
+        {/* Raw Report (for manual copy, collapsed by default) */}
         <AppCard>
           <details className="group">
             <summary className="cursor-pointer text-xs font-medium text-cocoa/50 uppercase tracking-wide select-none">

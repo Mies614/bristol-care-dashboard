@@ -624,8 +624,30 @@ export default function SettingsPage() {
         </SettingsSection>
 
         {/* ──────────────────── 7. Advanced ──────────────────── */}
-        <SettingsSection title="高级" subtitle="诊断和调试入口" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可检查 Supabase 连接、localStorage 状态和服务的各项健康指标。</p>
+        <SettingsSection title="高级" subtitle="同步频率和自动同步偏好" defaultOpen={false}>
+          <p className="text-xs text-[var(--app-muted)] mb-3">自动同步在数据变更后延迟触发，同时间只允许一次同步。手动操作始终优先。</p>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="accent-[var(--app-accent)]"
+                defaultChecked={true}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    try { localStorage.removeItem("bristol_autosync_disabled"); } catch {}
+                  } else {
+                    try { localStorage.setItem("bristol_autosync_disabled", "1"); } catch {}
+                  }
+                }}
+              />
+              <span className="text-sm text-[var(--app-text)]">启用自动同步</span>
+            </label>
+          </div>
+        </SettingsSection>
+
+        {/* ──────────────────── 8. 诊断 ──────────────────── */}
+        <SettingsSection title="诊断" subtitle="检查系统健康和调试工具" defaultOpen={false}>
+          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可检查 Supabase 连接、localStorage 状态和服务的各项健康指标，并一键复制诊断报告。</p>
           <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">🔍 打开诊断页面</AppButton></a>
         </SettingsSection>
       </div>

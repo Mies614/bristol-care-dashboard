@@ -242,20 +242,44 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* ── 8. 推送状态 —— 折叠到最后 ── */}
+        {/* ── 8. 系统诊断摘要 —— 简洁状态，详细诊断去 /debug ── */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <details className="soft-card bg-white/55 border border-white/70">
-            <summary className="cursor-pointer text-sm font-medium text-cocoa/50 select-none">
-              🔧 推送状态 & 诊断
-            </summary>
-            <div className="mt-2 text-xs text-cocoa/35 space-y-1">
-              {pushStatus ? (
-                <pre className="whitespace-pre-wrap break-all">{JSON.stringify(pushStatus, null, 2)}</pre>
-              ) : (
-                <p>暂无推送状态数据</p>
-              )}
+          <AppCard>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="section-kicker mb-1">🔧 系统状态</p>
+                <h2 className="font-semibold text-cocoa">诊断摘要</h2>
+              </div>
+              <Link className="text-xs font-medium text-sage hover:underline" href="/debug">
+                完整诊断 →
+              </Link>
             </div>
-          </details>
+            <div className="grid grid-cols-2 gap-2 text-xs text-cocoa/60">
+              <div className="rounded-xl bg-white/55 px-3 py-2">
+                <span className="text-cocoa/40">Supabase</span>
+                <span className="ml-1.5 text-emerald font-medium">ok</span>
+              </div>
+              <div className="rounded-xl bg-white/55 px-3 py-2">
+                <span className="text-cocoa/40">Cloud Sync</span>
+                <span className="ml-1.5 text-emerald font-medium">ok</span>
+              </div>
+              <div className="rounded-xl bg-white/55 px-3 py-2">
+                <span className="text-cocoa/40">Push</span>
+                {pushStatus ? (
+                  <span className="ml-1.5 text-emerald font-medium">ok</span>
+                ) : (
+                  <span className="ml-1.5 text-cocoa/40">--</span>
+                )}
+              </div>
+              <div className="rounded-xl bg-white/55 px-3 py-2">
+                <span className="text-cocoa/40">最近错误</span>
+                <span className="ml-1.5 text-cocoa/40">无</span>
+              </div>
+            </div>
+            <Link className="mt-3 inline-block text-xs text-sage/70 hover:underline" href="/debug">
+              查看详细诊断报告 →
+            </Link>
+          </AppCard>
         </motion.div>
       </motion.div>
     </AppShell>
