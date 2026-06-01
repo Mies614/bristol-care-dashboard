@@ -18,6 +18,8 @@ import { MissYouButton } from "@/components/MissYouButton";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
+import { buildNextImportant, NextImportantCard } from "@/components/NextImportantCard";
+import type { NextImportantResult } from "@/components/NextImportantCard";
 import { getCurrentDayName } from "@/lib/schedule";
 import { getDaysUntilNextPeriod } from "@/lib/period";
 import { getDaysUntil } from "@/lib/ddlPriority";
@@ -183,6 +185,20 @@ export default function HomePage() {
     return ids;
   }, [todaySummary.selectedDdl]);
 
+  // ──── 下一件重要事项 ────
+  const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
+    courses: data.courses,
+    deadlines: data.deadlines,
+    periodRecords,
+    periodSettings,
+    unreadMissYouCount,
+    featuredNote: featuredLoveNote,
+    randomMemory,
+    skipType: todaySummary.type,
+    excludedDdlIds,
+    now
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, excludedDdlIds, now]);
+
   // ──── 今日照顾数字行（紧凑 4 格：课程 / DDL / 经期 / 想念） ────
   const careStrip = useMemo((): CareStripItem[] => {
     const items: CareStripItem[] = [];
@@ -201,8 +217,11 @@ export default function HomePage() {
     });
 
     // 最近 DDL
+    const allExcludedIds = new Set(excludedDdlIds);
+    if (nextImportant.selectedDdlId) allExcludedIds.add(nextImportant.selectedDdlId);
+
     const activeDdls = data.deadlines
-      .filter((d) => d.status !== "done" && !excludedDdlIds.has(d.id))
+      .filter((d) => d.status !== "done" && !allExcludedIds.has(d.id))
       .map((d) => ({ d, days: getDaysUntil(d, now) }))
       .sort((a, b) => a.days - b.days);
     if (activeDdls.length > 0) {
@@ -251,7 +270,7 @@ export default function HomePage() {
     });
 
     return items;
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, excludedDdlIds, unreadMissYouCount]);
+  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, excludedDdlIds, nextImportant.selectedDdlId, unreadMissYouCount]);
 
   useEffect(() => {
     const localDate = now.toISOString().slice(0, 10);
@@ -317,6 +336,9 @@ export default function HomePage() {
 
         {/* 1. 今日最重要事项 - TodaySummaryCard */}
         <TodaySummaryCard summary={todaySummary} />
+
+        {/* 1b. 下一件重要事项 - NextImportantCard（不重复展示 TodaySummaryCard 已覆盖的内容） */}
+        <NextImportantCard next={nextImportant} />
 
         {/* 2. 想你按钮 / 未读想念 */}
         <MissYouButton />
