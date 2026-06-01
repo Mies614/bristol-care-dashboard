@@ -261,9 +261,6 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
   // 日落时间（使用天气数据的时区，Open-Meteo 返回的是当地时区的时间）
   const sunsetDisplay = w.sunset ? formatSunset(w.sunset, localTimeZone) : "";
 
-  // 天气来源标签
-  const weatherLabel = state.isFallback ? "Bristol 天气" : w.cityName;
-
   // ── compact 模式：仅显示天气概要 + 穿衣一句话 + 时间 ──
   if (compact) {
     const rainHint = rainPrediction
@@ -274,12 +271,14 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
       ? `北京时间 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`
       : `${state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)} ${localTime} · 北京 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`;
 
+    const compactWeatherLabel = state.isFallback ? "默认 Bristol 天气" : `本地天气 · ${w.cityName}`;
+
     return (
       <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
-              {weatherLabel} · {rainHint}
+              {compactWeatherLabel} · {rainHint}
             </p>
             <h2 className="text-base font-semibold text-cocoa">
               {weatherCodeText(w.weatherCode)} · {Math.round(w.temperature)}° 体感 {Math.round(w.apparentTemperature)}°
@@ -299,7 +298,7 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
-            {weatherLabel}
+            {state.isFallback ? "默认 Bristol 天气" : `本地天气 · ${w.cityName}`}
           </p>
           <h2 className="text-base font-semibold text-cocoa">
             {weatherCodeText(w.weatherCode)}

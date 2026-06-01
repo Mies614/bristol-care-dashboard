@@ -179,7 +179,7 @@ function getTomorrowDayName(): string {
 export function TodaySummaryCard({ summary }: { summary: TodaySummaryResult }) {
   return (
     <section className="soft-card bg-gradient-to-br from-white/88 via-butter/45 to-blush/45">
-      <p className="section-kicker mb-1">Today</p>
+      <p className="section-kicker mb-1">今日照顾</p>
       <h2 className="text-lg font-semibold text-cocoa">{summary.label}</h2>
       <p className="mt-2 text-sm leading-6 text-cocoa/70">{summary.description}</p>
       {summary.href && summary.actionLabel ? (

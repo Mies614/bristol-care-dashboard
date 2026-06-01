@@ -172,7 +172,7 @@ export function NextImportantCard({ next }: { next: NextImportantResult }) {
 
   return (
     <section className="soft-card bg-gradient-to-br from-white/85 via-skySoft/35 to-white/80">
-      <p className="section-kicker mb-1">Next</p>
+      <p className="section-kicker mb-1">下一件重要事项</p>
       <h2 className="text-lg font-semibold text-cocoa">{next.label}</h2>
       <p className="mt-2 text-sm leading-6 text-cocoa/70">{next.description}</p>
       {next.href && next.actionLabel ? (
