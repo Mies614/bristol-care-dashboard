@@ -11,7 +11,7 @@ import {
 } from "./navVariants";
 import { BottomNavItem } from "./BottomNavItem";
 import { getThemeSettings } from "@/lib/theme";
-import { cn } from "@/lib/design/tokens";
+import { cn } from "@/lib/utils";
 import type { AppThemeStyle, ThemeNavStyle, ThemeDecoration } from "@/lib/types";
 
 const ICON_MAP: Record<string, React.ReactNode> = {

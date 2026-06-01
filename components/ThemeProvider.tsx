@@ -11,7 +11,8 @@ import {
 } from "@/lib/theme";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullCloudData } from "@/lib/cloudSync";
 import type { ThemeSettings } from "@/lib/types";
-import { cn, getDecorationClass } from "@/lib/design/tokens";
+import { cn } from "@/lib/utils";
+import { getDecorationClass } from "@/lib/design/tokens";
 
 function decorationLabel(decoration: ThemeSettings["decoration"]) {
   if (decoration === "hearts") return "♡";

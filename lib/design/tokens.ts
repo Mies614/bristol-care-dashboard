@@ -1,11 +1,5 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
 import type { ThemeCardStyle, ThemeNavStyle, ThemeRadius, ThemeDecoration } from "@/lib/types";
-
-/** Merge Tailwind classes safely */
-export function cn(...inputs: (string | undefined | null | false)[]): string {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
 
 /** Theme decoration class for background sparkles */
 export function getDecorationClass(decoration: ThemeDecoration): string {

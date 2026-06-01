@@ -12,7 +12,7 @@ import {
   getStatusDotClass,
 } from "./navVariants";
 import type { ThemeNavStyle, AppThemeStyle, ThemeDecoration } from "@/lib/types";
-import { cn } from "@/lib/design/tokens";
+import { cn } from "@/lib/utils";
 
 interface BottomNavItemProps {
   href: string;

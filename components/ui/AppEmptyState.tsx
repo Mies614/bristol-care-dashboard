@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "@/lib/design/tokens";
+import { cn } from "@/lib/utils";
 import { Inbox } from "lucide-react";
 
 interface AppEmptyStateProps {
