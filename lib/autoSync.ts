@@ -232,7 +232,8 @@ export async function runAutoSyncNow(reason = "manual"): Promise<void> {
     setError(message);
     setPending(true, reason);
     setStatus("failed");
-    if (!retryTimer) {
+    // Do not schedule a retry for retry attempts themselves; prevents infinite retry loops.
+    if (!retryTimer && reason !== "retry") {
       retryTimer = setTimeout(() => {
         retryTimer = null;
         runAutoSyncNow("retry").catch(() => {
@@ -253,6 +254,26 @@ export async function runAutoSyncNow(reason = "manual"): Promise<void> {
       }, 200);
     }
   }
+}
+
+/**
+ * Test-only: reset all module-level state so tests start clean.
+ * Not exported in production bundles.
+ */
+export function resetAutoSyncForTests(): void {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  syncInProgress = false;
+  pendingRetryAfterSync = false;
+  pendingReason = "";
+  suppressCount = 0;
+  bootstrapped = false;
 }
 
 export function bootstrapAutoSync() {

@@ -110,6 +110,10 @@ describe("auto sync", () => {
   // ----- Concurrency control tests -----
   describe("auto sync concurrency control", () => {
     it("does not start a new sync while one is already in progress", async () => {
+      // Pre-load modules so the dynamic imports inside runAutoSyncNow resolve immediately
+      await import("@/lib/cloudSync");
+      await import("@/lib/storage");
+      
       vi.useFakeTimers({ shouldAdvanceTime: true });
       
       // Make fetch slow so we can overlap calls
@@ -127,9 +131,8 @@ describe("auto sync", () => {
       // Start first sync (will hang because fetch never resolves)
       const firstSync = runAutoSyncNow("first");
 
-      // Allow microtask queue to process so syncInProgress = true
-      await new Promise((r) => setTimeout(r, 0));
-      await vi.advanceTimersByTimeAsync(10);
+      // Allow dynamic imports and microtask queue to process
+      await vi.advanceTimersByTimeAsync(100);
 
       // Start second sync while first is still running
       const secondSync = runAutoSyncNow("second");
@@ -178,5 +181,178 @@ describe("auto sync", () => {
       expect(getPendingSyncState().pending).toBe(false);
     }, 5000);
 
+  });
+
+  // ----- Network failure recovery tests -----
+  describe("auto sync network failure recovery", () => {
+    it("network fetch error releases syncInProgress", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      // Make fetch reject with a network error
+      vi.stubGlobal("fetch", vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }));
+
+      const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
+
+      await runAutoSyncNow("network_error");
+
+      // After failure, pending should be true
+      expect(getPendingSyncState().pending).toBe(true);
+      // lastError should contain the error message
+      expect(getPendingSyncState().lastError).toBeTruthy();
+    }, 5000);
+
+    it("failure records lastError in pending state", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      vi.stubGlobal("fetch", vi.fn(async () => ({
+        ok: false,
+        json: async () => ({ error: "Database timeout", code: "TIMEOUT" })
+      })));
+
+      const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
+      
+      await runAutoSyncNow("db_timeout");
+      
+      expect(getPendingSyncState().pending).toBe(true);
+      // Should contain the error details concatenated
+      expect(getPendingSyncState().lastError).toContain("Database timeout");
+      expect(getPendingSyncState().lastError).toContain("TIMEOUT");
+    }, 5000);
+
+    it("does not retry infinitely after failure", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      // First attempt fails
+      vi.stubGlobal("fetch", vi.fn(async () => {
+        throw new TypeError("Network error");
+      }));
+
+      const { runAutoSyncNow } = await import("@/lib/autoSync");
+      
+      await runAutoSyncNow("first_fail");
+      
+      // After first failure, retryTimer is set to 30s
+      // Let's advance by 35s to trigger the retry
+      await vi.advanceTimersByTimeAsync(35000);
+      
+      // fetch should have been called once for the initial attempt + once for the retry
+      expect(fetch).toHaveBeenCalledTimes(2);
+      
+      // The retry also fails, but retryTimer is only set if !retryTimer
+      // Since retryTimer was already nulled after firing, a new retryTimer should NOT be set
+      // because the retry failure happens inside the catch where retryTimer is already null
+      // Let's advance another 35s
+      await vi.advanceTimersByTimeAsync(35000);
+      
+      // If retry was set again, fetch would have been called 3 times
+      // Let's check it's still 2 (no infinite retry)
+      expect(fetch).toHaveBeenCalledTimes(2);
+    }, 10000);
+
+    it("sync-in-progress triggers pendingRetryAfterSync and auto-retries", async () => {
+      // Pre-load modules so the dynamic imports inside runAutoSyncNow resolve immediately
+      await import("@/lib/cloudSync");
+      await import("@/lib/storage");
+      
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      let resolveFetch: (value: unknown) => void;
+      const fetchPromise = new Promise((resolve) => {
+        resolveFetch = resolve;
+      });
+      
+      // First call hangs; second call should see syncInProgress=true and set pendingRetryAfterSync
+      let callCount = 0;
+      vi.stubGlobal("fetch", vi.fn(() => {
+        callCount++;
+        if (callCount === 1) {
+          return fetchPromise.then(() => ({
+            ok: true,
+            json: async () => ({ ok: true, data: {} })
+          }));
+        }
+        // Second call (after retry) succeeds normally
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ok: true, data: {} })
+        });
+      }));
+
+      const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
+      
+      // Start first sync (will hang on dynamic imports then fetch)
+      const firstSync = runAutoSyncNow("first");
+      
+      // Advance time to let dynamic imports resolve inside runAutoSyncNow
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(10);
+      
+      // Only one fetch call so far
+      expect(fetch).toHaveBeenCalledTimes(1);
+      
+      // Start second sync while first is still running
+      const secondSync = runAutoSyncNow("second");
+      
+      await vi.advanceTimersByTimeAsync(100);
+      
+      // Still only 1 fetch call (second should have set pendingRetryAfterSync)
+      expect(fetch).toHaveBeenCalledTimes(1);
+      
+      // Resolve first sync
+      resolveFetch!({ ok: true, json: async () => ({ ok: true, data: {} }) });
+      await firstSync;
+      
+      // Wait for the pending retry (200ms delay + microtasks)
+      await vi.advanceTimersByTimeAsync(500);
+      
+      // Now second sync should have executed: 2 fetch calls total
+      expect(fetch).toHaveBeenCalledTimes(2);
+      
+      await secondSync;
+      expect(getPendingSyncState().pending).toBe(false);
+    }, 10000);
+
+    it("recovery after going from offline to online", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      // Start offline
+      vi.stubGlobal("navigator", { onLine: false });
+
+      const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
+      
+      await runAutoSyncNow("offline_test");
+      
+      expect(getPendingSyncState().status).toBe("queued");
+      expect(fetch).not.toHaveBeenCalled();
+
+      // Go online
+      vi.stubGlobal("navigator", { onLine: true });
+      
+      // Need to manually invoke runAutoSyncNow because the "online" event handler
+      // was stubbed in beforeEach
+      // But runAutoSyncNow should now proceed since we're online
+      await runAutoSyncNow("online_now");
+      
+      expect(fetch).toHaveBeenCalled();
+      expect(getPendingSyncState().pending).toBe(false);
+    }, 5000);
+
+    it("suppress during pull/restore prevents sync", async () => {
+      const { withAutoSyncSuppressed, markLocalChange, scheduleAutoSync, getPendingSyncState } = await import("@/lib/autoSync");
+      
+      // Clear any pending state first
+      const { clearPendingSyncState } = await import("@/lib/autoSync");
+      clearPendingSyncState();
+      
+      // Inside suppressed context, markLocalChange and scheduleAutoSync should not set pending
+      withAutoSyncSuppressed(() => {
+        markLocalChange("restore_test");
+        scheduleAutoSync("restore_test");
+      });
+      
+      expect(getPendingSyncState().pending).toBe(false);
+    }, 5000);
   });
 });
