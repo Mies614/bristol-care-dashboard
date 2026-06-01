@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { getDaysUntilDeadline } from "@/lib/date";
 import { getCurrentDayName } from "@/lib/schedule";
 import { calculateNextPeriodStart, getDaysUntilNextPeriod } from "@/lib/period";
+import { getTopPriorityDdl, type DdlWithPriority } from "@/lib/ddlPriority";
 import type { Course, Deadline, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import type { RandomMemoryItem } from "@/lib/randomMemory";
 
@@ -29,28 +29,35 @@ export type TodaySummaryResult = {
   href?: string;
   /** 跳转文案 */
   actionLabel?: string;
+  /** 被选中的 DDL 对象（用于去重排除） */
+  selectedDdl?: DdlWithPriority;
 };
 
 export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult {
   const now = input.now || new Date();
   const todayDay = getCurrentDayName();
   const todaysCourses = input.courses.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const activeDeadlines = input.deadlines.filter((d) => d.status !== "done");
-  const sortedDeadlines = activeDeadlines
-    .map((d) => ({ d, days: getDaysUntilDeadline(d, now) }))
-    .sort((a, b) => a.days - b.days);
-  const daysUntilPeriod = getDaysUntilNextPeriod(input.periodRecords, input.periodSettings, now);
-  const nextPeriodStart = calculateNextPeriodStart(input.periodRecords, input.periodSettings);
 
-  // 1. 24h DDL
-  const urgentDdl = sortedDeadlines.find((x) => x.days <= 1);
-  if (urgentDdl) {
+  // 1. 最高优先级 DDL（overdue / urgent）
+  const topDdl = getTopPriorityDdl(input.deadlines, now);
+  if (topDdl && (topDdl.priority === "overdue" || topDdl.priority === "urgent")) {
+    if (topDdl.priority === "overdue") {
+      return {
+        type: "ddl",
+        label: "⚠️ 已逾期",
+        description: `「${topDdl.deadline.title}」已经过期了，今天先抓最关键的一步。`,
+        href: "/deadlines",
+        actionLabel: "查看 DDL",
+        selectedDdl: topDdl
+      };
+    }
     return {
       type: "ddl",
       label: "⚠️ 紧急截止",
-      description: `「${urgentDdl.d.title}」${urgentDdl.days <= 0 ? "今天截止" : "明天截止"}，优先处理这一步。`,
+      description: `「${topDdl.deadline.title}」${topDdl.daysUntil <= 0 ? "今天截止" : "明天截止"}，优先处理这一步。`,
       href: "/deadlines",
-      actionLabel: "查看 DDL"
+      actionLabel: "查看 DDL",
+      selectedDdl: topDdl
     };
   }
 
@@ -66,7 +73,6 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
     };
   }
 
-  // 2b. 明天课程
   const tomorrowDay = getTomorrowDayName();
   const tomorrowCourses = input.courses.filter((c) => c.day === tomorrowDay).sort((a, b) => a.startTime.localeCompare(b.startTime));
   if (tomorrowCourses.length > 0) {
@@ -79,7 +85,21 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
     };
   }
 
-  // 3. 经期进行中或临近
+  // 3. 即将截止的 DDL（soon / upcoming）
+  if (topDdl && (topDdl.priority === "soon" || topDdl.priority === "upcoming")) {
+    return {
+      type: "ddl",
+      label: "📋 即将截止",
+      description: `「${topDdl.deadline.title}」还有 ${topDdl.daysUntil} 天，提前安排一下。`,
+      href: "/deadlines",
+      actionLabel: "查看 DDL",
+      selectedDdl: topDdl
+    };
+  }
+
+  // 4. 经期进行中或临近
+  const daysUntilPeriod = getDaysUntilNextPeriod(input.periodRecords, input.periodSettings, now);
+  const nextPeriodStart = calculateNextPeriodStart(input.periodRecords, input.periodSettings);
   if (daysUntilPeriod !== null && daysUntilPeriod >= 0 && daysUntilPeriod <= 3) {
     const label = daysUntilPeriod === 0 ? "🌸 经期预计今天" : `🌸 经期临近（约 ${daysUntilPeriod} 天）`;
     return {
@@ -91,7 +111,6 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
     };
   }
 
-  // 经期已过（延迟中）
   if (daysUntilPeriod !== null && daysUntilPeriod < 0) {
     return {
       type: "period",
@@ -102,7 +121,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
     };
   }
 
-  // 4. 未读想念
+  // 5. 未读想念
   if (input.unreadMissYouCount > 0) {
     return {
       type: "missyou",
@@ -113,7 +132,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
     };
   }
 
-  // 5. 温柔回忆/小纸条
+  // 6. 温柔回忆/小纸条
   if (input.featuredNote?.content) {
     const snippet = input.featuredNote.content.length > 24
       ? input.featuredNote.content.slice(0, 24) + "…"

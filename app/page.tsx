@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { OnboardingCard } from "@/components/OnboardingCard";
-import { useWeather } from "@/components/WeatherCard";
+import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
 import { formatCountdown } from "@/lib/date";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
@@ -53,7 +53,7 @@ export default function HomePage() {
   const [albumItems, setAlbumItems] = useState<AlbumItem[]>([]);
   const [periodRecords, setPeriodRecords] = useState<PeriodRecord[]>([]);
   const [periodSettings, setPeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
-  useWeather();
+  const weatherState = useWeatherCare();
 
   useEffect(() => {
     const emergencyReset = () => {
@@ -280,6 +280,11 @@ export default function HomePage() {
       >
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
+
+        {/* 0. 本地天气 + 两地时间 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <WeatherCareCard state={weatherState} />
+        </motion.div>
 
         {/* 1. 今日最重要事项 - TodaySummaryCard */}
         <TodaySummaryCard summary={todaySummary} />

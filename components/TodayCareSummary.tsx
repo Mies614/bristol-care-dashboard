@@ -1,8 +1,8 @@
 "use client";
 
-import { getDaysUntilDeadline } from "@/lib/date";
 import { getCurrentDayName } from "@/lib/schedule";
 import { calculateNextPeriodStart, getDaysUntilNextPeriod } from "@/lib/period";
+import { isActiveDdl, getDaysUntil } from "@/lib/ddlPriority";
 import type { Course, Deadline, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import type { RandomMemoryItem } from "@/lib/randomMemory";
 import type { PriorityReminder } from "@/lib/priorityReminders";
@@ -16,6 +16,8 @@ export type TodayCareInput = {
   featuredNote?: LoveNote | null;
   randomMemory?: RandomMemoryItem | null;
   topPriorityReminder?: PriorityReminder | null;
+  /** 已在 TodaySummaryCard 中展示的 DDL ID 集合，这些 DDL 不会在 TodayCareSummary 中重复出现 */
+  excludedDdlIds?: Set<string>;
   now?: Date;
 };
 
@@ -93,14 +95,19 @@ export function buildTodayCareSegments(input: TodayCareInput): TodayCareSegment[
     });
   }
 
-  // 4. 最近 DDL
-  const activeDeadlines = input.deadlines.filter((d) => d.status !== "done");
-  const sortedDeadlines = activeDeadlines
-    .map((d) => ({ d, days: getDaysUntilDeadline(d, now) }))
+  // 4. 最近 DDL（排除已在 TodaySummaryCard 中展示的）
+  const excludedDdlIds = input.excludedDdlIds || new Set<string>();
+  const activeDdls = input.deadlines
+    .filter(isActiveDdl)
+    .filter((d) => !excludedDdlIds.has(d.id))
+    .map((d) => ({
+      d,
+      days: getDaysUntil(d, now)
+    }))
     .sort((a, b) => a.days - b.days);
-  const nextDdl = sortedDeadlines[0];
+  const nextDdl = activeDdls[0];
   if (nextDdl) {
-    const label = nextDdl.days <= 0 ? "⚠️ DDL 今天截止" : nextDdl.days <= 3 ? "⏳ DDL 将近" : "📋 最近 DDL";
+    const label = nextDdl.days < 0 ? "⚠️ DDL 已逾期" : nextDdl.days <= 1 ? "⚠️ DDL 紧急" : nextDdl.days <= 3 ? "⏳ DDL 将近" : "📋 最近 DDL";
     const summary = nextDdl.days < 0
       ? `「${nextDdl.d.title}」已逾期`
       : nextDdl.days <= 0
@@ -114,7 +121,8 @@ export function buildTodayCareSegments(input: TodayCareInput): TodayCareSegment[
       href: "/deadlines",
       actionLabel: "DDL 列表"
     });
-  } else if (activeDeadlines.length === 0) {
+  } else if (activeDdls.length === 0 && excludedDdlIds.size === 0) {
+    // 只有正常没有 DDL 时才显示"没有待办"；如果排除了但还有别的则不显示空状态
     segments.push({
       id: "no-ddl",
       label: "✅ 没有待办 DDL",
@@ -215,6 +223,8 @@ export type NextImportantInput = {
   deadlines: Deadline[];
   periodRecords: PeriodRecord[];
   periodSettings: PeriodSettings;
+  /** 已在 TodaySummaryCard 中展示的 DDL ID，不重复 */
+  excludedDdlIds?: Set<string>;
   now?: Date;
 };
 
@@ -260,10 +270,12 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
     }
   }
 
-  // 2. 最近 DDL
+  // 2. 最近 DDL（排除已在 TodaySummaryCard 中展示的）
+  const excludedDdlIds = input.excludedDdlIds || new Set<string>();
   const activeDeadlines = input.deadlines
-    .filter((d) => d.status !== "done")
-    .map((d) => ({ d, days: getDaysUntilDeadline(d, now) }))
+    .filter(isActiveDdl)
+    .filter((d) => !excludedDdlIds.has(d.id))
+    .map((d) => ({ d, days: getDaysUntil(d, now) }))
     .sort((a, b) => a.days - b.days);
   if (activeDeadlines.length > 0 && activeDeadlines[0].days <= 3) {
     const ddl = activeDeadlines[0];
