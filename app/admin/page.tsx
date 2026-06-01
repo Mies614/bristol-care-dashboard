@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
   const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
   const periodDaysUntil = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
 
-  if (!data) return <AppShell><div className="soft-card">正在加载…</div></AppShell>;
+  if (!data) return <AppShell><div className="soft-card">正在准备照顾数据…</div></AppShell>;
 
   return (
     <AppShell>
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
             initial="hidden"
             animate="visible"
           >
-            <p className="section-kicker mb-1">Miss You</p>
+            <p className="section-kicker mb-1">想你</p>
             <h2 className="text-lg font-semibold text-cocoa">想她一下</h2>
             <p className="mt-1.5 text-sm text-cocoa/55">
               按一下就好，她那边会知道。

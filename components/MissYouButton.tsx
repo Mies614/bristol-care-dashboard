@@ -327,7 +327,7 @@ export function MissYouButton() {
       <div>
         {unreadCard}
 
-        <p className="section-kicker mb-1">Miss You</p>
+        <p className="section-kicker mb-1">想你</p>
         <h2 className="text-lg font-semibold text-cocoa">想你一下</h2>
         <p className="mt-2 text-sm leading-6 text-cocoa/70">
           {loading ? "正在记录..." : feedback || getMissYouFeedback(data.todayCount)}

@@ -74,7 +74,7 @@ export default function RecordsPage() {
 
   const reduceMotion = useAccessibleMotion();
 
-  if (!data) return <AppShell><div className="soft-card">正在加载…</div></AppShell>;
+  if (!data) return <AppShell><div className="soft-card">正在准备生活安排…</div></AppShell>;
 
   return (
     <AppShell>
@@ -118,7 +118,7 @@ export default function RecordsPage() {
           <AppCard>
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="section-kicker mb-1">Quick Actions</p>
+                <p className="section-kicker mb-1">快速操作</p>
                 <h2 className="font-semibold text-cocoa">快速操作</h2>
               </div>
               <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
@@ -222,7 +222,7 @@ export default function RecordsPage() {
               <Link className="text-xs font-medium text-sage hover:underline" href="/period">记录 →</Link>
             </div>
             {periodRecords.length === 0 ? (
-              <p className="empty-state py-4 text-left text-sm">还没有经期记录，可以先去补一条。</p>
+              <p className="empty-state py-4 text-left text-sm">还没有经期记录，之后补上也可以。</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
                 <div className="rounded-2xl bg-white/58 p-3">
