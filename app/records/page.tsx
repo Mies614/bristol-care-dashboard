@@ -14,6 +14,7 @@ import { getNextCourse, getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { AppCard } from "@/components/ui/AppCard";
+import { AppButton } from "@/components/ui/AppButton";
 
 function todayLabel() {
   return new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
@@ -82,102 +83,112 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="生活安排" subtitle="课程、DDL 和身体状态，按类看得清楚。" />
+      <PageHeader title="生活安排" subtitle="课程、DDL 和身体节奏，分开看得清楚。" />
 
       <div className="space-y-4">
-        {/* ── 1. 今日总览卡片 ── */}
+        {/* ── 1. 今日总览 —— 一行三格，干净不挤 ── */}
         <AppCard className="bg-gradient-to-br from-white/88 via-butter/45 to-lilac/50">
           <p className="section-kicker mb-1">{todayLabel()}</p>
           <h1 className="text-xl font-semibold text-cocoa">今日总览</h1>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-white/55 p-2">
+            <div className="rounded-xl bg-white/55 p-3">
               <p className="text-lg font-semibold text-cocoa">{todayCourses.length}</p>
               <p className="text-[11px] text-cocoa/55">今日课</p>
             </div>
-            <div className="rounded-xl bg-white/55 p-2">
+            <div className="rounded-xl bg-white/55 p-3">
               <p className="text-lg font-semibold text-cocoa">{incompleteDeadlines.length}</p>
-              <p className="text-[11px] text-cocoa/55">未完成 DDL</p>
+              <p className="text-[11px] text-cocoa/55">未完成</p>
             </div>
-            <div className="rounded-xl bg-white/55 p-2">
+            <div className="rounded-xl bg-white/55 p-3">
               <p className="text-lg font-semibold text-cocoa">{cycleDay || "—"}</p>
-              <p className="text-[11px] text-cocoa/55">周期第几天</p>
+              <p className="text-[11px] text-cocoa/55">周期天数</p>
             </div>
           </div>
           <p className="mt-3 text-sm leading-6 text-cocoa/65">
-            今天截止 {todayDue.length} 个 DDL，{soonDue.length} 个在 3 天内。{nextCourse ? `下一节：${nextCourse.name} ${nextCourse.startTime} 开始。` : ""}
+            今天截止 {todayDue.length} 个 DDL，{soonDue.length} 个在 3 天内。{nextCourse ? `下一节：${nextCourse.name} · ${nextCourse.startTime}。` : "今天课少，节奏由自己定。"}
           </p>
         </AppCard>
 
-        {/* ── 2. 快速添加 ── */}
+        {/* ── 2. 快速添加 —— 三类明确，少而精 ── */}
         <AppCard>
-          <p className="section-kicker mb-1">Quick Add</p>
-          <h2 className="mb-3 font-semibold text-cocoa">快速添加</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <Link className="btn-secondary text-center text-xs py-2" href="/schedule">+ 课程</Link>
-            <Link className="btn-secondary text-center text-xs py-2" href="/deadlines">+ DDL</Link>
-            <Link className="btn-secondary text-center text-xs py-2" href="/period">+ 经期</Link>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="section-kicker mb-1">Quick Add</p>
+              <h2 className="font-semibold text-cocoa">快速添加</h2>
+            </div>
+            <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
           </div>
-          <button className="btn-primary w-full mt-2 text-xs" onClick={exportAllCalendar}>导出日历提醒</button>
-          {message ? <p className="notice mt-3">{message}</p> : null}
+          {message ? <p className="notice mb-3">{message}</p> : null}
+          <div className="grid grid-cols-3 gap-2">
+            <Link className="btn-secondary text-center text-sm py-3 rounded-2xl font-medium" href="/schedule">📚 课程</Link>
+            <Link className="btn-secondary text-center text-sm py-3 rounded-2xl font-medium" href="/deadlines">📋 DDL</Link>
+            <Link className="btn-secondary text-center text-sm py-3 rounded-2xl font-medium" href="/period">🌸 经期</Link>
+          </div>
         </AppCard>
 
-        {/* ── 3. 今日课程 ── */}
+        {/* ── 3. 今日课程 —— 课程区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Courses</p>
+              <p className="section-kicker mb-1">📚 课程</p>
               <h2 className="font-semibold text-cocoa">今日课程</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/schedule">全部</Link>
+            <Link className="btn-secondary btn-small rounded-full px-4 py-1.5 text-xs font-medium" href="/schedule">全部课程</Link>
           </div>
           {todayCourses.length ? (
             <div className="space-y-2">{todayCourses.map((course) => <CourseCard compact course={course} key={course.id} />)}</div>
           ) : (
-            <p className="empty-state text-left">今天没有课，属于自己的节奏。</p>
+            <p className="empty-state py-4 text-left text-sm">今天没有课，属于自己的节奏。</p>
           )}
         </section>
 
-        {/* ── 4. DDL 摘要 ── */}
+        {/* ── 4. DDL 列表 —— DDL 区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Deadlines</p>
-              <h2 className="font-semibold text-cocoa">DDL 列表</h2>
+              <p className="section-kicker mb-1">📋 DDL</p>
+              <h2 className="font-semibold text-cocoa">待办 DDL</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/deadlines">全部</Link>
+            <Link className="btn-secondary btn-small rounded-full px-4 py-1.5 text-xs font-medium" href="/deadlines">全部 DDL</Link>
           </div>
           {incompleteDeadlines.length ? (
             <div className="space-y-2">
               {incompleteDeadlines.slice(0, 5).map((deadline) => (
                 <DeadlineCard deadline={deadline} key={deadline.id} />
               ))}
+              {incompleteDeadlines.length > 5 ? (
+                <p className="text-xs text-cocoa/40 pt-1">还有 {incompleteDeadlines.length - 5} 个未展示。</p>
+              ) : null}
             </div>
           ) : (
-            <p className="empty-state text-left">最近没有未完成 DDL，真棒。</p>
+            <p className="empty-state py-4 text-left text-sm">最近没有未完成 DDL，真棒。</p>
           )}
         </section>
 
-        {/* ── 5. 经期状态 ── */}
+        {/* ── 5. 经期状态 —— 经期区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="section-kicker mb-1">Cycle</p>
+              <p className="section-kicker mb-1">🌸 经期</p>
               <h2 className="font-semibold text-cocoa">经期状态</h2>
             </div>
-            <Link className="btn-secondary btn-small" href="/period">记录</Link>
+            <Link className="btn-secondary btn-small rounded-full px-4 py-1.5 text-xs font-medium" href="/period">记录</Link>
           </div>
           {periodRecords.length === 0 ? (
-            <p className="empty-state text-left">还没有经期记录，可以先去补一条。</p>
+            <p className="empty-state py-4 text-left text-sm">还没有经期记录，可以先去补一条。</p>
           ) : (
             <div className="grid grid-cols-2 gap-2 text-sm text-cocoa/70">
               <div className="rounded-2xl bg-white/58 p-3">
-                预计：<span className="font-semibold text-cocoa">{nextPeriodStart || "计算中"}</span>
+                <p className="text-[11px] text-cocoa/45">预计开始</p>
+                <p className="font-semibold text-cocoa">{nextPeriodStart || "计算中"}</p>
               </div>
               <div className="rounded-2xl bg-white/58 p-3">
-                距离：<span className="font-semibold text-cocoa">{periodDays === null ? "—" : `${periodDays} 天`}</span>
+                <p className="text-[11px] text-cocoa/45">距离现在</p>
+                <p className="font-semibold text-cocoa">{periodDays === null ? "—" : `${periodDays} 天`}</p>
               </div>
               <div className="col-span-2 rounded-2xl bg-white/58 p-3">
-                当前周期：<span className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "—"}</span>
+                <p className="text-[11px] text-cocoa/45">当前周期</p>
+                <p className="font-semibold text-cocoa">{cycleDay ? `第 ${cycleDay} 天` : "—"}</p>
               </div>
             </div>
           )}

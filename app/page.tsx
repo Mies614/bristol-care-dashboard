@@ -17,7 +17,6 @@ import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
-import { TodaySummaryCard, buildTodaySummary } from "@/components/TodaySummaryCard";
 import { buildTodayCareSegments, buildNextImportant } from "@/components/TodayCareSummary";
 import type { TodayCareSegment, NextImportantResult } from "@/components/TodayCareSummary";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
@@ -168,16 +167,6 @@ export default function HomePage() {
     }
   }
 
-  const todaySummary = useMemo(() => buildTodaySummary({
-    courses: data.courses,
-    deadlines: data.deadlines,
-    periodRecords,
-    periodSettings,
-    unreadMissYouCount,
-    featuredNote: featuredLoveNote,
-    randomMemory
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
-
   const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
     courses: data.courses,
     deadlines: data.deadlines,
@@ -250,10 +239,7 @@ export default function HomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
-        {/* 1. TodaySummaryCard - 智能今日摘要 */}
-        <TodaySummaryCard summary={todaySummary} />
-
-        {/* 2. 下一件重要事项 */}
+        {/* 1. 下一件重要事项 */}
         <AppCard className="bg-gradient-to-br from-white/88 via-butter/38 to-blush/38">
           <p className="section-kicker mb-1">Next</p>
           <div className="flex items-start justify-between gap-3">
@@ -275,10 +261,10 @@ export default function HomePage() {
           </div>
         </AppCard>
 
-        {/* 3. Miss You - 想你按钮 */}
+        {/* 2. Miss You - 想你按钮 */}
         <MissYouButton />
 
-        {/* 4. 今日照顾片段（课程/DDL/经期/纸条/回忆 - 统一摘要） */}
+        {/* 3. 今日照顾片段（课程/DDL/经期/纸条/回忆 - 统一摘要） */}
         <section className="soft-card">
           <div className="mb-3">
             <p className="section-kicker mb-1">Today Care</p>
@@ -312,21 +298,21 @@ export default function HomePage() {
           <Link className="mt-3 inline-block text-xs text-sage hover:underline" href="/records">更多详情 →</Link>
         </section>
 
-        {/* 5. Countdown - 下次见面 */}
+        {/* 4. Countdown - 下次见面 */}
         <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
           <p className="section-kicker mb-1">Countdown</p>
           <h2 className="font-semibold text-cocoa">下次见面</h2>
           <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
         </div>
 
-        {/* 6. Love Note - 置顶小纸条 */}
+        {/* 5. Love Note - 置顶小纸条 */}
         <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
         <div className="grid grid-cols-2 gap-2">
           <Link className="btn-primary text-center" href="/notes">小纸条墙</Link>
           <Link className="btn-secondary text-center" href="/notes">写一张</Link>
         </div>
 
-        {/* 7. Memories - 最近回忆 */}
+        {/* 6. Memories - 最近回忆 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -352,7 +338,7 @@ export default function HomePage() {
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
 
-        {/* 8. Onboarding - 引导卡 */}
+        {/* 7. Onboarding - 引导卡 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>
