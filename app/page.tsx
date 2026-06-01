@@ -181,12 +181,31 @@ export default function HomePage() {
     randomMemory
   }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
 
+  // 构建排除集合：TodaySummaryCard 已展示的 DDL 不再出现在 NextImportantCard 和 TodayCareSummary 中
+  const excludedDdlIds = useMemo((): Set<string> => {
+    const ids = new Set<string>();
+    if (todaySummary.selectedDdl?.deadline.id) {
+      ids.add(todaySummary.selectedDdl.deadline.id);
+    }
+    return ids;
+  }, [todaySummary.selectedDdl]);
+
   const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,
-    periodSettings
-  }), [data.courses, data.deadlines, periodRecords, periodSettings]);
+    periodSettings,
+    excludedDdlIds
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, excludedDdlIds]);
+
+  // 合并排除：TodaySummaryCard + NextImportantCard 中出现的 DDL 都不在 careSegments 中重复
+  const allExcludedDdlIds = useMemo((): Set<string> => {
+    const ids = new Set<string>(excludedDdlIds);
+    if (nextImportant.deadlineId) {
+      ids.add(nextImportant.deadlineId);
+    }
+    return ids;
+  }, [excludedDdlIds, nextImportant.deadlineId]);
 
   // 过滤 TodayCareSummary 片段，移除与 TodaySummaryCard / NextImportantCard 重复的类型
   const careSegments = useMemo((): TodayCareSegment[] => {
@@ -198,7 +217,8 @@ export default function HomePage() {
       unreadMissYouCount,
       featuredNote: featuredLoveNote,
       randomMemory,
-      topPriorityReminder: null
+      topPriorityReminder: null,
+      excludedDdlIds: allExcludedDdlIds
     });
     // 移除与今天最重要事项重复的片段
     const excludeIds = new Set<string>();
@@ -225,7 +245,7 @@ export default function HomePage() {
       excludeIds.add("period-soon");
     }
     return all.filter((seg) => !excludeIds.has(seg.id));
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, nextImportant.type]);
+  }, [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, nextImportant.type, allExcludedDdlIds]);
 
   useEffect(() => {
     const localDate = new Date().toISOString().slice(0, 10);

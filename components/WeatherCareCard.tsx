@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchWeather, getVisitorLocation, getVisitorTimeZone, weatherCodeText, DEFAULT_LAT, DEFAULT_LON, DEFAULT_CITY_NAME } from "@/lib/weatherClient";
 import type { WeatherData, HourlyRain } from "@/lib/weatherClient";
-import { formatTimeInZone, getRelativeDayLabel } from "@/lib/timeZones";
+import { formatTimeInZone } from "@/lib/timeZones";
 
 export type WeatherCareState = {
   weather?: WeatherData;
@@ -150,10 +150,10 @@ export function getClothingAdvice(
     parts.push("炎热，轻薄透气，注意防晒补水");
   }
 
-  // 体感远低于实际温度提示风寒
-  if (apparentTemp < temp - 3) {
+  // 体感偏冷提示：仅在温度不高于 20°C 且体感比实际低 3°C 以上时提示
+  if (temp <= 20 && apparentTemp < temp - 3) {
     const idx = parts[0].endsWith("。") ? parts[0].length - 1 : parts[0].length;
-    parts[0] = parts[0].slice(0, idx) + "，体感更冷";
+    parts[0] = parts[0].slice(0, idx) + "，体感偏冷";
   }
 
   // 降雨
@@ -255,9 +255,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
   // 时间信息
   const now = new Date();
   const localTime = formatTimeInZone(now, localTimeZone);
-  const localDayLabel = getRelativeDayLabel(now, now, localTimeZone);
   const beijingTime = formatTimeInZone(now, "Asia/Shanghai");
-  const beijingDayLabel = getRelativeDayLabel(now, now, "Asia/Shanghai");
 
   // 日落时间（使用天气数据的时区，Open-Meteo 返回的是当地时区的时间）
   const sunsetDisplay = w.sunset ? formatSunset(w.sunset, localTimeZone) : "";
@@ -310,24 +308,18 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       <div className="mt-2 flex items-center gap-x-2 text-[11px] text-cocoa/50">
         {isBeijingLocal ? (
           <>
-            <span className="font-semibold text-cocoa/70">北京</span>
-            <span>
-              {beijingDayLabel !== "今天" ? `${beijingDayLabel} ` : ""}{beijingTime}
-            </span>
+            <span className="font-semibold text-cocoa/70">北京时间</span>
+            <span>{beijingTime}</span>
           </>
         ) : (
           <>
             <span className="font-semibold text-cocoa/70">
               {state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)}
             </span>
-            <span>
-              {localDayLabel !== "今天" ? `${localDayLabel} ` : ""}{localTime}
-            </span>
+            <span>{localTime}</span>
             <span className="text-cocoa/25">·</span>
-            <span className="font-semibold text-cocoa/70">北京</span>
-            <span>
-              {beijingDayLabel !== "今天" ? `${beijingDayLabel} ` : ""}{beijingTime}
-            </span>
+            <span className="font-semibold text-cocoa/70">北京时间</span>
+            <span>{beijingTime}</span>
           </>
         )}
         {sunsetDisplay ? (

@@ -234,6 +234,7 @@ export type NextImportantResult = {
   title: string;
   detail?: string;
   href?: string;
+  deadlineId?: string;
 };
 
 export function buildNextImportant(input: NextImportantInput): NextImportantResult {
@@ -284,7 +285,8 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
       label: ddl.days <= 0 ? "⚠️ 今天截止" : "⏳ 即将截止",
       title: ddl.d.title,
       detail: ddl.days <= 0 ? "今天先抓最关键的一步。" : `还有 ${ddl.days} 天，提前安排一下。`,
-      href: "/deadlines"
+      href: "/deadlines",
+      deadlineId: ddl.d.id
     };
   }
 
