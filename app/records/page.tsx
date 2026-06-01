@@ -83,7 +83,7 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="生活安排" subtitle="课程、DDL 和身体节奏，分开看得清楚。" />
+      <PageHeader title="生活安排总览" subtitle="课程、DDL 和身体节奏，一目了然。" />
 
       <div className="space-y-4">
         {/* ── 1. 今日总览 —— 一行三格，干净不挤 ── */}
@@ -126,7 +126,31 @@ export default function RecordsPage() {
           </div>
         </AppCard>
 
-        {/* ── 3. 今日课程 —— 课程区清晰 ── */}
+        {/* ── 3. 下一节课 —— 最近的上课提醒 ── */}
+        <section className="soft-card">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="section-kicker mb-1">📚 Next Class</p>
+              <h2 className="font-semibold text-cocoa">下一节课</h2>
+            </div>
+            <Link className="btn-secondary btn-small rounded-full px-4 py-1.5 text-xs font-medium" href="/schedule">全部课程</Link>
+          </div>
+          {nextCourse ? (
+            <div className="rounded-2xl bg-white/58 p-3">
+              <p className="font-medium text-cocoa">{nextCourse.name}</p>
+              <p className="mt-1 text-xs text-cocoa/55">
+                {nextCourse.startTime}–{nextCourse.endTime} · {nextCourse.day || "时间待定"}
+              </p>
+              {nextCourse.location ? (
+                <p className="mt-0.5 text-xs text-cocoa/45">{nextCourse.location}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="empty-state py-4 text-left text-sm">今天和近期都没有安排课程，节奏由自己掌控。</p>
+          )}
+        </section>
+
+        {/* ── 4. 今日课程 —— 课程区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -142,7 +166,7 @@ export default function RecordsPage() {
           )}
         </section>
 
-        {/* ── 4. DDL 列表 —— DDL 区清晰 ── */}
+        {/* ── 5. DDL 列表 —— DDL 区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -165,7 +189,7 @@ export default function RecordsPage() {
           )}
         </section>
 
-        {/* ── 5. 经期状态 —— 经期区清晰 ── */}
+        {/* ── 6. 经期状态 —— 经期区清晰 ── */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>

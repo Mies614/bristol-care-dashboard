@@ -17,10 +17,11 @@ import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
-import { buildTodayCareSegments, buildNextImportant } from "@/components/TodayCareSummary";
-import type { TodayCareSegment, NextImportantResult } from "@/components/TodayCareSummary";
+import { buildTodayCareSegments } from "@/components/TodayCareSummary";
+import type { TodayCareSegment } from "@/components/TodayCareSummary";
+import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
+import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
-import { AppCard } from "@/components/ui/AppCard";
 
 function safeBristolDate() {
   try {
@@ -126,13 +127,13 @@ export default function HomePage() {
   }, []);
 
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const priorityReminders = useMemo(() => getTodayPriorityReminders({
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,
     periodSettings
   }), [data.courses, data.deadlines, periodRecords, periodSettings]);
-  const topPriorityReminder = useMemo(() => priorityReminders[0] || null, [priorityReminders]);
   const recentMemories = useMemo(() => {
     const favorites = albumItems.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albumItems).slice(0, 4);
@@ -167,12 +168,15 @@ export default function HomePage() {
     }
   }
 
-  const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
+  const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,
-    periodSettings
-  }), [data.courses, data.deadlines, periodRecords, periodSettings]);
+    periodSettings,
+    unreadMissYouCount,
+    featuredNote: featuredLoveNote,
+    randomMemory
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
 
   const careSegments = useMemo((): TodayCareSegment[] => buildTodayCareSegments({
     courses: data.courses,
@@ -182,8 +186,8 @@ export default function HomePage() {
     unreadMissYouCount,
     featuredNote: featuredLoveNote,
     randomMemory,
-    topPriorityReminder
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, topPriorityReminder]);
+    topPriorityReminder: null // 避免与 TodaySummaryCard 重复
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
 
   useEffect(() => {
     const localDate = new Date().toISOString().slice(0, 10);
@@ -239,27 +243,8 @@ export default function HomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
-        {/* 1. 下一件重要事项 */}
-        <AppCard className="bg-gradient-to-br from-white/88 via-butter/38 to-blush/38">
-          <p className="section-kicker mb-1">Next</p>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold text-cocoa">{nextImportant.label}</h2>
-              <p className="mt-1 text-sm font-medium text-cocoa truncate">{nextImportant.title}</p>
-              {nextImportant.detail ? (
-                <p className="mt-1 text-xs leading-5 text-cocoa/60">{nextImportant.detail}</p>
-              ) : null}
-            </div>
-            {nextImportant.href ? (
-              <Link
-                className="shrink-0 rounded-full border border-white/70 bg-white/62 px-3 py-1 text-xs font-medium text-sage shadow-sm hover:bg-white/80 transition"
-                href={nextImportant.href}
-              >
-                去看看
-              </Link>
-            ) : null}
-          </div>
-        </AppCard>
+        {/* 1. 今日最重要事项 - TodaySummaryCard */}
+        <TodaySummaryCard summary={todaySummary} />
 
         {/* 2. Miss You - 想你按钮 */}
         <MissYouButton />

@@ -281,7 +281,7 @@ export default function AdminPage() {
             <h1 className="mt-2 text-[1.8rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--app-text)]">
               远程照顾控制台
             </h1>
-            <p className="mt-2 text-sm leading-5 text-[var(--app-muted)]">今天也可以轻轻照顾她一点。</p>
+            <p className="mt-2 text-sm leading-5 text-[var(--app-muted)]">远程看一眼小乖，轻轻照顾她一点。</p>
           </div>
           <div className="rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-2 text-right text-xs leading-5 text-[var(--app-muted)] shadow-sm">
             <div>Bristol {bristolTime}</div>
@@ -319,14 +319,14 @@ export default function AdminPage() {
         <>
           {/* ── 首屏优先：操作按钮在前 ── */}
           <div className="mb-4 space-y-3">
-            {/* 想她一下 */}
+            {/* 想她一下 —— 最重要的操作 */}
             <MissYouAdminCard />
 
-            {/* Space code */}
-            <label className="flex items-center gap-2 text-sm text-[var(--app-muted)]">
+            {/* 管理空间 —— 行内不占空间 */}
+            <label className="flex flex-wrap items-center gap-2 text-sm text-[var(--app-muted)]">
               管理空间
-              <Input className="w-32" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => { loadNotes(); loadCareSummary(); }} />
-              <AppButton variant="secondary" size="sm" onClick={loadCareSummary}>刷新数据</AppButton>
+              <Input className="w-28" value={code} onChange={(e) => setCode(e.target.value)} onBlur={() => { loadNotes(); loadCareSummary(); }} />
+              <AppButton variant="secondary" size="sm" onClick={loadCareSummary}>刷新</AppButton>
             </label>
           </div>
 
@@ -405,15 +405,15 @@ export default function AdminPage() {
               </AppCard>
 
               {/* 推送状态 - 折叠到末尾 */}
-              <AppCard>
-                <details>
-                  <summary className="cursor-pointer font-medium text-cocoa text-sm">推送状态</summary>
-                  <div className="mt-3 space-y-2 text-xs text-cocoa/60">
-                    <p>想你次数：小乖 {missYouCounts.xiaoguai} 次，我 {missYouCounts.admin} 次。</p>
-                    <p>未完成 DDL：{careData.deadlines.filter((d) => d.status !== "done").length} 个。</p>
-                    <p>今日课程：{careData.courses.filter((c) => c.day === new Date().toLocaleDateString("en-US", { weekday: "long" })).length} 节。</p>
-                    <p>纸条总数：{notes.length} 条。</p>
-                    <p className="pt-2 font-medium">💡 提示：如需更详细诊断，前往「诊断」标签页。</p>
+              <AppCard className="opacity-75">
+                <details className="group">
+                  <summary className="cursor-pointer font-medium text-cocoa/60 text-xs uppercase tracking-wide select-none">📊 数据摘要</summary>
+                  <div className="mt-3 space-y-2 text-xs text-cocoa/55 leading-relaxed">
+                    <p>想你次数：小乖 {missYouCounts.xiaoguai} 次，我 {missYouCounts.admin} 次</p>
+                    <p>未完成 DDL：{careData.deadlines.filter((d) => d.status !== "done").length} 个</p>
+                    <p>今日课程：{careData.courses.filter((c) => c.day === new Date().toLocaleDateString("en-US", { weekday: "long" })).length} 节</p>
+                    <p>纸条总数：{notes.length} 条</p>
+                    <p className="pt-1.5 text-cocoa/40">💡 详细诊断请前往「诊断」标签页</p>
                   </div>
                 </details>
               </AppCard>
