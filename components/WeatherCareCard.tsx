@@ -261,31 +261,37 @@ export function WeatherCareCard({ state, compact }: { state: WeatherCareState; c
   // 日落时间（使用天气数据的时区，Open-Meteo 返回的是当地时区的时间）
   const sunsetDisplay = w.sunset ? formatSunset(w.sunset, localTimeZone) : "";
 
-  // ── compact 模式：仅显示天气概要 + 穿衣一句话 + 时间 ──
+  // ── compact 模式：天气概要 + 穿衣建议 + 时间 + 日落 ──
   if (compact) {
-    const rainHint = rainPrediction
-      ? (rainPrediction.hoursUntil <= 0 ? "当前有雨" : `${rainPrediction.hoursUntil}h后有${rainPrediction.intensity}`)
-      : "无雨";
+    const compactLocation = state.isFallback
+      ? `${w.cityName || "Bristol"}`
+      : `${w.cityName || ""}`;
+    const compactWeatherHeader = `${compactLocation} · ${weatherCodeText(w.weatherCode)} ${Math.round(w.temperature)}°`;
 
+    // 体感 + 降雨概率 + 风速
+    const compactDetails = `体感 ${Math.round(w.apparentTemperature)}° · 雨 ${w.rainProbability}% · 风 ${Math.round(w.windSpeed)}km/h`;
+
+    // 未来降雨提示
+    const rainLine = rainPrediction
+      ? (rainPrediction.hoursUntil <= 0
+        ? `当前${rainPrediction.intensity}${rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}`
+        : `${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}${rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}`)
+      : "未来几小时无明显降雨";
+
+    // 时间行
     const timeLine = isBeijingLocal
       ? `北京时间 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`
-      : `${state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)} ${localTime} · 北京 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`;
-
-    const compactWeatherLabel = state.isFallback ? "默认 Bristol 天气" : `本地天气 · ${w.cityName}`;
+      : `当地 ${localTime} · 北京 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`;
 
     return (
       <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40 px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
-              {compactWeatherLabel} · {rainHint}
-            </p>
-            <h2 className="text-base font-semibold text-cocoa">
-              {weatherCodeText(w.weatherCode)} · {Math.round(w.temperature)}° 体感 {Math.round(w.apparentTemperature)}°
-            </h2>
-            <p className="mt-1 text-sm leading-5 text-cocoa/80 break-words">{clothing}</p>
-            <p className="mt-1 text-xs text-cocoa/50">{timeLine}</p>
-          </div>
+        <div className="min-w-0">
+          <p className="section-kicker mb-0.5">天气</p>
+          <h2 className="text-base font-semibold text-cocoa">{compactWeatherHeader}</h2>
+          <p className="mt-0.5 text-sm leading-5 text-cocoa/55">{compactDetails}</p>
+          <p className="mt-1 text-sm leading-5 text-cocoa/80 break-words">{clothing}</p>
+          <p className="mt-0.5 text-xs leading-5 text-cocoa/45">{rainLine}</p>
+          <p className="mt-0.5 text-xs leading-5 text-cocoa/45">{timeLine}</p>
         </div>
       </section>
     );

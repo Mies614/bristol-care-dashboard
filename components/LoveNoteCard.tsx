@@ -14,7 +14,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="section-kicker mb-1">小纸条</p>
-          <h2 className="font-semibold text-cocoa">小纸条</h2>
+          <h2 className="font-semibold text-cocoa">今天的小纸条</h2>
         </div>
         {onRefresh ? (
           <div className="flex flex-wrap justify-end gap-2">
