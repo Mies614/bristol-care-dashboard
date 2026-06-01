@@ -292,18 +292,18 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       </div>
 
       {/* ── 第三行：穿衣建议 ── */}
-      <p className="mt-1.5 text-xs leading-5 text-cocoa/65">{clothing}</p>
+      <p className="mt-1.5 text-xs leading-5 text-cocoa/65 break-words">{clothing}</p>
 
       {/* ── 第四行：降雨提示 ── */}
       {rainPrediction ? (
-        <p className="mt-1 text-[11px] leading-5 text-blue-700/80">
+          <p className="mt-1 text-[11px] leading-5 text-blue-700/80 break-words">
           {rainPrediction.hoursUntil <= 0
             ? "当前时段可能有雨"
             : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
           {rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}
         </p>
       ) : (
-        <p className="mt-1 text-[11px] leading-5 text-cocoa/40">未来几小时无明显降雨</p>
+        <p className="mt-1 text-[11px] leading-5 text-cocoa/40 break-words">未来几小时无明显降雨</p>
       )}
 
       {/* ── 第五行：当地时间 · 北京时间 · 日落 ── */}

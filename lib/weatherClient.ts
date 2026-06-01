@@ -100,7 +100,8 @@ function buildWeatherData(apiData: Record<string, unknown>, cityName: string): W
   const maxLen = Math.min(hourlyTimes.length, 12);
   for (let i = 0; i < maxLen; i++) {
     const timeStr = hourlyTimes[i];
-    const hour = new Date(timeStr).getHours();
+    const parsed = new Date(timeStr);
+    const hour = Number.isFinite(parsed.getTime()) ? parsed.getHours() : i;
     hourlyFull.push({
       hour: `${String(hour).padStart(2, "0")}:00`,
       prob: hourlyProb[i] ?? 0,
