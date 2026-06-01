@@ -22,8 +22,8 @@ import type { TodayCareSegment } from "@/components/TodayCareSummary";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { NextImportantCard } from "@/components/NextImportantCard";
-import type { NextImportantResult } from "@/components/NextImportantCard";
 import { buildNextImportant } from "@/components/TodayCareSummary";
+import type { NextImportantResult } from "@/components/TodayCareSummary";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 
 function safeBristolDate() {
