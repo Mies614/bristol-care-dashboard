@@ -240,9 +240,9 @@ export default function HomePage() {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="section-kicker">今日照顾</p>
+            <p className="section-kicker">小乖</p>
             <h1 className="mt-1.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-cocoa">
-              小乖，今天也好
+              今天也好
             </h1>
           </div>
           <div className="shrink-0 rounded-[1.25rem] border border-white/70 bg-white/62 px-3 py-1.5 text-right text-xs leading-5 text-cocoa/62 shadow-sm">

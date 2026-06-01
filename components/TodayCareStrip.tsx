@@ -31,14 +31,13 @@ export function TodayCareStrip({ items }: TodayCareStripProps) {
 
   return (
     <section className="soft-card">
-      <p className="section-kicker mb-1">今日照顾</p>
-      <h2 className="font-semibold text-cocoa mb-3">今日照顾</h2>
+      <p className="section-kicker mb-2">今日照顾</p>
       <div className="flex justify-around gap-1">
         {items.slice(0, 4).map((item) => (
           <Link
             key={item.id}
             href={item.href || "#"}
-            className="flex flex-col items-center gap-1 rounded-2xl bg-white/55 px-2 py-3 min-w-0 flex-1 transition hover:bg-white/80 hover:shadow-sm"
+            className="flex flex-col items-center gap-1 rounded-2xl bg-white/55 px-2 py-2 min-w-0 flex-1 transition hover:bg-white/80 hover:shadow-sm"
           >
             <span className="text-xl leading-none">{item.icon}</span>
             <span className="text-base font-bold text-cocoa leading-tight tabular-nums">{item.value}</span>
@@ -46,9 +45,6 @@ export function TodayCareStrip({ items }: TodayCareStripProps) {
           </Link>
         ))}
       </div>
-      <Link className="mt-3 inline-block text-xs text-sage hover:underline" href="/records">
-        更多详情 →
-      </Link>
     </section>
   );
 }

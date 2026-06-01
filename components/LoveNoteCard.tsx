@@ -9,8 +9,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   const content = note?.content || fallback;
 
   return (
-    <section className="soft-card relative overflow-hidden bg-gradient-to-br from-butter/80 via-white/85 to-lilac/55">
-      <div className="absolute left-1/2 top-0 h-7 w-24 -translate-x-1/2 -translate-y-3 rounded-full bg-roseSoft/35 blur-[1px]" aria-hidden="true" />
+    <section className="soft-card relative overflow-hidden bg-gradient-to-br from-butter/50 via-white/75 to-lilac/35">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="section-kicker mb-1">小纸条</p>

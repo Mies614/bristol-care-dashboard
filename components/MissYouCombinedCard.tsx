@@ -111,7 +111,6 @@ export function MissYouCombinedCard() {
     unreadFromOtherEvents: []
   });
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const [animating, setAnimating] = useState(false);
   const [hearts, setHearts] = useState<Array<{ id: number; left: number }>>([]);
   const [markingSeen, setMarkingSeen] = useState(false);
@@ -237,7 +236,6 @@ export function MissYouCombinedCard() {
           todayByAuthor: payload.todayByAuthor || {}
         }));
         const feedbackText = getMissYouFeedback(payload.todayCount);
-        setFeedback(feedbackText);
         toast(feedbackText, {
           className: "!rounded-[var(--app-radius)] !border !border-[var(--app-card-border)] !bg-[var(--app-card-bg)] !text-[var(--app-text)]"
         });
@@ -253,7 +251,6 @@ export function MissYouCombinedCard() {
         });
         savePendingQueue(pending);
         const offlineMsg = "已经先帮你记在本地，稍后再同步。";
-        setFeedback(offlineMsg);
         toast(offlineMsg);
       }
     } catch {
@@ -268,7 +265,6 @@ export function MissYouCombinedCard() {
       });
       savePendingQueue(pending);
       const offlineMsg = "已经先帮你记在本地，稍后再同步。";
-      setFeedback(offlineMsg);
       toast(offlineMsg);
     } finally {
       setLoading(false);
@@ -299,34 +295,24 @@ export function MissYouCombinedCard() {
       <div className="relative z-10">
         <p className="section-kicker mb-1">想你</p>
 
-        {/* ── 两行计数 ── */}
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-cocoa">今天也想你</h2>
-          {todaysYouCount > 0 && (
-            <span className="text-sm font-medium text-cocoa/50 tabular-nums">
-              今天已想你 {todaysYouCount} 次
-            </span>
-          )}
-        </div>
+        {/* ── 一行标题 + 计数 ── */}
+        <h2 className="text-lg font-semibold text-cocoa">
+          想你{todaysYouCount > 0 ? ` · 今天已想你 ${todaysYouCount} 次` : ""}
+        </h2>
 
         {/* ── 未读想念（admin 端发来的） ── */}
         {hasUnread && (
           <div className="mt-2 rounded-2xl bg-white/65 px-3 py-2">
             <p className="text-sm font-medium text-cocoa">
-              💕 他也想你啦 · 你不在时他想你了 <span className="text-base font-bold">{data.unreadFromOtherCount}</span> 次
+              💕 他也在想你（{data.unreadFromOtherCount} 次）
             </p>
             {data.unreadFromOtherEvents.length > 0 && (
               <p className="mt-0.5 text-xs text-cocoa/50">
-                最近一次：{data.unreadFromOtherEvents[0].message} · {formatTime(data.unreadFromOtherEvents[0].created_at)}
+                最近：{formatTime(data.unreadFromOtherEvents[0].created_at)}
               </p>
             )}
           </div>
         )}
-
-        {/* ── 反馈文案 ── */}
-        <p className="mt-2.5 text-sm leading-6 text-cocoa/65">
-          {loading ? "正在记录..." : feedback || getMissYouFeedback(todaysYouCount)}
-        </p>
 
         {/* ── 按钮组 ── */}
         <div className="mt-3 flex items-center gap-2">

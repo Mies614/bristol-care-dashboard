@@ -119,7 +119,7 @@ export default function RecordsPage() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="section-kicker mb-1">快速操作</p>
-                <h2 className="font-semibold text-cocoa">快速操作</h2>
+                <h2 className="font-semibold text-cocoa">添加 / 导出</h2>
               </div>
               <AppButton variant="secondary" size="sm" onClick={exportAllCalendar}>📅 导出日历</AppButton>
             </div>
