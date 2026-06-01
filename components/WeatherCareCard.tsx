@@ -66,43 +66,134 @@ export function useWeatherCare(): WeatherCareState {
   return state;
 }
 
+// ── 降雨预测 ──
+
+export type RainPrediction = {
+  /** -1 表示无雨，0 表示当前小时已有雨，>0 表示 N 小时后有雨 */
+  hoursUntil: number;
+  /** 该小时降雨概率 */
+  prob: number;
+  /** 该小时降雨/降水量 mm */
+  amount: number;
+  /** 雨势描述 */
+  intensity: string;
+};
+
 /**
- * 穿衣建议。
+ * 从未来 12 小时数据中找到最近一次明显降雨。
+ *
+ * 明显降雨判定：
+ *   precipitation_probability >= 40 或 rain/precipitation >= 0.2mm
+ *
+ * 遍历 hourlyFull（已含 12 小时），找到第一个符合条件的。
  */
-export function getOutfitText(temp: number, rainProb: number, windSpeed: number): string {
-  const parts: string[] = [];
+export function findNextRain(hourly: HourlyRain[]): RainPrediction | null {
+  if (!hourly || hourly.length === 0) return null;
 
-  if (temp < 5) {
-    parts.push("很冷，厚外套和围巾最合适。");
-  } else if (temp < 12) {
-    parts.push("偏冷，外套加内搭刚好。");
-  } else if (temp < 20) {
-    parts.push("舒适，薄外套就可以。");
-  } else if (temp < 28) {
-    parts.push("温暖，轻薄衣物舒服。");
-  } else {
-    parts.push("炎热，记得防晒补水。");
+  for (let i = 0; i < hourly.length; i++) {
+    const h = hourly[i];
+    const prob = h.prob ?? 0;
+    const rain = h.rain ?? h.precipitation ?? 0;
+
+    if (prob >= 40 || rain >= 0.2) {
+      return {
+        hoursUntil: i,
+        prob,
+        amount: rain,
+        intensity: getRainIntensity(rain)
+      };
+    }
   }
 
-  if (rainProb >= 60) {
-    parts.push("记得带伞，今天会下雨。");
-  } else if (rainProb >= 30) {
-    parts.push("可能飘点雨，带把小伞更安心。");
-  }
-
-  if (windSpeed >= 25) {
-    parts.push("风比较大，注意防风。");
-  }
-
-  return parts.join(" ");
+  return null;
 }
 
-/** 把时区转成简短友好名称，如 "本地" "北京" */
+/**
+ * 雨势描述。
+ *   < 0.5mm：零星小雨
+ *   0.5-2mm：小雨
+ *   2-6mm：中雨
+ *   > 6mm：雨势较大
+ */
+export function getRainIntensity(amount: number): string {
+  if (amount < 0.5) return "零星小雨";
+  if (amount < 2) return "小雨";
+  if (amount < 6) return "中雨";
+  return "雨势较大";
+}
+
+// ── 穿衣建议 ──
+
+/**
+ * 穿衣建议。
+ *
+ * 结合：当前温度、体感温度、风速、是否下雨/雨概率。
+ */
+export function getClothingAdvice(
+  temp: number,
+  apparentTemp: number,
+  windSpeed: number,
+  rainProb: number
+): string {
+  const parts: string[] = [];
+
+  // 基于实际温度
+  if (temp < 5) {
+    parts.push("很冷，厚外套和围巾最合适");
+  } else if (temp < 12) {
+    parts.push("偏冷，外套加内搭刚好");
+  } else if (temp < 18) {
+    parts.push("微凉，薄外套就可以");
+  } else if (temp < 26) {
+    parts.push("舒适，轻薄衣物最舒服");
+  } else {
+    parts.push("炎热，轻薄透气，注意防晒补水");
+  }
+
+  // 体感远低于实际温度提示风寒
+  if (apparentTemp < temp - 3) {
+    const idx = parts[0].endsWith("。") ? parts[0].length - 1 : parts[0].length;
+    parts[0] = parts[0].slice(0, idx) + "，体感更冷";
+  }
+
+  // 降雨
+  if (rainProb >= 60) {
+    parts.push("记得带伞，鞋子选防滑一点");
+  } else if (rainProb >= 30) {
+    parts.push("可能飘点雨，带把小伞更安心");
+  }
+
+  // 大风
+  if (windSpeed >= 25) {
+    parts.push("风比较大，外套别太薄");
+  } else if (windSpeed >= 15 && temp < 15) {
+    parts.push("有风，注意防风");
+  }
+
+  return parts.join("。") + "。";
+}
+
+// ── 时间格式化 ──
+
+/** 把时区转成简短友好名称 */
 function friendlyTimeZoneLabel(tz: string): string {
   if (tz === "Asia/Shanghai") return "北京";
   const parts = tz.split("/");
   return parts[parts.length - 1]?.replace(/_/g, " ") || "本地";
 }
+
+/** 格式化日落时间为 HH:MM */
+function formatSunset(sunsetStr: string, timeZone: string): string {
+  try {
+    const date = new Date(sunsetStr);
+    if (!Number.isFinite(date.getTime())) return "";
+    return formatTimeInZone(date, timeZone);
+  } catch {
+    return "";
+  }
+}
+
+// ── 卡片组件 ──
 
 export function WeatherCareCard({ state }: { state: WeatherCareState }) {
   if (state.loading) {
@@ -152,102 +243,102 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
   }
 
   const w = state.weather;
-  const outfit = getOutfitText(w.temperature, w.rainProbability, w.windSpeed);
-  const now = new Date();
-
-  // 两地时间：访问者当地时区 + 北京时间
   const localTimeZone = state.localTimeZone;
+  const isBeijingLocal = localTimeZone === "Asia/Shanghai";
+
+  // 基本数据
+  const clothing = getClothingAdvice(w.temperature, w.apparentTemperature, w.windSpeed, w.rainProbability);
+
+  // 降雨预测（基于 12 小时 hourlyFull）
+  const rainPrediction = w.hourlyFull && w.hourlyFull.length > 0 ? findNextRain(w.hourlyFull) : null;
+
+  // 时间信息
+  const now = new Date();
   const localTime = formatTimeInZone(now, localTimeZone);
   const localDayLabel = getRelativeDayLabel(now, now, localTimeZone);
   const beijingTime = formatTimeInZone(now, "Asia/Shanghai");
   const beijingDayLabel = getRelativeDayLabel(now, now, "Asia/Shanghai");
 
-  // 天气来源标签
-  const weatherLabel = state.isFallback ? "默认 Bristol 天气" : `本地天气 · ${w.cityName}`;
-  const kickerText = state.isFallback ? `未获取定位 · 以下为 ${w.cityName} 天气` : `${w.cityName}`;
+  // 日落时间（使用天气数据的时区，Open-Meteo 返回的是当地时区的时间）
+  const sunsetDisplay = w.sunset ? formatSunset(w.sunset, localTimeZone) : "";
 
-  function renderHourlyRain(hourly: HourlyRain[]) {
-    const relevant = hourly.filter((h) => h.prob > 0).slice(0, 4);
-    if (relevant.length === 0) return null;
-    return (
-      <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
-        {relevant.map((h) => {
-          const showRain = h.prob >= 30;
-          return (
-            <div
-              key={h.hour}
-              className={`shrink-0 rounded-[0.85rem] px-2 py-1 text-center text-[10px] leading-tight ${
-                showRain ? "bg-blue-100/70 text-blue-700" : "bg-white/50 text-cocoa/55"
-              }`}
-            >
-              <p className="font-semibold">{h.hour}</p>
-              <p>{h.prob}%</p>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  // 天气来源标签
+  const weatherLabel = state.isFallback ? `Bristol 天气` : w.cityName;
 
   return (
-    <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40">
-      {/* 顶部：天气主信息 */}
+    <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40 px-4 py-3.5">
+      {/* ── 第一行：天气描述 + 当前温度 ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="section-kicker mb-1">{weatherLabel}</p>
-          <h2 className="text-sm font-semibold text-cocoa">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-sage/70 mb-0.5">
+            {weatherLabel}
+          </p>
+          <h2 className="text-base font-semibold text-cocoa">
             {weatherCodeText(w.weatherCode)}
           </h2>
-          <p className="mt-1 text-xs leading-5 text-cocoa/60">{outfit}</p>
-          {state.isFallback && (
-            <p className="mt-0.5 text-[10px] text-cocoa/40">{kickerText}</p>
-          )}
         </div>
-        <div className="shrink-0 rounded-[1.25rem] bg-white/70 px-3 py-2 text-right shadow-sm">
+        <div className="shrink-0 rounded-[1rem] bg-white/65 px-2.5 py-1.5 text-right shadow-sm">
           <p className="text-2xl font-semibold text-cocoa leading-none">{Math.round(w.temperature)}°</p>
-          <p className="mt-0.5 text-[10px] text-cocoa/50">
-            体感 {Math.round(w.apparentTemperature)}° · 雨 {w.rainProbability}%
-          </p>
         </div>
       </div>
 
-      {/* 未来几小时降雨 */}
-      {w.hourlyRain && w.hourlyRain.length > 0 ? renderHourlyRain(w.hourlyRain) : null}
-
-      {/* 三列天气数据 */}
-      <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-        <div className="rounded-2xl border border-white/70 bg-white/55 px-2.5 py-2 shadow-sm">
-          <p className="text-cocoa/45">最高/最低</p>
-          <p className="font-semibold text-cocoa">{Math.round(w.maxTemperature)}° / {Math.round(w.minTemperature)}°</p>
-        </div>
-        <div className="rounded-2xl border border-white/70 bg-white/55 px-2.5 py-2 shadow-sm">
-          <p className="text-cocoa/45">风速</p>
-          <p className="font-semibold text-cocoa">{Math.round(w.windSpeed)} km/h</p>
-        </div>
-        <div className="rounded-2xl border border-white/70 bg-white/55 px-2.5 py-2 shadow-sm">
-          <p className="text-cocoa/45">日落</p>
-          <p className="font-semibold text-cocoa">
-            {new Date(w.sunset).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
-          </p>
-        </div>
+      {/* ── 第二行：体感 / 降雨概率 / 风速 ── */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-cocoa/55">
+        <span>体感 {Math.round(w.apparentTemperature)}°</span>
+        <span className="text-cocoa/25">·</span>
+        <span>降雨 {w.rainProbability}%</span>
+        <span className="text-cocoa/25">·</span>
+        <span>风速 {Math.round(w.windSpeed)} km/h</span>
       </div>
 
-      {/* 两地时间：当地 + 北京 */}
-      <div className="mt-2 grid grid-cols-2 gap-2 rounded-[1rem] bg-white/35 p-2">
-        <div className="text-center">
-          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-sage">
-            {state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)}
-          </p>
-          <p className="text-lg font-semibold text-cocoa">
-            {localDayLabel !== "今天" ? `${localDayLabel} ` : ""}{localTime}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-sage">北京</p>
-          <p className="text-lg font-semibold text-cocoa">
-            {beijingDayLabel !== "今天" ? `${beijingDayLabel} ` : ""}{beijingTime}
-          </p>
-        </div>
+      {/* ── 第三行：穿衣建议 ── */}
+      <p className="mt-1.5 text-xs leading-5 text-cocoa/65">{clothing}</p>
+
+      {/* ── 第四行：降雨提示 ── */}
+      {rainPrediction ? (
+        <p className="mt-1 text-[11px] leading-5 text-blue-700/80">
+          {rainPrediction.hoursUntil <= 0
+            ? "当前时段可能有雨"
+            : `约 ${rainPrediction.hoursUntil} 小时后${rainPrediction.intensity}，预计 ${rainPrediction.amount}mm`}
+          {rainPrediction.prob > 0 ? `（概率 ${rainPrediction.prob}%）` : ""}
+        </p>
+      ) : (
+        <p className="mt-1 text-[11px] leading-5 text-cocoa/40">未来几小时无明显降雨</p>
+      )}
+
+      {/* ── 第五行：当地时间 · 北京时间 · 日落 ── */}
+      <div className="mt-2 flex items-center gap-x-2 text-[11px] text-cocoa/50">
+        {isBeijingLocal ? (
+          <>
+            <span className="font-semibold text-cocoa/70">北京</span>
+            <span>
+              {beijingDayLabel !== "今天" ? `${beijingDayLabel} ` : ""}{beijingTime}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-cocoa/70">
+              {state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)}
+            </span>
+            <span>
+              {localDayLabel !== "今天" ? `${localDayLabel} ` : ""}{localTime}
+            </span>
+            <span className="text-cocoa/25">·</span>
+            <span className="font-semibold text-cocoa/70">北京</span>
+            <span>
+              {beijingDayLabel !== "今天" ? `${beijingDayLabel} ` : ""}{beijingTime}
+            </span>
+          </>
+        )}
+        {sunsetDisplay ? (
+          <>
+            <span className="text-cocoa/25">·</span>
+            <span className="text-cocoa/45">日落 {sunsetDisplay}</span>
+          </>
+        ) : null}
+        {state.isFallback && (
+          <span className="text-cocoa/35 text-[10px]">· 未获取定位</span>
+        )}
       </div>
     </section>
   );

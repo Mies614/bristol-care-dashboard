@@ -3,7 +3,7 @@
  *
  * 轻量天气 API route，代理 Open-Meteo 免费 API。
  * 不暴露任何密钥到前端，客户端只需传坐标即可。
- * 包含未来 6 小时降雨概率，用于首页显示。
+ * 包含未来 12 小时降雨数据，用于首页降雨预测。
  */
 
 export const runtime = "nodejs";
@@ -85,19 +85,11 @@ export async function GET(request: Request) {
 
     const data = (await response.json()) as OpenMeteoResponse;
 
-    // 提取未来 6 小时降雨概率（按小时聚合）
-    const hourlyRain: { hour: string; prob: number; rain: number }[] = [];
-    if (data.hourly?.time && data.hourly?.precipitation_probability) {
-      for (let i = 0; i < Math.min(data.hourly.time.length, 6); i++) {
-        const timeStr = data.hourly.time[i];
-        const hour = new Date(timeStr).getHours();
-        hourlyRain.push({
-          hour: `${String(hour).padStart(2, "0")}:00`,
-          prob: data.hourly.precipitation_probability[i] ?? 0,
-          rain: data.hourly.rain[i] ?? data.hourly.precipitation[i] ?? 0
-        });
-      }
-    }
+    // 提取 12 小时降雨数据
+    const hourlyTimes = data.hourly?.time ?? [];
+    const hourlyProb = data.hourly?.precipitation_probability ?? [];
+    const hourlyRainVals = data.hourly?.rain ?? [];
+    const hourlyPrecipVals = data.hourly?.precipitation ?? [];
 
     return NextResponse.json({
       ok: true,
@@ -110,7 +102,11 @@ export async function GET(request: Request) {
       minTemperature: data.daily.temperature_2m_min[0],
       sunrise: data.daily.sunrise[0],
       sunset: data.daily.sunset[0],
-      hourlyRain
+      // 12 小时完整数据（客户端做 findNextRain 预测）
+      hourlyTime: hourlyTimes,
+      hourlyProb,
+      hourlyRain: hourlyRainVals,
+      hourlyPrecip: hourlyPrecipVals
     });
   } catch (err) {
     return NextResponse.json(

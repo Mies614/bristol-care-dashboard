@@ -9,9 +9,14 @@
  */
 
 export type HourlyRain = {
+  /** 时间标签，如 "14:00" */
   hour: string;
+  /** 降雨概率 0-100 */
   prob: number;
+  /** 降雨量 mm */
   rain: number;
+  /** 降水量 mm（可能包含雪等） */
+  precipitation: number;
 };
 
 export type WeatherData = {
@@ -24,7 +29,10 @@ export type WeatherData = {
   minTemperature: number;
   sunrise: string;
   sunset: string;
+  /** 未来 6 小时降雨（用于小时降雨条） */
   hourlyRain: HourlyRain[];
+  /** 未来 12 小时完整小时数据（用于降雨预测） */
+  hourlyFull: HourlyRain[];
   /** 反向地理编码获取的城市名，如 "Bristol, UK" */
   cityName: string;
 };
@@ -69,7 +77,7 @@ export function getVisitorLocation(): Promise<{ lat: number; lon: number } | nul
 }
 
 /**
- * 从浏览器时区推断城市名（如 "Shanghai"）。
+ * 从浏览器时区推断时区字符串。
  */
 export function getVisitorTimeZone(): string {
   try {
@@ -77,6 +85,47 @@ export function getVisitorTimeZone(): string {
   } catch {
     return "Europe/London";
   }
+}
+
+/**
+ * 从 /api/weather 返回的原始数据构建 WeatherData。
+ */
+function buildWeatherData(apiData: Record<string, unknown>, cityName: string): WeatherData {
+  const hourlyTimes = Array.isArray(apiData.hourlyTime) ? (apiData.hourlyTime as string[]) : [];
+  const hourlyProb = Array.isArray(apiData.hourlyProb) ? (apiData.hourlyProb as number[]) : [];
+  const hourlyRain = Array.isArray(apiData.hourlyRain) ? (apiData.hourlyRain as number[]) : [];
+  const hourlyPrecip = Array.isArray(apiData.hourlyPrecip) ? (apiData.hourlyPrecip as number[]) : [];
+
+  const hourlyFull: HourlyRain[] = [];
+  const maxLen = Math.min(hourlyTimes.length, 12);
+  for (let i = 0; i < maxLen; i++) {
+    const timeStr = hourlyTimes[i];
+    const hour = new Date(timeStr).getHours();
+    hourlyFull.push({
+      hour: `${String(hour).padStart(2, "0")}:00`,
+      prob: hourlyProb[i] ?? 0,
+      rain: hourlyRain[i] ?? hourlyPrecip[i] ?? 0,
+      precipitation: hourlyPrecip[i] ?? 0
+    });
+  }
+
+  // 前 6 小时用于小时降雨条展示
+  const hourlyRainSlice = hourlyFull.slice(0, 6);
+
+  return {
+    temperature: (apiData.temperature as number) ?? 0,
+    apparentTemperature: (apiData.apparentTemperature as number) ?? 0,
+    weatherCode: (apiData.weatherCode as number) ?? 0,
+    windSpeed: (apiData.windSpeed as number) ?? 0,
+    rainProbability: (apiData.rainProbability as number) ?? 0,
+    maxTemperature: (apiData.maxTemperature as number) ?? 0,
+    minTemperature: (apiData.minTemperature as number) ?? 0,
+    sunrise: (apiData.sunrise as string) || "",
+    sunset: (apiData.sunset as string) || "",
+    hourlyRain: hourlyRainSlice,
+    hourlyFull,
+    cityName
+  };
 }
 
 /**
@@ -129,19 +178,7 @@ export async function fetchWeather(
 
     return {
       ok: true,
-      data: {
-        temperature: data.temperature,
-        apparentTemperature: data.apparentTemperature,
-        weatherCode: data.weatherCode,
-        windSpeed: data.windSpeed,
-        rainProbability: data.rainProbability,
-        maxTemperature: data.maxTemperature,
-        minTemperature: data.minTemperature,
-        sunrise: data.sunrise,
-        sunset: data.sunset,
-        hourlyRain: Array.isArray(data.hourlyRain) ? data.hourlyRain : [],
-        cityName
-      }
+      data: buildWeatherData(data, cityName)
     };
   } catch (error) {
     return {
