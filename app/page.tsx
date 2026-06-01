@@ -14,16 +14,17 @@ import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPers
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
-import { getTodayPriorityReminders } from "@/lib/priorityReminders";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { MissYouButton } from "@/components/MissYouButton";
-import { buildTodayCareSegments } from "@/components/TodayCareSummary";
-import type { TodayCareSegment } from "@/components/TodayCareSummary";
+import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { NextImportantCard } from "@/components/NextImportantCard";
 import { buildNextImportant } from "@/components/TodayCareSummary";
 import type { NextImportantResult } from "@/components/TodayCareSummary";
+import { getCurrentDayName } from "@/lib/schedule";
+import { getDaysUntilNextPeriod } from "@/lib/period";
+import { getDaysUntil } from "@/lib/ddlPriority";
 import { useAccessibleMotion, safeTransition, safeVariants, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 
 function safeBristolDate() {
@@ -71,10 +72,10 @@ export default function HomePage() {
       try {
         emergencyReset();
         setData(loadAppData());
-      } catch (loadError) {
+      } catch (loadErr) {
         setData(defaultAppData);
         if (process.env.NODE_ENV === "development") {
-          setInitError(loadError instanceof Error ? loadError.message : "首页初始化失败，已使用默认数据。");
+          setInitError(loadErr instanceof Error ? loadErr.message : "首页初始化失败，已使用默认数据。");
         }
       }
     };
@@ -130,13 +131,6 @@ export default function HomePage() {
   }, []);
 
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const priorityReminders = useMemo(() => getTodayPriorityReminders({
-    courses: data.courses,
-    deadlines: data.deadlines,
-    periodRecords,
-    periodSettings
-  }), [data.courses, data.deadlines, periodRecords, periodSettings]);
   const recentMemories = useMemo(() => {
     const favorites = albumItems.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albumItems).slice(0, 4);
@@ -145,6 +139,7 @@ export default function HomePage() {
   const todayLabel = useMemo(safeBristolDate, []);
   const bristolStatus = useMemo(safeBristolStatus, []);
   const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
+  const now = useMemo(() => new Date(), []);
 
   async function refreshLoveNote() {
     const connection = getCloudConnection();
@@ -171,6 +166,7 @@ export default function HomePage() {
     }
   }
 
+  // ──── 今日最重要事项 ────
   const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
     courses: data.courses,
     deadlines: data.deadlines,
@@ -178,10 +174,11 @@ export default function HomePage() {
     periodSettings,
     unreadMissYouCount,
     featuredNote: featuredLoveNote,
-    randomMemory
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory]);
+    randomMemory,
+    now
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, now]);
 
-  // 构建排除集合：TodaySummaryCard 已展示的 DDL 不再出现在 NextImportantCard 和 TodayCareSummary 中
+  // 排除 TodaySummaryCard 中已展示的 DDL
   const excludedDdlIds = useMemo((): Set<string> => {
     const ids = new Set<string>();
     if (todaySummary.selectedDdl?.deadline.id) {
@@ -190,15 +187,17 @@ export default function HomePage() {
     return ids;
   }, [todaySummary.selectedDdl]);
 
+  // ──── 下一件重要事项 ────
   const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,
     periodSettings,
-    excludedDdlIds
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, excludedDdlIds]);
+    excludedDdlIds,
+    now
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, excludedDdlIds, now]);
 
-  // 合并排除：TodaySummaryCard + NextImportantCard 中出现的 DDL 都不在 careSegments 中重复
+  // 合并排除：TodaySummaryCard + NextImportantCard 中出现的 DDL
   const allExcludedDdlIds = useMemo((): Set<string> => {
     const ids = new Set<string>(excludedDdlIds);
     if (nextImportant.deadlineId) {
@@ -207,48 +206,130 @@ export default function HomePage() {
     return ids;
   }, [excludedDdlIds, nextImportant.deadlineId]);
 
-  // 过滤 TodayCareSummary 片段，移除与 TodaySummaryCard / NextImportantCard 重复的类型
-  const careSegments = useMemo((): TodayCareSegment[] => {
-    const all = buildTodayCareSegments({
-      courses: data.courses,
-      deadlines: data.deadlines,
-      periodRecords,
-      periodSettings,
-      unreadMissYouCount,
-      featuredNote: featuredLoveNote,
-      randomMemory,
-      topPriorityReminder: null,
-      excludedDdlIds: allExcludedDdlIds
-    });
-    // 移除与今天最重要事项重复的片段
-    const excludeIds = new Set<string>();
-    if (todaySummary.type === "ddl") excludeIds.add("next-ddl");
-    if (todaySummary.type === "course") excludeIds.add("today-courses");
-    if (todaySummary.type === "period") {
-      excludeIds.add("period-today");
-      excludeIds.add("period-soon");
-      excludeIds.add("period-late");
+  // ──── 今日照顾摘要条（紧凑 2-4 格） ────
+  const careStrip = useMemo((): CareStripItem[] => {
+    const items: CareStripItem[] = [];
+    const todayDay = getCurrentDayName(now);
+
+    // 今日课程
+    const todaysCourses = data.courses.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    if (todaysCourses.length > 0) {
+      const label = todaysCourses.length === 1
+        ? `${todaysCourses[0].startTime} ${todaysCourses[0].name}`
+        : `${todaysCourses.length} 节课`;
+      items.push({
+        id: "today-courses",
+        icon: "📖",
+        label: "今日课程",
+        summary: label,
+        href: "/schedule"
+      });
+    } else {
+      items.push({
+        id: "no-course-today",
+        icon: "☁️",
+        label: "今天没课",
+        summary: "按自己的节奏来",
+        href: "/schedule"
+      });
     }
-    if (todaySummary.type === "missyou") excludeIds.add("miss-you-unread");
-    if (todaySummary.type === "memory") {
-      excludeIds.add("pinned-note");
-      excludeIds.add("random-memory");
+
+    // 最近 DDL（排除已展示的）
+    const activeDdls = data.deadlines
+      .filter((d) => d.status !== "done" && !allExcludedDdlIds.has(d.id))
+      .map((d) => ({ d, days: getDaysUntil(d, now) }))
+      .sort((a, b) => a.days - b.days);
+    if (activeDdls.length > 0) {
+      const next = activeDdls[0];
+      const urgency = next.days <= 0 ? "⚠️" : next.days <= 3 ? "⏳" : "📋";
+      items.push({
+        id: "next-ddl",
+        icon: urgency,
+        label: "最近 DDL",
+        summary: next.days <= 0 ? "今天截止" : `${next.days} 天`,
+        href: "/deadlines"
+      });
+    } else {
+      items.push({
+        id: "no-ddl",
+        icon: "✅",
+        label: "无待办 DDL",
+        summary: "今天不用追",
+        href: "/deadlines"
+      });
     }
-    // 也移除与 NextImportantCard 重复的
-    if (nextImportant.type === "course") {
-      excludeIds.add("today-courses");
-      excludeIds.add("no-course-today");
+
+    // 经期状态
+    const daysUntil = getDaysUntilNextPeriod(periodRecords, periodSettings, now);
+    if (daysUntil !== null) {
+      if (daysUntil === 0) {
+        items.push({
+          id: "period-today",
+          icon: "🌸",
+          label: "经期预计今天",
+          summary: "对自己温柔点",
+          href: "/period"
+        });
+      } else if (daysUntil > 0 && daysUntil <= 3) {
+        items.push({
+          id: "period-soon",
+          icon: "🌸",
+          label: "经期临近",
+          summary: `约 ${daysUntil} 天`,
+          href: "/period"
+        });
+      } else if (daysUntil < 0) {
+        items.push({
+          id: "period-late",
+          icon: "🌸",
+          label: "经期延迟",
+          summary: `已过 ${Math.abs(daysUntil)} 天`,
+          href: "/period"
+        });
+      } else {
+        items.push({
+          id: "period-far",
+          icon: "🌿",
+          label: "经期还远",
+          summary: `${daysUntil} 天后`,
+          href: "/period"
+        });
+      }
+    } else {
+      items.push({
+        id: "period-no-data",
+        icon: "🌿",
+        label: "经期记录",
+        summary: "还没记过",
+        href: "/period"
+      });
     }
-    if (nextImportant.type === "deadline") excludeIds.add("next-ddl");
-    if (nextImportant.type === "period") {
-      excludeIds.add("period-today");
-      excludeIds.add("period-soon");
+
+    // 最近回忆
+    if (randomMemory?.title) {
+      items.push({
+        id: "random-memory",
+        icon: "📷",
+        label: "一张回忆",
+        summary: randomMemory.title.slice(0, 10),
+        href: "/albums"
+      });
+    } else if (featuredLoveNote?.content) {
+      const snippet = featuredLoveNote.content.slice(0, 10);
+      items.push({
+        id: "note-snippet",
+        icon: "💌",
+        label: "小纸条",
+        summary: snippet,
+        href: "/notes"
+      });
     }
-    return all.filter((seg) => !excludeIds.has(seg.id));
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, todaySummary.type, nextImportant.type, allExcludedDdlIds]);
+
+    return items;
+  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, allExcludedDdlIds, randomMemory, featuredLoveNote]);
 
   useEffect(() => {
-    const localDate = new Date().toISOString().slice(0, 10);
+    const localDate = now.toISOString().slice(0, 10);
     fetch(`/api/miss-you?code=${encodeURIComponent(getDefaultSpaceCode())}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`)
       .then((res) => res.json())
       .then((payload) => {
@@ -259,7 +340,7 @@ export default function HomePage() {
       .catch(() => {
         // Non-blocking
       });
-  }, []);
+  }, [now]);
 
   const reduceMotion = useAccessibleMotion();
 
@@ -288,6 +369,9 @@ export default function HomePage() {
         <div className="mt-3 flex flex-wrap gap-1.5">
           <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">{bristolStatus}</span>
           <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">今天也慢慢来</span>
+          <span className="rounded-full border border-white/70 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-cocoa/70 shadow-sm">
+            下次见面：{formatCountdown(data.nextMeetDate)}
+          </span>
         </div>
         <p className="mt-3 text-[13px] leading-5 text-cocoa/65">慢慢吃饭，慢慢走路，今天也不用急着证明什么。</p>
       </motion.header>
@@ -309,59 +393,23 @@ export default function HomePage() {
         {/* 1. 今日最重要事项 - TodaySummaryCard */}
         <TodaySummaryCard summary={todaySummary} />
 
-        {/* 2. 下一件重要事项 - NextImportantCard（不重复 TodaySummaryCard） */}
+        {/* 2. 下一件重要事项 - NextImportantCard */}
         <NextImportantCard result={nextImportant} />
 
         {/* 3. 想你按钮 / 未读想念 */}
         <MissYouButton />
 
-        {/* 4. 今日照顾摘要（课程/DDL/经期/纸条/回忆 — 已去除与上面重复的） */}
-        {careSegments.length > 0 && (
-          <section className="soft-card">
-            <div className="mb-3">
-              <p className="section-kicker mb-1">Today Care</p>
-              <h2 className="font-semibold text-cocoa">今日照顾</h2>
-            </div>
-            <div className="divide-y divide-white/60">
-              {careSegments.map((seg) => (
-                <div key={seg.id} className="flex items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-cocoa">{seg.label}</p>
-                    <p className="text-xs leading-5 text-cocoa/70 truncate">{seg.summary}</p>
-                    {seg.detail ? (
-                      <p className="mt-0.5 text-[11px] text-cocoa/45">{seg.detail}</p>
-                    ) : null}
-                  </div>
-                  {seg.href && seg.actionLabel ? (
-                    <Link
-                      className="shrink-0 rounded-full border border-white/70 bg-white/62 px-2.5 py-0.5 text-[11px] font-medium text-sage shadow-sm hover:bg-white/80 transition"
-                      href={seg.href}
-                    >
-                      {seg.actionLabel}
-                    </Link>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            <Link className="mt-3 inline-block text-xs text-sage hover:underline" href="/records">更多详情 →</Link>
-          </section>
-        )}
+        {/* 4. 今日照顾摘要条（课程 / DDL / 经期 / 回忆） */}
+        <TodayCareStrip items={careStrip} />
 
-        {/* 5. Countdown - 下次见面 */}
-        <div className="soft-card bg-gradient-to-br from-white/82 to-blush/42">
-          <p className="section-kicker mb-1">Countdown</p>
-          <h2 className="font-semibold text-cocoa">下次见面</h2>
-          <p className="mt-3 text-2xl font-semibold text-cocoa">{formatCountdown(data.nextMeetDate)}</p>
-        </div>
-
-        {/* 6. Love Note - 置顶小纸条 */}
+        {/* 5. 置顶小纸条 */}
         <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
         <div className="grid grid-cols-2 gap-2">
           <Link className="btn-primary text-center" href="/notes">小纸条墙</Link>
           <Link className="btn-secondary text-center" href="/notes">写一张</Link>
         </div>
 
-        {/* 7. Memories - 最近回忆 */}
+        {/* 6. 最近回忆 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -387,7 +435,7 @@ export default function HomePage() {
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
 
-        {/* 8. Onboarding - 引导卡 */}
+        {/* 7. 引导卡 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>

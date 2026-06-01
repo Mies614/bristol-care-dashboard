@@ -23,7 +23,6 @@ import { uploadBackgroundImageDirectly, validateBackgroundImageFile } from "@/li
 import {
   clearCloudConnection,
   getCloudConnection,
-  getCloudSyncStatus,
   getDefaultSpaceCode,
   getLastSyncTime,
   getSpaceByCode,
@@ -168,9 +167,45 @@ export default function SettingsPage() {
           </label>
         </SettingsSection>
 
-        {/* ──────────────────── 2. Appearance / Theme ──────────────────── */}
+        {/* ──────────────────── 2. Cloud Sync — 同步状态靠前 ──────────────────── */}
+        <SettingsSection title="同步与备份" subtitle="云同步状态和操作" defaultOpen={true}>
+          <div className="space-y-2">
+            <AutoSyncStatusBadge />
+          </div>
+          {lastSync ? <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : <p className="text-xs text-[var(--app-muted)]">尚未同步过</p>}
+          <div className="flex flex-wrap gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/55 p-3 shadow-sm mt-2">
+            <Badge variant="outline">课程 {counts.courses}</Badge>
+            <Badge variant="outline">Deadline {counts.deadlines}</Badge>
+            <Badge variant="outline">小纸条 {counts.loveNotes}</Badge>
+            <Badge variant="outline">经期记录 {data.periodRecords?.length || 0}</Badge>
+          </div>
+          <label className="block text-sm text-[var(--app-muted)] mt-3">
+            访问码
+            <Input className="mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-2">
+            <AppButton variant="secondary" className="w-full" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</AppButton>
+            {isCloudConfigured() ? (
+              <>
+                <AppButton variant="secondary" className="w-full" onClick={manualSync}>手动同步</AppButton>
+                <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传本地到云端</AppButton>
+                <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
+              </>
+            ) : null}
+          </div>
+          {isCloudConfigured() ? (
+            <AppButton variant="danger" className="w-full mt-2" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</AppButton>
+          ) : null}
+          {cloudMessage ? (
+            <details className="mt-2 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words whitespace-pre-wrap">
+              <summary className="cursor-pointer font-medium">同步消息（点击展开）</summary>
+              <p className="mt-2">{cloudMessage}</p>
+            </details>
+          ) : null}
+        </SettingsSection>
+
+        {/* ──────────────────── 3. Appearance / Theme ──────────────────── */}
         <SettingsSection title="外观风格" subtitle="主题和卡片样式">
-          <div className="mt-2"><AutoSyncStatusBadge /></div>
           <ThemeStylePicker
             currentStyle={data.themeSettings.style}
             onSelect={(style) => updateTheme(getThemeDefaultsForStyle(style))}
@@ -486,42 +521,16 @@ export default function SettingsPage() {
           </AppButton>
         </SettingsSection>
 
-        {/* ──────────────────── 4. Cloud Sync ──────────────────── */}
-        <SettingsSection title="同步与备份" subtitle="云同步" defaultOpen={true}>
-          <div className="rounded-[var(--app-radius)] border border-white/70 bg-white/60 px-3 py-2 text-sm text-[var(--app-muted)] shadow-sm">
-            {isCloudConfigured() ? getCloudSyncStatus() : "云同步未配置，当前为本地模式。"}
+        {/* ──────────────────── 4. Local Data — 危险区，独立分组 ──────────────────── */}
+        <SettingsSection title="本地数据" subtitle="导出、导入和重置（危险操作）">
+          <div className="rounded-[var(--app-radius)] border border-[var(--app-danger)]/25 bg-[var(--app-danger)]/6 p-3 text-sm text-[var(--app-text)]">
+            <p className="font-medium">⚠️ 危险操作区</p>
+            <p className="mt-1 text-xs text-[var(--app-muted)]">导入和重置会覆盖当前本地数据，操作前建议先导出 JSON 备份。</p>
           </div>
-          {lastSync ? <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p> : null}
-          <div className="flex flex-wrap gap-2 rounded-[var(--app-radius)] border border-white/70 bg-white/55 p-3 shadow-sm">
-            <Badge variant="outline">课程 {counts.courses}</Badge>
-            <Badge variant="outline">Deadline {counts.deadlines}</Badge>
-            <Badge variant="outline">小纸条 {counts.loveNotes}</Badge>
-            <Badge variant="outline">经期记录 {data.periodRecords?.length || 0}</Badge>
-          </div>
-          <label className="block text-sm text-[var(--app-muted)]">
-            访问码
-            <Input className="mt-1" value={cloudCode} onChange={(e) => setCloudCode(e.target.value)} />
-          </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <AppButton variant="secondary" className="w-full" onClick={connectCloud} disabled={!isCloudConfigured()}>连接云同步</AppButton>
-            {isCloudConfigured() ? (
-              <>
-                <AppButton variant="secondary" className="w-full" onClick={manualSync}>手动同步</AppButton>
-                <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传本地到云端</AppButton>
-                <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
-                <AppButton variant="danger" className="w-full sm:col-span-2" onClick={() => { clearCloudConnection(); setLastSync(null); setCloudMessage("已关闭云同步。"); }}>关闭云同步</AppButton>
-              </>
-            ) : null}
-          </div>
-          {cloudMessage ? <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words whitespace-pre-wrap">{cloudMessage}</div> : null}
-        </SettingsSection>
-
-        {/* ──────────────────── 5. Local Data ──────────────────── */}
-        <SettingsSection title="本地数据" subtitle="导入、导出和重置">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <AppButton variant="secondary" className="w-full" onClick={() => downloadJson("bristol-care-data.json", data)}>导出全部 JSON</AppButton>
-            <label className="cursor-pointer">
-              <AppButton variant="secondary" className="w-full" onClick={() => {}}>导入全部 JSON</AppButton>
+          <div className="grid grid-cols-1 gap-2 mt-3">
+            <AppButton variant="secondary" className="w-full" onClick={() => downloadJson("bristol-care-data.json", data)}>📥 导出全部 JSON</AppButton>
+            <label className="cursor-pointer block">
+              <AppButton variant="secondary" className="w-full" onClick={() => {}}>📤 导入全部 JSON</AppButton>
               <Input
                 className="hidden"
                 type="file"
@@ -540,25 +549,26 @@ export default function SettingsPage() {
                 }}
               />
             </label>
-            <AppButton variant="danger" className="w-full sm:col-span-2" onClick={() => { resetAppData(); setData(loadAppData()); }}>
-              重置所有本地数据
+            <AppButton variant="danger" className="w-full" onClick={() => { resetAppData(); setData(loadAppData()); }}>
+              🗑 重置所有本地数据
             </AppButton>
           </div>
           {importMessage ? <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{importMessage}</div> : null}
         </SettingsSection>
 
-        {/* ──────────────────── 6. Advanced (collapsed) ──────────────────── */}
-        <SettingsSection title="高级设置" subtitle="高级数据管理" defaultOpen={false}>
-          <div className="grid grid-cols-1 gap-2">
+        {/* ──────────────────── 5. Advanced (collapsed) ──────────────────── */}
+        <SettingsSection title="高级设置" subtitle="高级数据操作" defaultOpen={false}>
+          <p className="text-xs text-[var(--app-muted)] mb-3">高级操作已移至上方「同步与备份」区域。如需手动上传/恢复，请展开此区域。</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AppButton variant="secondary" className="w-full" onClick={uploadCloud}>上传到云端</AppButton>
             <AppButton variant="secondary" className="w-full" onClick={pullCloud}>从云端恢复</AppButton>
           </div>
         </SettingsSection>
 
-        {/* ──────────────────── 7. Debug ──────────────────── */}
+        {/* ──────────────────── 6. Debug ──────────────────── */}
         <SettingsSection title="诊断入口" subtitle="调试和问题排查" defaultOpen={false}>
-          <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">打开诊断页面</AppButton></a>
-          <a className="block w-full mt-2" href="/api/debug/supabase" target="_blank"><AppButton variant="secondary" className="w-full">API Debug 端点</AppButton></a>
+          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可以检查 Supabase 连接、localStorage 状态等。</p>
+          <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">🔍 打开诊断页面</AppButton></a>
         </SettingsSection>
       </div>
     </AppShell>

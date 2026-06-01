@@ -548,12 +548,29 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── Diagnostics Tab ── */}
+          {/* ── Diagnostics Tab (关键摘要，详细诊断跳转 /debug) ── */}
           {activeTab === "diagnostics" && (
-            <div className="space-y-3">
-              <AppButton variant="primary" className="w-full" onClick={() => window.open("/debug", "_blank")}>打开诊断页面 🔍</AppButton>
-              <AppButton variant="secondary" className="w-full" onClick={() => window.open("/api/debug/supabase", "_blank")}>API Debug 端点</AppButton>
-              <AppButton variant="secondary" className="w-full" onClick={() => window.open("/debug", "_blank")}>Debug UI</AppButton>
+            <div className="space-y-4">
+              <AppCard>
+                <p className="section-kicker mb-1">Diagnostics</p>
+                <h2 className="font-semibold text-cocoa">系统状态摘要</h2>
+                <div className="mt-3 grid gap-2 text-sm text-cocoa/70">
+                  <p><span className="font-medium text-cocoa/50">云同步：</span>{isCloudConfigured() ? "已配置" : "未配置"}</p>
+                  <p><span className="font-medium text-cocoa/50">空间码：</span>{code}</p>
+                  <p><span className="font-medium text-cocoa/50">课程数：</span>{careData.courses.length}</p>
+                  <p><span className="font-medium text-cocoa/50">DDL 数：</span>{careData.deadlines.length}</p>
+                  <p><span className="font-medium text-cocoa/50">经期记录数：</span>{carePeriods.length}</p>
+                  <p><span className="font-medium text-cocoa/50">纸条总数：</span>{notes.length}</p>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <AppButton variant="primary" size="sm" onClick={() => window.open("/debug", "_blank")}>
+                    🔍 完整诊断
+                  </AppButton>
+                  <AppButton variant="secondary" size="sm" onClick={loadCareSummary}>
+                    刷新数据
+                  </AppButton>
+                </div>
+              </AppCard>
             </div>
           )}
         </>
