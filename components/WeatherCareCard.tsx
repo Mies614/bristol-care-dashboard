@@ -223,8 +223,8 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
           <div className="flex items-start gap-3">
             <span className="text-2xl">🌤️</span>
             <div>
-              <p className="text-[13px] font-semibold text-cocoa">天气</p>
-              <p className="mt-0.5 text-xs leading-5 text-cocoa/60">
+              <p className="text-sm font-semibold text-cocoa">天气</p>
+              <p className="mt-0.5 text-sm leading-5 text-cocoa/60">
                 Bristol 天气暂时看不了，但也要舒舒服服的。
               </p>
             </div>
@@ -237,8 +237,8 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
         <div className="flex items-start gap-3">
           <span className="text-2xl">🌤️</span>
           <div>
-            <p className="text-[13px] font-semibold text-cocoa">天气</p>
-            <p className="mt-0.5 text-xs leading-5 text-cocoa/60">
+            <p className="text-sm font-semibold text-cocoa">天气</p>
+            <p className="mt-0.5 text-sm leading-5 text-cocoa/60">
               允许定位后可显示本地天气。Bristol 今天也要照顾好自己。
             </p>
           </div>
@@ -273,7 +273,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
       {/* ── 第一行：天气描述 + 当前温度 ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
+          <p className="text-sm font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
             {weatherLabel}
           </p>
           <h2 className="text-base font-semibold text-cocoa">
@@ -334,7 +334,7 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
           </>
         ) : null}
         {state.isFallback && (
-          <span className="text-cocoa/40 text-sm">· 未获取定位</span>
+          <span className="text-cocoa/50 text-sm">· 未获取定位</span>
         )}
       </div>
     </section>
