@@ -9,8 +9,8 @@ export type CareStripItem = {
   icon: string;
   /** 标签 */
   label: string;
-  /** 简短摘要 */
-  summary: string;
+  /** 数字或简短值 */
+  value: string;
   /** 跳转链接 */
   href?: string;
 };
@@ -22,8 +22,9 @@ interface TodayCareStripProps {
 /**
  * TodayCareStrip
  *
- * 首页紧凑横向摘要条，展示 2-4 个今日照顾关键信息。
- * 替代之前的长列表 TodayCareSummary。
+ * 首页紧凑横向状态行，展示 3-4 个今日关键数字。
+ * 每格只显示 emoji + 数字 + 标签，不展示详细文字。
+ * 宽度自适应，支持 390px 不换行。
  */
 export function TodayCareStrip({ items }: TodayCareStripProps) {
   if (items.length === 0) return null;
@@ -32,16 +33,16 @@ export function TodayCareStrip({ items }: TodayCareStripProps) {
     <section className="soft-card">
       <p className="section-kicker mb-1">Today Care</p>
       <h2 className="font-semibold text-cocoa mb-3">今日照顾</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="flex justify-around gap-1">
         {items.slice(0, 4).map((item) => (
           <Link
             key={item.id}
             href={item.href || "#"}
-            className="flex flex-col gap-1 rounded-2xl bg-white/55 p-3 transition hover:bg-white/80 hover:shadow-sm"
+            className="flex flex-col items-center gap-1 rounded-2xl bg-white/55 px-2 py-3 min-w-0 flex-1 transition hover:bg-white/80 hover:shadow-sm"
           >
-            <span className="text-lg">{item.icon}</span>
-            <span className="text-xs font-semibold text-cocoa/60">{item.label}</span>
-            <span className="text-xs leading-5 text-cocoa/70 line-clamp-2">{item.summary}</span>
+            <span className="text-xl leading-none">{item.icon}</span>
+            <span className="text-base font-bold text-cocoa leading-tight tabular-nums">{item.value}</span>
+            <span className="text-[11px] font-medium text-cocoa/50 leading-tight text-center">{item.label}</span>
           </Link>
         ))}
       </div>

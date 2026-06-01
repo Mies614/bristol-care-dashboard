@@ -19,9 +19,6 @@ import { MissYouButton } from "@/components/MissYouButton";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
-import { NextImportantCard } from "@/components/NextImportantCard";
-import { buildNextImportant } from "@/components/TodayCareSummary";
-import type { NextImportantResult } from "@/components/TodayCareSummary";
 import { getCurrentDayName } from "@/lib/schedule";
 import { getDaysUntilNextPeriod } from "@/lib/period";
 import { getDaysUntil } from "@/lib/ddlPriority";
@@ -187,56 +184,26 @@ export default function HomePage() {
     return ids;
   }, [todaySummary.selectedDdl]);
 
-  // ──── 下一件重要事项 ────
-  const nextImportant = useMemo((): NextImportantResult => buildNextImportant({
-    courses: data.courses,
-    deadlines: data.deadlines,
-    periodRecords,
-    periodSettings,
-    excludedDdlIds,
-    now
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, excludedDdlIds, now]);
-
-  // 合并排除：TodaySummaryCard + NextImportantCard 中出现的 DDL
-  const allExcludedDdlIds = useMemo((): Set<string> => {
-    const ids = new Set<string>(excludedDdlIds);
-    if (nextImportant.deadlineId) {
-      ids.add(nextImportant.deadlineId);
-    }
-    return ids;
-  }, [excludedDdlIds, nextImportant.deadlineId]);
-
-  // ──── 今日照顾摘要条（紧凑 2-4 格） ────
+  // ──── 今日照顾数字行（紧凑 4 格：课程 / DDL / 经期 / 想念） ────
   const careStrip = useMemo((): CareStripItem[] => {
     const items: CareStripItem[] = [];
     const todayDay = getCurrentDayName(now);
 
     // 今日课程
-    const todaysCourses = data.courses.filter((c) => c.day === todayDay).sort((a, b) => a.startTime.localeCompare(b.startTime));
-    if (todaysCourses.length > 0) {
-      const label = todaysCourses.length === 1
-        ? `${todaysCourses[0].startTime} ${todaysCourses[0].name}`
-        : `${todaysCourses.length} 节课`;
-      items.push({
-        id: "today-courses",
-        icon: "📖",
-        label: "今日课程",
-        summary: label,
-        href: "/schedule"
-      });
-    } else {
-      items.push({
-        id: "no-course-today",
-        icon: "☁️",
-        label: "今天没课",
-        summary: "按自己的节奏来",
-        href: "/schedule"
-      });
-    }
+    const todaysCourses = data.courses
+      .filter((c) => c.day === todayDay)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    items.push({
+      id: "today-courses",
+      icon: todaysCourses.length > 0 ? "📖" : "☁️",
+      label: "今日课",
+      value: `${todaysCourses.length}`,
+      href: "/schedule"
+    });
 
-    // 最近 DDL（排除已展示的）
+    // 最近 DDL
     const activeDdls = data.deadlines
-      .filter((d) => d.status !== "done" && !allExcludedDdlIds.has(d.id))
+      .filter((d) => d.status !== "done" && !excludedDdlIds.has(d.id))
       .map((d) => ({ d, days: getDaysUntil(d, now) }))
       .sort((a, b) => a.days - b.days);
     if (activeDdls.length > 0) {
@@ -245,16 +212,16 @@ export default function HomePage() {
       items.push({
         id: "next-ddl",
         icon: urgency,
-        label: "最近 DDL",
-        summary: next.days <= 0 ? "今天截止" : `${next.days} 天`,
+        label: "最近DDL",
+        value: next.days <= 0 ? "今" : `${next.days}d`,
         href: "/deadlines"
       });
     } else {
       items.push({
         id: "no-ddl",
         icon: "✅",
-        label: "无待办 DDL",
-        summary: "今天不用追",
+        label: "DDL",
+        value: "0",
         href: "/deadlines"
       });
     }
@@ -263,70 +230,29 @@ export default function HomePage() {
     const daysUntil = getDaysUntilNextPeriod(periodRecords, periodSettings, now);
     if (daysUntil !== null) {
       if (daysUntil === 0) {
-        items.push({
-          id: "period-today",
-          icon: "🌸",
-          label: "经期预计今天",
-          summary: "对自己温柔点",
-          href: "/period"
-        });
+        items.push({ id: "period-today", icon: "🌸", label: "经期", value: "今天", href: "/period" });
       } else if (daysUntil > 0 && daysUntil <= 3) {
-        items.push({
-          id: "period-soon",
-          icon: "🌸",
-          label: "经期临近",
-          summary: `约 ${daysUntil} 天`,
-          href: "/period"
-        });
+        items.push({ id: "period-soon", icon: "🌸", label: "经期", value: `${daysUntil}d`, href: "/period" });
       } else if (daysUntil < 0) {
-        items.push({
-          id: "period-late",
-          icon: "🌸",
-          label: "经期延迟",
-          summary: `已过 ${Math.abs(daysUntil)} 天`,
-          href: "/period"
-        });
+        items.push({ id: "period-late", icon: "🌸", label: "经期", value: `+${Math.abs(daysUntil)}`, href: "/period" });
       } else {
-        items.push({
-          id: "period-far",
-          icon: "🌿",
-          label: "经期还远",
-          summary: `${daysUntil} 天后`,
-          href: "/period"
-        });
+        items.push({ id: "period-far", icon: "🌿", label: "经期", value: `${daysUntil}d`, href: "/period" });
       }
     } else {
-      items.push({
-        id: "period-no-data",
-        icon: "🌿",
-        label: "经期记录",
-        summary: "还没记过",
-        href: "/period"
-      });
+      items.push({ id: "period-no-data", icon: "🌿", label: "经期", value: "—", href: "/period" });
     }
 
-    // 最近回忆
-    if (randomMemory?.title) {
-      items.push({
-        id: "random-memory",
-        icon: "📷",
-        label: "一张回忆",
-        summary: randomMemory.title.slice(0, 10),
-        href: "/albums"
-      });
-    } else if (featuredLoveNote?.content) {
-      const snippet = featuredLoveNote.content.slice(0, 10);
-      items.push({
-        id: "note-snippet",
-        icon: "💌",
-        label: "小纸条",
-        summary: snippet,
-        href: "/notes"
-      });
-    }
+    // 未读想念
+    items.push({
+      id: "miss-you-status",
+      icon: "💕",
+      label: "未读想念",
+      value: `${unreadMissYouCount}`,
+      href: undefined
+    });
 
     return items;
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, allExcludedDdlIds, randomMemory, featuredLoveNote]);
+  }, [data.courses, data.deadlines, periodRecords, periodSettings, now, excludedDdlIds, unreadMissYouCount]);
 
   useEffect(() => {
     const localDate = now.toISOString().slice(0, 10);
@@ -393,23 +319,20 @@ export default function HomePage() {
         {/* 1. 今日最重要事项 - TodaySummaryCard */}
         <TodaySummaryCard summary={todaySummary} />
 
-        {/* 2. 下一件重要事项 - NextImportantCard */}
-        <NextImportantCard result={nextImportant} />
-
-        {/* 3. 想你按钮 / 未读想念 */}
+        {/* 2. 想你按钮 / 未读想念 */}
         <MissYouButton />
 
-        {/* 4. 今日照顾摘要条（课程 / DDL / 经期 / 回忆） */}
+        {/* 3. 今日照顾数字行（课程 / DDL / 经期 / 想念） */}
         <TodayCareStrip items={careStrip} />
 
-        {/* 5. 置顶小纸条 */}
+        {/* 4. 置顶小纸条 */}
         <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
         <div className="grid grid-cols-2 gap-2">
           <Link className="btn-primary text-center" href="/notes">小纸条墙</Link>
           <Link className="btn-secondary text-center" href="/notes">写一张</Link>
         </div>
 
-        {/* 6. 最近回忆 */}
+        {/* 5. 最近回忆 */}
         <section className="soft-card">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -435,7 +358,7 @@ export default function HomePage() {
           ) : <p className="empty-state text-left">还没有放进相册的照片，之后慢慢补上。</p>}
         </section>
 
-        {/* 7. 引导卡 */}
+        {/* 6. 引导卡 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <OnboardingCard />
         </motion.div>
