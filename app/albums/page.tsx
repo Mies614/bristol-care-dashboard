@@ -19,6 +19,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { formatApiError } from "@/lib/utils";
 import type { AlbumItem } from "@/lib/types";
 
 const filters = [
@@ -28,15 +29,6 @@ const filters = [
   ["live_photo", "实况"],
   ["video", "视频"]
 ] as const;
-
-function formatApiError(payload: Record<string, unknown>, fallback: string) {
-  return [
-    typeof payload.error === "string" ? payload.error : fallback,
-    typeof payload.code === "string" ? `code: ${payload.code}` : "",
-    typeof payload.step === "string" ? `step: ${payload.step}` : "",
-    typeof payload.detail === "string" ? `detail: ${payload.detail}` : ""
-  ].filter(Boolean).join(" · ");
-}
 
 function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata", error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "未知错误");

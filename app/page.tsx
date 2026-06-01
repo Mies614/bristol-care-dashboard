@@ -320,9 +320,9 @@ export default function HomePage() {
           <MissYouButton />
         </motion.div>
 
-        {/* 4. 天气 & 时间 */}
+        {/* 4. 天气 & 时间（紧凑模式：摘要 + 穿衣一句话 + 时间） */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <WeatherCareCard state={weatherState} />
+          <WeatherCareCard state={weatherState} compact />
         </motion.div>
 
         {/* 5. 今日照顾数字行（课程 / DDL / 经期 / 想念） */}

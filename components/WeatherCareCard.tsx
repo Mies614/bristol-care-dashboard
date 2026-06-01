@@ -200,9 +200,19 @@ function formatSunset(sunsetStr: string, timeZone: string): string {
 
 // ── 卡片组件 ──
 
-export function WeatherCareCard({ state }: { state: WeatherCareState }) {
+export function WeatherCareCard({ state, compact }: { state: WeatherCareState; compact?: boolean }) {
   if (state.loading) {
-    return (
+    return compact ? (
+      <section className="soft-card bg-gradient-to-br from-white/82 to-skySoft/55">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-white/50 animate-pulse" />
+          <div className="flex-1 space-y-1">
+            <div className="h-2.5 w-16 rounded-full bg-white/50 animate-pulse" />
+            <div className="h-2.5 w-28 rounded-full bg-white/40 animate-pulse" />
+          </div>
+        </div>
+      </section>
+    ) : (
       <section className="soft-card bg-gradient-to-br from-white/82 to-skySoft/55">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-[1.2rem] bg-white/50 animate-pulse" />
@@ -217,30 +227,16 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
 
   // 天气获取失败
   if (!state.weather) {
-    if (state.isFallback) {
-      return (
-        <section className="soft-card bg-gradient-to-br from-white/82 to-skySoft/55">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">🌤️</span>
-            <div>
-              <p className="text-sm font-semibold text-cocoa">天气</p>
-              <p className="mt-0.5 text-sm leading-5 text-cocoa/60">
-                Bristol 天气暂时看不了，但也要舒舒服服的。
-              </p>
-            </div>
-          </div>
-        </section>
-      );
-    }
+    const label = state.isFallback
+      ? "Bristol 天气暂时看不了，但也要舒舒服服的。"
+      : "允许定位后可显示本地天气。Bristol 今天也要照顾好自己。";
     return (
       <section className="soft-card bg-gradient-to-br from-white/82 to-skySoft/55">
         <div className="flex items-start gap-3">
           <span className="text-2xl">🌤️</span>
           <div>
             <p className="text-sm font-semibold text-cocoa">天气</p>
-            <p className="mt-0.5 text-sm leading-5 text-cocoa/60">
-              允许定位后可显示本地天气。Bristol 今天也要照顾好自己。
-            </p>
+            <p className="mt-0.5 text-sm leading-5 text-cocoa/60">{label}</p>
           </div>
         </div>
       </section>
@@ -266,8 +262,37 @@ export function WeatherCareCard({ state }: { state: WeatherCareState }) {
   const sunsetDisplay = w.sunset ? formatSunset(w.sunset, localTimeZone) : "";
 
   // 天气来源标签
-  const weatherLabel = state.isFallback ? `Bristol 天气` : w.cityName;
+  const weatherLabel = state.isFallback ? "Bristol 天气" : w.cityName;
 
+  // ── compact 模式：仅显示天气概要 + 穿衣一句话 + 时间 ──
+  if (compact) {
+    const rainHint = rainPrediction
+      ? (rainPrediction.hoursUntil <= 0 ? "当前有雨" : `${rainPrediction.hoursUntil}h后有${rainPrediction.intensity}`)
+      : "无雨";
+
+    const timeLine = isBeijingLocal
+      ? `北京时间 ${beijingTime}`
+      : `${state.isFallback ? "Bristol" : friendlyTimeZoneLabel(localTimeZone)} ${localTime} · 北京 ${beijingTime}${sunsetDisplay ? ` · 日落 ${sunsetDisplay}` : ""}`;
+
+    return (
+      <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium uppercase tracking-[0.1em] text-sage/70 mb-0.5">
+              {weatherLabel} · {rainHint}
+            </p>
+            <h2 className="text-base font-semibold text-cocoa">
+              {weatherCodeText(w.weatherCode)} · {Math.round(w.temperature)}° 体感 {Math.round(w.apparentTemperature)}°
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-cocoa/70 break-words">{clothing}</p>
+            <p className="mt-1 text-xs text-cocoa/45">{timeLine}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── 全量模式 ──
   return (
     <section className="soft-card overflow-hidden bg-gradient-to-br from-white/88 via-skySoft/65 to-lilac/40 px-4 py-3.5">
       {/* ── 第一行：天气描述 + 当前温度 ── */}

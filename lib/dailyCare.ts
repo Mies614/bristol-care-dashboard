@@ -1,6 +1,5 @@
 import type { BristolWeather } from "./weather";
 import type { Course, Deadline, LoveNote, PeriodRecord, PeriodSettings } from "./types";
-import type { OutfitSuggestion } from "./outfit";
 import type { RandomMemoryItem } from "./randomMemory";
 import { getDaysUntilDeadline } from "./date";
 import { calculateNextPeriodStart, getDaysUntilNextPeriod } from "./period";
@@ -15,7 +14,6 @@ export type DailyCareResult = {
 
 export type DailyCareInput = {
   weather?: BristolWeather;
-  outfit?: OutfitSuggestion;
   todayCourses?: Course[];
   deadlines?: Deadline[];
   periodRecords?: PeriodRecord[];
@@ -65,7 +63,6 @@ export function getDailyCare(input: DailyCareInput): DailyCareResult {
   const weatherText = input.weather
     ? `Bristol 现在大概 ${Math.round(input.weather.temperature)}°，体感 ${Math.round(input.weather.apparentTemperature)}°。`
     : "Bristol 的天气还在加载，先按舒服的节奏来。";
-  const outfitText = input.outfit?.summary ? ` ${input.outfit.summary}` : "";
   const courseText = courses.length
     ? `今天有 ${courses.length} 节课，出门前看一眼时间就好。`
     : "今天课程不多，可以把节奏放松一点。";
@@ -81,7 +78,7 @@ export function getDailyCare(input: DailyCareInput): DailyCareResult {
     topReminderText = `预计 ${nextPeriod || "这几天"} 附近开始，今天对身体温柔一点。`;
   }
 
-  const careMessage = `${weatherText}${outfitText} ${courseText}`;
+  const careMessage = `${weatherText} ${courseText}`;
   const memoryHint = input.featuredNote?.content
     ? `今天的小纸条：${input.featuredNote.content.slice(0, 28)}${input.featuredNote.content.length > 28 ? "..." : ""}`
     : input.randomMemory?.title

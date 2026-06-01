@@ -6,5 +6,7 @@ export type {
   DayName,
   Deadline,
   LoveNote,
-  QuickLink
 } from "@/lib/types";
+
+/** @deprecated Use CommonLink instead */
+export type { QuickLink } from "@/lib/types";

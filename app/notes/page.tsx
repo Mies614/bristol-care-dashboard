@@ -9,6 +9,7 @@ import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
+import { formatApiError } from "@/lib/utils";
 import type { LoveNote } from "@/lib/types";
 
 const filters = [
@@ -28,15 +29,6 @@ const sorts = [
   ["latest", "最新优先"],
   ["oldest", "最早优先"]
 ] as const;
-
-function formatApiError(payload: Record<string, unknown>, fallback: string) {
-  return [
-    typeof payload.error === "string" ? payload.error : fallback,
-    typeof payload.code === "string" ? `code: ${payload.code}` : "",
-    typeof payload.step === "string" ? `step: ${payload.step}` : "",
-    typeof payload.detail === "string" ? `detail: ${payload.detail}` : ""
-  ].filter(Boolean).join(" · ");
-}
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<LoveNote[]>([]);
