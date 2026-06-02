@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NoteCard } from "./NoteCard";
 import { NoteEditorModal } from "./NoteEditorModal";
 import { staggerContainer, staggerItem, useAccessibleMotion, safeVariants } from "@/lib/design/motion";
+import { getCurrentIdentityId } from "@/lib/identityStorage";
+import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { LoveNote } from "@/lib/types";
 
 export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (body: Record<string, unknown>) => Promise<void> }) {
+  const [identityId, setIdentityId] = useState<string>("");
+
+  useEffect(() => {
+    const code = getDefaultSpaceCode();
+    setIdentityId(getCurrentIdentityId(code));
+  }, []);
   const [selected, setSelected] = useState<LoveNote | null>(null);
   const [editing, setEditing] = useState<LoveNote | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -40,6 +48,7 @@ export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (bod
                 onEdit={onPatch ? () => setEditing(note) : undefined}
                 onPatch={onPatch ? patch : undefined}
                 busy={busyId === note.id}
+                identityId={identityId}
               />
             </motion.div>
           ))}
@@ -63,7 +72,7 @@ export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (bod
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <NoteCard note={selected} featured />
+              <NoteCard note={selected} featured identityId={identityId} />
               <button className="btn-secondary mt-3 w-full" onClick={() => setSelected(null)}>关闭</button>
             </motion.div>
           </motion.div>

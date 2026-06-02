@@ -8,6 +8,38 @@ function getDefaultCode(): string {
   return getDefaultSpaceCodeServer();
 }
 
+/**
+ * Helper: after creating/removing a like interaction, count all likes
+ * for this content item and return liked/likeCount in the response.
+ */
+async function buildLikeCountResponse(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  spaceId: string,
+  contentType: string,
+  contentId: string,
+  identity: string,
+  base: Record<string, unknown>
+): Promise<NextResponse> {
+  const { data: allLikes, error: countError } = await supabase
+    .from("content_interactions")
+    .select("identity")
+    .eq("space_id", spaceId)
+    .eq("content_type", contentType)
+    .eq("content_id", contentId)
+    .eq("interaction_type", "like");
+
+  const likeCount = countError ? 0 : (allLikes || []).length;
+  const liked = !countError && (allLikes || []).some(
+    (i: Record<string, unknown>) => i.identity === identity
+  );
+
+  return NextResponse.json({
+    ...base,
+    liked,
+    likeCount,
+  });
+}
+
 // Supported content types and interaction types
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
@@ -237,8 +269,8 @@ export async function POST(request: NextRequest) {
     // For "reaction": if already exists with same reaction, remove (toggle off); otherwise add
     if (existing && existing.length > 0) {
       if (interactionType === "read") {
-        // Read is idempotent — just return success
-        return NextResponse.json({
+        // Read is idempotent — just return success with aggregate counts
+        return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
           ok: true,
           action: "kept",
           interaction: {
@@ -267,7 +299,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.json({
+      return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
         ok: true,
         action: "removed",
         interaction: {
@@ -277,6 +309,8 @@ export async function POST(request: NextRequest) {
           interactionType,
           reaction: reaction || undefined,
         },
+        liked: false,
+        likeCount: undefined, // will be filled by buildLikeCountResponse
       });
     }
 
@@ -307,7 +341,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
       ok: true,
       action: "created",
       interaction: {
@@ -320,6 +354,8 @@ export async function POST(request: NextRequest) {
         createdAt: newInteraction.created_at,
         updatedAt: newInteraction.updated_at,
       },
+      liked: true,
+      likeCount: undefined, // will be filled by buildLikeCountResponse
     });
   } catch (err) {
     return NextResponse.json(

@@ -291,3 +291,107 @@ export function mergeComments(
   const uniqueLocal = local.filter((c) => !remoteIds.has(c.id));
   return [...remote, ...uniqueLocal];
 }
+
+// ─── Convenience wrappers for InteractionSummary ───
+
+/**
+ * Get like count from an InteractionSummary.
+ * Returns 0 when summary is undefined or likeCount is missing.
+ */
+export function getLikeCount(summary: InteractionSummary | undefined | null): number {
+  return summary?.likeCount ?? 0;
+}
+
+/**
+ * Check if the current identity has liked based on an InteractionSummary.
+ */
+export function isLikedByIdentity(
+  summary: InteractionSummary | undefined | null,
+  identityId: string
+): boolean {
+  if (!summary || !identityId) return false;
+  return summary.hasLiked === true;
+}
+
+/**
+ * Get comment count from an InteractionSummary.
+ * Returns 0 when summary is undefined or commentCount is missing.
+ */
+export function getCommentCount(summary: InteractionSummary | undefined | null): number {
+  return summary?.commentCount ?? 0;
+}
+
+/**
+ * Filter visible (non-deleted) comments from a list of CommentEntry items.
+ */
+export function filterVisibleComments(entries: CommentEntry[]): CommentEntry[] {
+  return entries.filter((c) => !c.isDeleted);
+}
+
+/**
+ * Build a complete InteractionSummary given separate interactions and comments arrays,
+ * for a specific content item from the perspective of a current identity.
+ */
+export function summarizeInteractions(
+  interactions: ContentInteraction[],
+  comments: ContentComment[],
+  contentType: ContentType,
+  contentId: string,
+  currentIdentityId: string
+): InteractionSummary {
+  return buildInteractionSummary(
+    interactions,
+    comments,
+    contentType,
+    contentId,
+    currentIdentityId,
+    []
+  );
+}
+
+/**
+ * Merge cloud (Supabase) interactions and comments with local storage fallback data.
+ * Returns merged arrays suitable for display.
+ */
+export function mergeLocalAndCloudInteractions(
+  cloudInteractions: ContentInteraction[],
+  cloudComments: ContentComment[],
+  localInteractions: ContentInteraction[],
+  localComments: ContentComment[]
+): { interactions: ContentInteraction[]; comments: ContentComment[] } {
+  return {
+    interactions: mergeInteractions(cloudInteractions, localInteractions),
+    comments: mergeComments(cloudComments, localComments),
+  };
+}
+
+// ─── Normalize ───
+
+/**
+ * Normalize a content type string to a valid ContentType.
+ * Falls back to "note" for unknown values.
+ */
+export function normalizeContentType(raw: string | null | undefined): ContentType {
+  if (!raw) return "note";
+  const valid = ["note", "album", "memory"] as const;
+  if (valid.includes(raw as typeof valid[number])) {
+    return raw as ContentType;
+  }
+  return "note";
+}
+
+/**
+ * Normalize an identity string for interaction operations.
+ * Migrates "default" to the provided defaultIdentityId.
+ * Falls back to "xiaoguai" when no default is given.
+ */
+export function normalizeIdentityForInteraction(
+  identity: string | null | undefined,
+  defaultIdentityId?: string
+): string {
+  const fallback = defaultIdentityId || "xiaoguai";
+  if (!identity || identity.trim() === "" || identity.trim() === "default") {
+    return fallback;
+  }
+  return identity.trim();
+}

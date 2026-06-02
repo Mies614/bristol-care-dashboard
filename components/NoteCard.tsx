@@ -4,10 +4,22 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { LoveNote } from "@/lib/types";
-import { getUserFacingAuthorLabel } from "@/lib/identity";
+import { getUserFacingAuthorLabel, DEFAULT_NORMAL_IDENTITY_ID, isSameIdentity } from "@/lib/identity";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import ContentComments from "./ContentComments";
+import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry } from "@/lib/contentInteractions";
+
+export interface NoteCardProps {
+  note: LoveNote;
+  onClick?: () => void;
+  featured?: boolean;
+  onEdit?: () => void;
+  onPatch?: (body: Record<string, unknown>) => void;
+  busy?: boolean;
+  /** Current active identity id for interactions */
+  identityId?: string;
+}
 
 export function NoteCard({
   note,
@@ -15,15 +27,12 @@ export function NoteCard({
   featured = false,
   onEdit,
   onPatch,
-  busy
-}: {
-  note: LoveNote;
-  onClick?: () => void;
-  featured?: boolean;
-  onEdit?: () => void;
-  onPatch?: (body: Record<string, unknown>) => void;
-  busy?: boolean;
-}) {
+  busy,
+  identityId,
+}: NoteCardProps) {
+  const spaceCode = getDefaultSpaceCode();
+  const identity = identityId || DEFAULT_NORMAL_IDENTITY_ID;
+
   const style = note.displayStyle || "sticky";
   const base = "overflow-hidden border shadow-soft backdrop-blur-xl text-left transition hover:-translate-y-0.5";
   const styleClass = {
@@ -44,14 +53,35 @@ export function NoteCard({
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentEntry[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const identity = "xiaoguai";
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+
+  // Fetch interaction summary on mount
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch(
+          `/api/interactions?code=${encodeURIComponent(spaceCode)}&contentType=note&contentIds=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
+        );
+        const payload = await res.json();
+        if (payload.ok && payload.summaries?.[note.id]) {
+          const s = payload.summaries[note.id];
+          setLikeCount(s.likeCount || 0);
+          setLiked(s.hasLiked || false);
+        }
+      } catch {
+        // Non-critical
+      }
+    };
+    fetchSummary();
+  }, [note.id, spaceCode, identity]);
 
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
     try {
-      const code = getDefaultSpaceCode();
+      const code = spaceCode;
       const res = await fetch(
-        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${identity}`
+        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
       );
       const payload = await res.json();
       if (payload.ok && Array.isArray(payload.comments)) {
@@ -63,16 +93,17 @@ export function NoteCard({
           deletedAt: c.deletedAt as string | undefined,
           updatedAt: c.updatedAt as string | undefined,
           isDeleted: Boolean(c.deletedAt),
-          isMine: (c.identity as string) === identity,
+          isMine: isSameIdentity(c.identity as string, identity),
         }));
         setComments(entries);
+        // Comment count is set by the interaction bar via summary, no need to set here
       }
     } catch {
       // Non-critical
     } finally {
       setCommentsLoading(false);
     }
-  }, [note.id, identity]);
+  }, [note.id, spaceCode, identity]);
 
   useEffect(() => {
     if (showComments) {
@@ -81,7 +112,7 @@ export function NoteCard({
   }, [showComments, loadComments]);
 
   async function handleAddComment(body: string) {
-    const code = getDefaultSpaceCode();
+    const code = spaceCode;
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -99,7 +130,7 @@ export function NoteCard({
   }
 
   function handleDeleteComment(commentId: string) {
-    const code = getDefaultSpaceCode();
+    const code = spaceCode;
     fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -111,6 +142,8 @@ export function NoteCard({
     });
   }
 
+  const isHidden = note.active === false;
+
   return (
     <article className={`${base} ${styleClass} ${pinnedClass} ${bubbleAlign} ${onClick ? "cursor-pointer" : ""} ${featured ? "w-full" : ""}`} onClick={onClick}>
       <div className="mb-2 flex items-center justify-between gap-2 text-xs text-cocoa/55">
@@ -121,16 +154,26 @@ export function NoteCard({
       {note.videoUrl ? <video className="mb-3 max-h-56 w-full rounded-[1.25rem] bg-black" src={note.videoUrl} controls onClick={(event) => event.stopPropagation()} preload="metadata" /> : null}
       {note.audioUrl ? <audio className="mb-3 w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} /> : null}
       {note.content ? <p className="whitespace-pre-wrap text-sm leading-7 text-cocoa/78">{note.content}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {note.mood ? <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/62">{note.mood}</span> : null}
         <span className="rounded-full bg-cocoa/8 px-2.5 py-1 text-xs uppercase text-cocoa/55">{type}</span>
         {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-xs text-cocoa/65">置顶</span> : null}
-        <button
-          className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/50 hover:bg-white/85 transition"
-          onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
-        >
-          💬 评论
-        </button>
+        {!isHidden ? (
+          <ContentInteractionBar
+            spaceCode={spaceCode}
+            contentType="note"
+            contentId={note.id}
+            identityId={identity}
+            likeCountOverride={likeCount}
+            hasLikedOverride={liked}
+            compact
+            onOpenComments={() => setShowComments(!showComments)}
+            onLikeChanged={({ liked: newLiked, count: newCount }) => {
+              setLiked(newLiked);
+              setLikeCount(newCount);
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Comments section */}
@@ -145,7 +188,7 @@ export function NoteCard({
             onAddComment={handleAddComment}
             onDeleteComment={handleDeleteComment}
             placeholder="想说点什么..."
-            maxLength={200}
+            maxLength={500}
           />
         </div>
       ) : null}
@@ -170,3 +213,5 @@ export function NoteCard({
     </article>
   );
 }
+
+export default NoteCard;

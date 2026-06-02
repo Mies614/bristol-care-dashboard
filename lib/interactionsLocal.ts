@@ -1,30 +1,31 @@
-"use client";
-
 /**
  * localStorage fallback for content interactions and comments.
- * Used when Supabase is unavailable — all data stays in the browser.
  *
- * Stored under a single key per spaceCode to keep things clean.
+ * Used when Supabase is unavailable. Stores likes and comments per
+ * spaceCode + identity + contentType combination.
+ *
+ * Key format: bristol_int_${spaceCode}_${identity}_${contentType}
+ * Reuses existing "bristol_interactions" fallback format.
  */
 
-import type { ContentInteraction, ContentComment } from "@/lib/contentInteractions";
+import type { ContentInteraction, ContentComment } from "./contentInteractions";
 
-const STORAGE_PREFIX = "bristol_interactions_";
-const COMMENTS_PREFIX = "bristol_comments_";
+const LS_INTERACTIONS_KEY = (spaceCode: string, identity: string, contentType: string) =>
+  `bristol_int_${spaceCode}_${identity}_${contentType}`;
 
-function storageKey(spaceCode: string): string {
-  return `${STORAGE_PREFIX}${spaceCode}`;
-}
-
-function commentsStorageKey(spaceCode: string): string {
-  return `${COMMENTS_PREFIX}${spaceCode}`;
-}
+const LS_COMMENTS_KEY = (spaceCode: string, identity: string, contentType: string) =>
+  `bristol_cmt_${spaceCode}_${identity}_${contentType}`;
 
 // ─── Interactions ───
 
-export function getLocalInteractions(spaceCode: string): ContentInteraction[] {
+export function getLocalInteractions(
+  spaceCode: string,
+  identity: string,
+  contentType: string
+): ContentInteraction[] {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(storageKey(spaceCode));
+    const raw = window.localStorage.getItem(LS_INTERACTIONS_KEY(spaceCode, identity, contentType));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -33,32 +34,40 @@ export function getLocalInteractions(spaceCode: string): ContentInteraction[] {
   }
 }
 
-export function saveLocalInteractions(spaceCode: string, interactions: ContentInteraction[]): void {
+export function saveLocalInteractions(
+  spaceCode: string,
+  identity: string,
+  contentType: string,
+  interactions: ContentInteraction[]
+): void {
+  if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(storageKey(spaceCode), JSON.stringify(interactions));
+    window.localStorage.setItem(
+      LS_INTERACTIONS_KEY(spaceCode, identity, contentType),
+      JSON.stringify(interactions)
+    );
   } catch {
-    // silently ignore, storage may be full
+    // Storage full or unavailable — non-critical
   }
 }
 
-export function addLocalInteraction(spaceCode: string, interaction: ContentInteraction): ContentInteraction[] {
-  const existing = getLocalInteractions(spaceCode);
-  // Dedup: same contentType + contentId + identity + interactionType + reaction
-  const idx = existing.findIndex(
+export function addLocalInteraction(
+  spaceCode: string,
+  interaction: ContentInteraction
+): void {
+  const existing = getLocalInteractions(spaceCode, interaction.identity, interaction.contentType);
+  // Deduplicate: same contentId + identity + interactionType
+  const filtered = existing.filter(
     (i) =>
-      i.contentType === interaction.contentType &&
-      i.contentId === interaction.contentId &&
-      i.identity === interaction.identity &&
-      i.interactionType === interaction.interactionType &&
-      (i.reaction || "") === (interaction.reaction || "")
+      !(
+        i.contentId === interaction.contentId &&
+        i.identity === interaction.identity &&
+        i.interactionType === interaction.interactionType &&
+        (i.reaction || "") === (interaction.reaction || "")
+      )
   );
-  if (idx >= 0) {
-    existing[idx] = { ...interaction, createdAt: existing[idx].createdAt };
-  } else {
-    existing.push(interaction);
-  }
-  saveLocalInteractions(spaceCode, existing);
-  return existing;
+  filtered.push(interaction);
+  saveLocalInteractions(spaceCode, interaction.identity, interaction.contentType, filtered);
 }
 
 export function removeLocalInteraction(
@@ -68,159 +77,136 @@ export function removeLocalInteraction(
   identity: string,
   interactionType: string,
   reaction?: string
-): ContentInteraction[] {
-  const existing = getLocalInteractions(spaceCode).filter(
+): void {
+  const existing = getLocalInteractions(spaceCode, identity, contentType);
+  const filtered = existing.filter(
     (i) =>
       !(
-        i.contentType === contentType &&
         i.contentId === contentId &&
         i.identity === identity &&
         i.interactionType === interactionType &&
         (i.reaction || "") === (reaction || "")
       )
   );
-  saveLocalInteractions(spaceCode, existing);
-  return existing;
+  saveLocalInteractions(spaceCode, identity, contentType, filtered);
 }
 
 // ─── Comments ───
 
-export function getLocalComments(spaceCode: string): ContentComment[] {
+export function getLocalComments(
+  spaceCode: string,
+  contentType: string
+): ContentComment[] {
+  if (typeof window === "undefined") return [];
+  const all: ContentComment[] = [];
+  // Local comments are stored per identity; iterate known identities
+  const knownIdentities = ["xiaoguai", "me", "admin"];
   try {
-    const raw = localStorage.getItem(commentsStorageKey(spaceCode));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    for (const identity of knownIdentities) {
+      const raw = window.localStorage.getItem(LS_COMMENTS_KEY(spaceCode, identity, contentType));
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        all.push(...parsed);
+      }
+    }
+    return all;
   } catch {
     return [];
   }
 }
 
-export function saveLocalComments(spaceCode: string, comments: ContentComment[]): void {
+export function saveLocalComments(
+  spaceCode: string,
+  identity: string,
+  contentType: string,
+  comments: ContentComment[]
+): void {
+  if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(commentsStorageKey(spaceCode), JSON.stringify(comments));
+    window.localStorage.setItem(
+      LS_COMMENTS_KEY(spaceCode, identity, contentType),
+      JSON.stringify(comments)
+    );
   } catch {
-    // silently ignore
+    // Storage full or unavailable — non-critical
   }
 }
 
-export function addLocalComment(spaceCode: string, comment: ContentComment): ContentComment[] {
-  const existing = getLocalComments(spaceCode);
-  existing.push(comment);
-  saveLocalComments(spaceCode, existing);
-  return existing;
+export function addLocalComment(
+  spaceCode: string,
+  comment: ContentComment
+): void {
+  const existing = getLocalComments(spaceCode, comment.contentType);
+  const filtered = existing.filter((c) => c.id !== comment.id);
+  filtered.push(comment);
+  saveLocalComments(spaceCode, comment.identity, comment.contentType, filtered);
 }
 
-export function softDeleteLocalComment(spaceCode: string, commentId: string): ContentComment[] {
-  const existing = getLocalComments(spaceCode).map((c) =>
-    c.id === commentId ? { ...c, deletedAt: new Date().toISOString() } : c
-  );
-  saveLocalComments(spaceCode, existing);
-  return existing;
-}
-
-// ─── Legacy migration helpers ───
-
-/**
- * Attempt to migrate old readState (from lib/readState.ts) into the new format.
- * Old format: Set<string> stored as JSON array of note IDs.
- * Call this once on app load.
- */
-export function migrateOldReadState(spaceCode: string, identity: string): boolean {
-  try {
-    const oldKey = "bristol_dashboard_read_notes";
-    const oldRaw = localStorage.getItem(oldKey);
-    if (!oldRaw) return false;
-    const oldIds: string[] = JSON.parse(oldRaw);
-    if (!Array.isArray(oldIds) || oldIds.length === 0) return false;
-
-    const existing = getLocalInteractions(spaceCode);
-    const now = new Date().toISOString();
-    let changed = false;
-
-    for (const noteId of oldIds) {
-      const alreadyExists = existing.some(
-        (i) =>
-          i.contentType === "note" &&
-          i.contentId === noteId &&
-          i.identity === identity &&
-          i.interactionType === "read"
-      );
-      if (!alreadyExists) {
-        existing.push({
-          id: `migrated_${spaceCode}_read_${noteId}_${identity}`,
-          contentType: "note",
-          contentId: noteId,
-          identity,
-          interactionType: "read",
-          createdAt: now,
-          updatedAt: now,
-        });
-        changed = true;
-      }
+export function softDeleteLocalComment(
+  spaceCode: string,
+  contentType: string,
+  commentId: string
+): void {
+  if (typeof window === "undefined") return;
+  const all = getLocalComments(spaceCode, contentType);
+  const updated = all.map((c) => {
+    if (c.id === commentId) {
+      return { ...c, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     }
-
-    if (changed) {
-      saveLocalInteractions(spaceCode, existing);
-      // Remove old key to avoid re-migration
-      localStorage.removeItem(oldKey);
-    }
-    return changed;
-  } catch {
-    return false;
+    return c;
+  });
+  // Reorganize: save back per identity
+  const byIdentity: Record<string, ContentComment[]> = {};
+  for (const c of updated) {
+    const key = c.identity || "xiaoguai";
+    if (!byIdentity[key]) byIdentity[key] = [];
+    byIdentity[key].push(c);
+  }
+  for (const [identity, comments] of Object.entries(byIdentity)) {
+    saveLocalComments(spaceCode, identity, contentType, comments);
   }
 }
 
-/**
- * Migrate old reactions (from lib/reactions.ts) into the new format.
- * Old format: Record<string, string[]> — { noteId: [reaction1, reaction2] }
- * Call this once on app load.
- */
-export function migrateOldReactions(spaceCode: string, identity: string): boolean {
-  try {
-    const oldKey = "bristol_dashboard_reactions";
-    const oldRaw = localStorage.getItem(oldKey);
-    if (!oldRaw) return false;
-    const oldData: Record<string, string[]> = JSON.parse(oldRaw);
-    if (!oldData || typeof oldData !== "object") return false;
-
-    const existing = getLocalInteractions(spaceCode);
-    const now = new Date().toISOString();
-    let changed = false;
-
-    for (const [noteId, reactions] of Object.entries(oldData)) {
-      if (!Array.isArray(reactions)) continue;
-      for (const reaction of reactions) {
-        const alreadyExists = existing.some(
-          (i) =>
-            i.contentType === "note" &&
-            i.contentId === noteId &&
-            i.identity === identity &&
-            i.interactionType === "reaction" &&
-            i.reaction === reaction
-        );
-        if (!alreadyExists) {
-          existing.push({
-            id: `migrated_${spaceCode}_reaction_${noteId}_${reaction}_${identity}`,
-            contentType: "note",
-            contentId: noteId,
-            identity,
-            interactionType: "reaction",
-            reaction,
-            createdAt: now,
-            updatedAt: now,
-          });
-          changed = true;
-        }
-      }
+export function restoreLocalComment(
+  spaceCode: string,
+  contentType: string,
+  commentId: string
+): void {
+  if (typeof window === "undefined") return;
+  const all = getLocalComments(spaceCode, contentType);
+  const updated = all.map((c) => {
+    if (c.id === commentId) {
+      return { ...c, deletedAt: undefined, updatedAt: new Date().toISOString() };
     }
+    return c;
+  });
+  const byIdentity: Record<string, ContentComment[]> = {};
+  for (const c of updated) {
+    const key = c.identity || "xiaoguai";
+    if (!byIdentity[key]) byIdentity[key] = [];
+    byIdentity[key].push(c);
+  }
+  for (const [identity, comments] of Object.entries(byIdentity)) {
+    saveLocalComments(spaceCode, identity, contentType, comments);
+  }
+}
 
-    if (changed) {
-      saveLocalInteractions(spaceCode, existing);
-      localStorage.removeItem(oldKey);
-    }
-    return changed;
-  } catch {
-    return false;
+export function hardDeleteLocalComment(
+  spaceCode: string,
+  contentType: string,
+  commentId: string
+): void {
+  if (typeof window === "undefined") return;
+  const all = getLocalComments(spaceCode, contentType);
+  const filtered = all.filter((c) => c.id !== commentId);
+  const byIdentity: Record<string, ContentComment[]> = {};
+  for (const c of filtered) {
+    const key = c.identity || "xiaoguai";
+    if (!byIdentity[key]) byIdentity[key] = [];
+    byIdentity[key].push(c);
+  }
+  for (const [identity, comments] of Object.entries(byIdentity)) {
+    saveLocalComments(spaceCode, identity, contentType, comments);
   }
 }

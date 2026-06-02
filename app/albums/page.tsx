@@ -9,6 +9,8 @@ import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getCurrentIdentityId } from "@/lib/identityStorage";
+import ContentInteractionBar from "@/components/ContentInteractionBar";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
@@ -61,10 +63,19 @@ export default function AlbumsPage() {
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
 
+  // Identity - from storage
+  const [identity, setIdentity] = useState("xiaoguai");
+
+  // Load identity from storage
+  useEffect(() => {
+    setIdentity(getCurrentIdentityId(code));
+  }, [code]);
+
   // Comments state
   const [selectedComments, setSelectedComments] = useState<CommentEntry[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const identity = "xiaoguai";
+  const [_selectedLikeCount, setSelectedLikeCount] = useState(0);
+  const [_selectedLiked, setSelectedLiked] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("upload=1")) setUploadOpen(true);
@@ -490,6 +501,19 @@ export default function AlbumsPage() {
               {selected.location ? <p>{selected.location}</p> : null}
               {selected.note ? <p className="leading-6">{selected.note}</p> : null}
             </div>
+
+            {/* Like button in lightbox */}
+            <ContentInteractionBar
+              spaceCode={code}
+              contentType="album"
+              contentId={selected.id}
+              identityId={identity}
+              onOpenComments={() => loadAlbumComments(selected.id).catch(() => {})}
+              onLikeChanged={({ liked, count }) => {
+                setSelectedLiked(liked);
+                setSelectedLikeCount(count);
+              }}
+            />
 
             {/* Comments section in lightbox */}
             <ContentComments
