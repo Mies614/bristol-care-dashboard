@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const MAX_COMMENT_LENGTH = 500;
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     const contentType = searchParams.get("contentType");
     const contentId = searchParams.get("contentId");
     const includeDeleted = searchParams.get("includeDeleted") === "true";
-    const identity = searchParams.get("identity") || "xiaoguai";
+    const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const commentBody = (body.body as string || "").trim();
-    const identity = (body.identity as string) || "xiaoguai";
+    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -203,8 +204,9 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     const code = body.code || getDefaultCode();
     const commentId = body.commentId as string;
-    const identity = (body.identity as string) || "xiaoguai";
-    const adminPassword = request.headers.get("x-admin-password") || "";
+    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
+    // x-admin-password header reserved for future admin auth
+    void request.headers.get("x-admin-password");
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(

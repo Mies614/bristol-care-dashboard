@@ -75,8 +75,8 @@ npm run dev                   # 启动后访问 http://localhost:3000
 | 类型 | 存储位置 | 备份包含 |
 |---|---|---|
 | 小纸条/课程/DDL/相册/经期 | Supabase 或 localStorage | ✅ |
-| readState / reactions / updateChecker | localStorage（本设备） | ❌ |
-| reminderConfig / PWA dismissed | localStorage（本设备） | ❌ |
+| readState / reactions / updateChecker | localStorage（本设备，按 identity 隔离） | ❌ |
+| reminderConfig / PWA dismissed / identities | localStorage（本设备） | ❌ |
 
 详见 `docs/maintenance.md`。
 
@@ -95,7 +95,20 @@ npm run dev       # 本地开发
 
 ## 版本
 
-v1.0.0 — 详见 `CHANGELOG.md`。
+v1.3.0 — 详见 `CHANGELOG.md`。
+
+## 身份系统（v1.3）
+
+v1.3 引入正式身份系统，comments、interactions、readState、reactions 和 reminders 均按身份隔离。
+
+- **默认身份**：「小乖」（id: `xiaoguai`）— 默认普通身份，写评论和互动时使用
+- **自用身份**：「我」（id: `me`）— 可在设置页切换
+- **管理员身份**：「Admin」（id: `admin`）— 仅后台使用
+- 旧 `"default"` 身份自动迁移为 `xiaoguai`
+- 不同身份的评论、点赞、已读、reaction 互不影响
+- Supabase 不可用时身份 fallback 到 localStorage
+
+在 `/settings` 页面可以切换身份、编辑显示名和 emoji。
 
 ## 定时提醒（v1.1）
 

@@ -29,7 +29,6 @@ import {
 export function NotificationSettingsCard() {
   // Push state
   const [pushState, setPushState] = useState<PushState>("unsupported");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_pushSubscribed, setPushSubscribed] = useState(false);
   const [vapidConfigured, setVapidConfigured] = useState(false);
   const [vapidPublicKey, setVapidPublicKey] = useState("");

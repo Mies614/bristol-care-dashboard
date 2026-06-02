@@ -7,6 +7,7 @@ import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { SyncStatusCard } from "@/components/SyncStatusCard";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { IdentitySettingsCard } from "@/components/settings/IdentitySettingsCard";
 import { NotificationSettingsCard } from "@/components/settings/NotificationSettingsCard";
 import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
 import { AppButton } from "@/components/ui/AppButton";
@@ -182,7 +183,12 @@ export default function SettingsPage() {
       <PageHeader title="设置" subtitle="这里管理外观、背景、云同步和数据。" />
 
       <div className="flex w-full min-w-0 flex-col gap-4">
-        {/* ──────────────────── 1. Profile - 日常最常用 ──────────────────── */}
+        {/* ──────────────────── 1. Identity ──────────────────── */}
+        <SettingsSection title="身份设置" subtitle="管理当前身份，切换后评论和互动会按这个身份记录">
+          <IdentitySettingsCard />
+        </SettingsSection>
+
+        {/* ──────────────────── 2. Profile - 日常最常用 ──────────────────── */}
         <SettingsSection title="常用设置" subtitle="昵称、见面日期和备注">
           <label className="block text-sm text-[var(--app-muted)]">
             昵称
@@ -202,7 +208,7 @@ export default function SettingsPage() {
           </label>
         </SettingsSection>
 
-        {/* ──────────────────── 2. Appearance / Theme ──────────────────── */}
+        {/* ──────────────────── 3. Appearance / Theme ──────────────────── */}
         <SettingsSection title="外观风格" subtitle="主题和卡片样式">
           <ThemeStylePicker
             currentStyle={data.themeSettings.style}
@@ -259,7 +265,7 @@ export default function SettingsPage() {
           <AppButton variant="secondary" className="w-full" onClick={() => updateTheme(DEFAULT_THEME_SETTINGS)}>恢复默认风格</AppButton>
         </SettingsSection>
 
-        {/* ──────────────────── 3. Background ──────────────────── */}
+        {/* ──────────────────── 4. Background ──────────────────── */}
         <SettingsSection title="背景" subtitle="上传背景图后会同步到云端">
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--app-muted)]">预设背景</p>
@@ -519,7 +525,7 @@ export default function SettingsPage() {
           </AppButton>
         </SettingsSection>
 
-        {/* ──────────────────── 4. Cloud Sync ──────────────────── */}
+        {/* ──────────────────── 5. Cloud Sync ──────────────────── */}
         <SettingsSection title="云同步" subtitle="同步状态、手动操作和错误诊断">
           <div className="space-y-1">
             <AutoSyncStatusBadge />
@@ -575,7 +581,7 @@ export default function SettingsPage() {
           ) : null}
         </SettingsSection>
 
-        {/* ──────────────────── 5. Local Data ──────────────────── */}
+        {/* ──────────────────── 6. Local Data ──────────────────── */}
         <SettingsSection title="本地数据" subtitle="导出、导入和重置" defaultOpen={false}>
           <div className="rounded-[var(--app-radius)] border border-[var(--app-danger)]/25 bg-[var(--app-danger)]/6 p-3 text-sm text-[var(--app-text)]">
             <p className="font-medium">⚠️ 危险操作区</p>
@@ -610,12 +616,12 @@ export default function SettingsPage() {
           {importMessage ? <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{importMessage}</div> : null}
         </SettingsSection>
 
-        {/* ──────────────────── 6. Notifications ──────────────────── */}
+        {/* ──────────────────── 7. Notifications ──────────────────── */}
         <SettingsSection title="通知" subtitle="推送通知和每日关怀提醒" defaultOpen={false}>
           <NotificationSettingsCard />
         </SettingsSection>
 
-        {/* ──────────────────── 7. Advanced ──────────────────── */}
+        {/* ──────────────────── 8. Advanced ──────────────────── */}
         <SettingsSection title="高级" subtitle="同步频率和自动同步偏好" defaultOpen={false}>
           <p className="text-xs text-[var(--app-muted)] mb-3">自动同步在数据变更后延迟触发，同时间只允许一次同步。手动操作始终优先。</p>
           <div className="space-y-3">
@@ -637,7 +643,7 @@ export default function SettingsPage() {
           </div>
         </SettingsSection>
 
-        {/* ──────────────────── 8. 诊断 ──────────────────── */}
+        {/* ──────────────────── 9. 诊断 ──────────────────── */}
         <SettingsSection title="诊断" subtitle="检查系统健康和调试工具" defaultOpen={false}>
           <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可检查 Supabase 连接、localStorage 状态和服务的各项健康指标，并一键复制诊断报告。</p>
           <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">🔍 打开诊断页面</AppButton></a>

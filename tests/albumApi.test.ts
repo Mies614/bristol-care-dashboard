@@ -3,7 +3,6 @@ import { NextRequest } from "next/server";
 
 const insertMock = vi.fn();
 const updateMock = vi.fn();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getSpaceByCodeMock = vi.fn(async (_code: string) => ({ id: "space-id", code: "xiaoguai520" }));
 
 vi.mock("@/lib/api/cloud", () => ({

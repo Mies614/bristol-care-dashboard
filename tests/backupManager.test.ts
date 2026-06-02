@@ -88,6 +88,8 @@ describe("validateBackupPayload", () => {
       deadlines: 1,
       courses: 1,
       periodRecords: 1,
+      interactions: 0,
+      comments: 0,
     });
     expect(result.payload!.spaceCode).toBe("xiaoguai520");
     expect(result.payload!.storageMode).toBe("supabase");

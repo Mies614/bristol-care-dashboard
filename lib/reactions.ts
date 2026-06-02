@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+
 /**
  * Lightweight reactions for love notes.
  *
@@ -52,7 +54,7 @@ function saveReactions(spaceCode: string, map: ReactionsMap): void {
 }
 
 function getCurrentUser(): string {
-  return "xiaoguai";
+  return DEFAULT_NORMAL_IDENTITY_ID;
 }
 
 /**

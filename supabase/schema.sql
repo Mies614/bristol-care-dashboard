@@ -407,6 +407,22 @@ create table if not exists public.reminder_run_logs (
 create index if not exists idx_reminder_run_logs_checked_at
 on public.reminder_run_logs(checked_at desc);
 
+-- ─── v1.3 User Identities ───
+
+create table if not exists public.user_identities (
+  id text not null,
+  space_code text not null,
+  display_name text not null,
+  role text not null check (role in ('self', 'partner', 'admin')),
+  avatar_emoji text,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (space_code, id)
+);
+
+alter table public.user_identities enable row level security;
+
 -- ─── v1.3 Content Interactions (unified read/like/reaction) ───
 
 create table if not exists public.content_interactions (

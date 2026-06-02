@@ -1,11 +1,12 @@
 import type { LoveNote } from "./types";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 export const MAX_NOTE_IMAGE_SIZE = 30 * 1024 * 1024;
 export const MAX_NOTE_VIDEO_SIZE = 100 * 1024 * 1024;
 export const MAX_NOTE_AUDIO_SIZE = 20 * 1024 * 1024;
 
 export const NOTE_DISPLAY_STYLES = ["sticky", "postcard", "bubble", "photo_card", "timeline", "minimal", "romantic"] as const;
-export const NOTE_AUTHORS = ["admin", "user", "xiaoguai", "me"] as const;
+export const NOTE_AUTHORS = ["admin", "user", DEFAULT_NORMAL_IDENTITY_ID, "me"] as const;
 export const NOTE_TYPES = ["text", "image", "audio", "video", "mixed"] as const;
 export const NOTE_MOODS = ["开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"] as const;
 
@@ -74,7 +75,7 @@ export function inferNoteType(input: { content?: string; imageUrl?: string; audi
 }
 
 export function normalizeNoteAuthor(value: unknown): NonNullable<LoveNote["author"]> {
-  return NOTE_AUTHORS.includes(value as NonNullable<LoveNote["author"]>) ? value as NonNullable<LoveNote["author"]> : "xiaoguai";
+  return NOTE_AUTHORS.includes(value as NonNullable<LoveNote["author"]>) ? value as NonNullable<LoveNote["author"]> : DEFAULT_NORMAL_IDENTITY_ID;
 }
 
 export function normalizeDisplayStyle(value: unknown): NonNullable<LoveNote["displayStyle"]> {

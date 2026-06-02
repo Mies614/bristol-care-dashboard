@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { DEFAULT_NORMAL_IDENTITY_ID, ADMIN_IDENTITY_ID } from "@/lib/identity";
 
 export interface PushPayload {
   title: string;
@@ -76,8 +77,8 @@ export interface PushResult {
  * Get the opposite author(s) for a given viewer.
  */
 export function getOppositeAuthors(viewer: string): string[] {
-  if (viewer === "admin") return ["xiaoguai"];
-  if (viewer === "xiaoguai") return ["admin", "me"];
+  if (viewer === ADMIN_IDENTITY_ID) return [DEFAULT_NORMAL_IDENTITY_ID];
+  if (viewer === DEFAULT_NORMAL_IDENTITY_ID) return [ADMIN_IDENTITY_ID, "me"];
   return [];
 }
 
@@ -85,8 +86,8 @@ export function getOppositeAuthors(viewer: string): string[] {
  * Get the recipient for a given author.
  */
 export function getRecipientForAuthor(author: string): string {
-  if (author === "xiaoguai") return "admin";
-  return "xiaoguai";
+  if (author === DEFAULT_NORMAL_IDENTITY_ID) return ADMIN_IDENTITY_ID;
+  return DEFAULT_NORMAL_IDENTITY_ID;
 }
 
 /**
@@ -96,7 +97,7 @@ export function getPushNotificationContent(
   author: string,
   todayCount: number
 ): { title: string; body: string } {
-  if (author === "xiaoguai" || author === "小乖") {
+  if (author === DEFAULT_NORMAL_IDENTITY_ID || author === "小乖") {
     const body =
       todayCount === 1
         ? `她刚刚点了一下"想你一下"。`
@@ -117,7 +118,7 @@ export function getPushNotificationContent(
  * Get the push notification URL based on recipient role.
  */
 export function getPushUrlForRecipient(recipient: string): string {
-  if (recipient === "xiaoguai") return "/";
+  if (recipient === DEFAULT_NORMAL_IDENTITY_ID) return "/";
   return "/admin";
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+
 /**
  * Read/unread state for love notes.
  *
@@ -15,7 +17,7 @@ const STORAGE_PREFIX = "bristol_dashboard_read_state";
 export type ReadMap = Record<string, string>; // noteId -> ISO timestamp
 
 function getStorageKey(spaceCode: string): string {
-  return `${STORAGE_PREFIX}_${spaceCode || "default"}_xiaoguai`;
+  return `${STORAGE_PREFIX}_${spaceCode || "default"}_${DEFAULT_NORMAL_IDENTITY_ID}`;
 }
 
 // In-memory cache to avoid repeated localStorage reads within a render cycle
@@ -76,7 +78,7 @@ export function isRead(noteId: string, spaceCode = "default"): boolean {
 
 /**
  * Get the number of unread notes from a list.
- * Excludes: own notes (author === "xiaoguai"), soft-deleted notes.
+ * Excludes: own notes, soft-deleted notes.
  */
 export function getUnreadCount(
   notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>,
@@ -85,7 +87,7 @@ export function getUnreadCount(
   const map = loadReadMap(spaceCode);
   return notes.filter((n) => {
     // Exclude own notes
-    if (n.author === "xiaoguai") return false;
+    if (n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
     // Exclude soft-deleted notes
     if (n.deletedAt) return false;
     // Check if unread
@@ -104,7 +106,7 @@ export function getUnreadIds(
   const map = loadReadMap(spaceCode);
   return notes
     .filter((n) => {
-      if (n.author === "xiaoguai") return false;
+      if (n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
       if (n.deletedAt) return false;
       return !(n.id in map);
     })

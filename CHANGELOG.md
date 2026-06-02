@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.3.0 — 2026-06-02
+
+### 正式身份系统
+
+- 新增 `lib/identity.ts`：统一身份类型、常量和纯函数工具
+- 新增 `lib/identityStorage.ts`：身份存储层（Supabase + localStorage fallback）
+- 新增 `supabase/schema.sql` 中 `user_identities` 表
+- 新增 `components/IdentitySettingsCard.tsx`：设置页身份切换 UI
+- comments/interactions/readState/reactions/updateChecker 全部接入正式身份系统
+- 旧 `"default"` 身份自动迁移为 `xiaoguai`，无需手动迁移
+- 不同身份的评论、点赞、已读、reaction 互不影响
+- Admin 评论管理显示友好身份标签，可删除任意身份评论
+- 备份导出/导入支持 identities，dry-run 显示 identities 数量
+- Cron/reminder preferences 已使用 identity 字段，完全兼容
+- 656 个 Vitest 测试全部通过
+
 ## v1.1.0 — 2026-06-02
 
 ### 服务端定时提醒

@@ -44,13 +44,32 @@
 
 | 状态 | 影响 |
 |---|---|
-| readState | 小纸条已读/未读 |
-| reactions | 小纸条互动（❤️ 🫶 🌙） |
+| readState | 小纸条已读/未读（按 identity 隔离） |
+| reactions | 小纸条互动（❤️ 🫶 🌙，按 identity 隔离） |
 | reminderConfig | 每日提醒偏好 |
-| updateChecker | 对方更新检测时间戳 |
+| updateChecker | 对方更新检测时间戳（按 identity 隔离） |
 | PWA install dismissed | 安装提示关闭状态 |
+| identities | 身份设置（显示名、emoji、当前身份） |
 
 这些状态可以随时通过清除浏览器数据来重置，不会影响云端数据。
+
+## 身份系统（v1.3）
+
+App 支持多身份切换，comments、interactions、readState、reactions 等均按身份隔离。
+
+- **身份管理**：在 `/settings` 页的「身份设置」区域可以切换身份、编辑显示名和 emoji
+- **默认身份**：`xiaoguai`（小乖）为默认普通身份，`me`（我）为自用身份，`admin` 为管理员身份
+- **旧数据兼容**：旧 `"default"` 身份自动映射为 `xiaoguai`，无需手动迁移
+- **身份隔离**：不同身份的评论、点赞、已读、reaction 互不影响
+- **Supabase 不可用**：身份设置仅保存在本机 localStorage
+- **备份**：identities 包含在备份导出中，导入时 merge（不覆盖）
+
+### Admin 端身份显示
+
+- Admin 评论管理中显示友好身份标签：`xiaoguai` → 小乖，`me` → 我，`admin` → Admin
+- Admin 可查看所有身份的评论和互动
+- Admin 可删除任意身份的评论
+- 普通端只能删除自己身份的评论
 
 ## Supabase 不可用时的行为
 

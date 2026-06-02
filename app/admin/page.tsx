@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { AdminOverviewCard } from "@/components/admin/AdminOverviewCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { ADMIN_IDENTITY_ID } from "@/lib/identity";
 import { getDaysUntilDeadline } from "@/lib/date";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { getTodayCourses } from "@/lib/schedule";
@@ -109,7 +110,7 @@ export default function AdminDashboardPage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       code: space,
-                      author: "admin",
+                      author: ADMIN_IDENTITY_ID,
                       recipient: "xiaoguai",
                       localDate
                     })

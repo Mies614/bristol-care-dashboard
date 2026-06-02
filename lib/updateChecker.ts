@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+
 /**
  * Partner update checker.
  *
@@ -60,11 +62,11 @@ export function resetLastCheck(spaceCode = "default"): void {
  */
 export function getNewNotes(notes: LoveNote[], spaceCode = "default"): LoveNote[] {
   const lastCheck = getLastCheckAt(spaceCode);
-  if (!lastCheck) return notes.filter((n) => n.author !== "xiaoguai" && !n.deletedAt);
+  if (!lastCheck) return notes.filter((n) => n.author !== DEFAULT_NORMAL_IDENTITY_ID && !n.deletedAt);
 
   const lastDate = new Date(lastCheck);
   return notes.filter((n) => {
-    if (n.author === "xiaoguai") return false;
+    if (n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
     if (n.deletedAt) return false;
     const createdAt = n.createdAt ? new Date(n.createdAt) : null;
     return createdAt && createdAt > lastDate;

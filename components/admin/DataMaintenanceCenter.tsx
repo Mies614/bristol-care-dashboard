@@ -369,6 +369,8 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
               <span>📚 课程 x{backupCounts.courses}</span>
               <span>🖼 albums x{backupCounts.albums}</span>
               <span>🌸 经期 x{backupCounts.periodRecords}</span>
+              <span>❤️ 互动 x{backupCounts.interactions}</span>
+              <span>💬 评论 x{backupCounts.comments}</span>
             </div>
           )}
         </div>
@@ -410,6 +412,8 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
                 <span>📚 课程 x{importSummary.courses}</span>
                 <span>🖼 albums x{importSummary.albums}</span>
                 <span>🌸 经期 x{importSummary.periodRecords}</span>
+                <span>❤️ 互动 x{importSummary.interactions}</span>
+                <span>💬 评论 x{importSummary.comments}</span>
               </div>
               {!importConfirm ? (
                 <AppButton variant="secondary" size="sm" onClick={() => setImportConfirm(true)} disabled={!password}>

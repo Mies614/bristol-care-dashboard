@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { ADMIN_IDENTITY_ID, getIdentityLabel, getIdentityAvatarEmoji } from "@/lib/identity";
 
 interface CommentRecord {
   id: string;
@@ -144,7 +145,7 @@ export function CommentsModerationTab({ password }: { password: string }) {
           "Content-Type": "application/json",
           "x-admin-password": password,
         },
-        body: JSON.stringify({ code, commentId, identity: "admin" }),
+        body: JSON.stringify({ code, commentId, identity: ADMIN_IDENTITY_ID }),
       });
       const p = await res.json() as ApiResponse;
       if (p.ok) {
@@ -261,7 +262,8 @@ export function CommentsModerationTab({ password }: { password: string }) {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-cocoa/60">
-                    {c.identity === "xiaoguai" ? "👧 小乖" : c.identity === "admin" ? "👦 我" : c.identity}
+                    <span>{getIdentityAvatarEmoji(c.identity)} </span>
+                    {getIdentityLabel(c.identity)}
                   </span>
                   <span className="text-[10px] text-cocoa/30">{c.contentType}</span>
                   {c.deletedAt && (

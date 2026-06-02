@@ -36,7 +36,7 @@ export interface ContentCommentsProps {
 export default function ContentComments({
   contentType: _contentType,
   contentId: _contentId,
-  identity,
+  identity: _identity,
   comments,
   onAddComment,
   onDeleteComment,

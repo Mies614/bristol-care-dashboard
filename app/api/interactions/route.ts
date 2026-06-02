@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 function getDefaultCode(): string {
   return getDefaultSpaceCodeServer();
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get("code") || getDefaultCode();
     const contentType = searchParams.get("contentType");
     const contentIdsRaw = searchParams.get("contentIds");
-    const identity = searchParams.get("identity") || "xiaoguai";
+    const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
     const reaction = body.reaction as string | undefined;
-    const identity = (body.identity as string) || "xiaoguai";
+    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -340,7 +341,7 @@ export async function DELETE(request: NextRequest) {
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
     const reaction = body.reaction as string | undefined;
-    const identity = (body.identity as string) || "xiaoguai";
+    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
