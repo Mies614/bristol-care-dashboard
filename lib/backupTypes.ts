@@ -5,6 +5,8 @@
 
 
 
+import type { PeriodSettings } from "./types";
+
 export const BACKUP_SCHEMA_VERSION = "1.0.0";
 
 export type StorageModeHint = "supabase" | "localStorage" | "mixed";
