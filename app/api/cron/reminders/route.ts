@@ -7,6 +7,7 @@ import { getVapidConfig } from "@/lib/push";
 import { fetchBristolWeather } from "@/lib/weather";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { scheduleReminders, type ServerReminderPreference, type SpaceData, type ReminderDeliveryRecord } from "@/lib/serverReminderScheduler";
+import { DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 
 function getCronSecret(): string {
   return process.env.CRON_SECRET || "";
