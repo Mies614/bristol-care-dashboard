@@ -138,3 +138,44 @@ export function toSafeApiError(
     ...fields,
   };
 }
+
+/**
+ * An error class for client-side (4xx) API failures — validation errors,
+ * permission denied, etc. These are not network errors and should not trigger
+ * localStorage fallback; instead they should display a user-facing message
+ * while preserving any in-progress input state.
+ */
+export class ApiClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiClientError";
+    // Ensure instanceof works correctly across module boundaries in bundlers
+    Object.setPrototypeOf(this, ApiClientError.prototype);
+  }
+}
+
+/**
+ * An error class for server-side (5xx) API failures — infrastructure
+ * outages, database errors, etc. These may trigger localStorage fallback.
+ */
+export class ApiServerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiServerError";
+    Object.setPrototypeOf(this, ApiServerError.prototype);
+  }
+}
+
+/**
+ * Returns true if the error is a known client-side error (4xx).
+ * All ApiClientErrors qualify; any error whose message contains "客户端错误"
+ * or "4xx" also qualifies for backward compatibility.
+ */
+export function isApiClientError(error: unknown): boolean {
+  if (error instanceof ApiClientError) return true;
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes("客户端错误") || msg.includes("4xx");
+  }
+  return false;
+}
