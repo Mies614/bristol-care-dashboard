@@ -9,6 +9,8 @@ import {
   getCurrentPermission,
   getPushStateInfo,
   isPushAvailable,
+  getPushFailureMessages,
+  parseApiSubscribeError,
   type PushState,
 } from "@/lib/notificationState";
 import {
@@ -21,6 +23,7 @@ import {
   getExistingPushSubscription,
   subscribeToPush,
   unsubscribePush,
+  type SubscribeError,
 } from "@/lib/pushClient";
 
 export function NotificationSettingsCard() {
@@ -32,31 +35,17 @@ export function NotificationSettingsCard() {
   const [vapidPublicKey, setVapidPublicKey] = useState("");
   const [pushMessage, setPushMessage] = useState("");
   const [pushLoading, setPushLoading] = useState(false);
-  const [vapidConfig, setVapidConfigState] = useState(false);
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch("/api/push/status");
-        const data = await res.json();
-        setVapidConfigState(data.supportedByServer || false);
-        if (data.publicKey) setVapidPublicKey(data.publicKey);
-        setVapidConfigured(data.supportedByServer || false);
-      } catch {
-        setVapidConfigState(false);
-      }
-    };
-    check();
-  }, []);
 
   // Reminder prefs
   const [prefs, setPrefs] = useState<ReminderPreferences>(DEFAULT_REMINDER_PREFERENCES);
 
-  // Fetch VAPID config on mount
+  // Fetch VAPID config on mount (single useEffect)
   useEffect(() => {
     fetch("/api/push/status")
       .then((r) => r.json())
       .then((data: { supportedByServer?: boolean; publicKey?: string }) => {
-        setVapidConfigured(data.supportedByServer || false);
+        const configured = data.supportedByServer || false;
+        setVapidConfigured(configured);
         if (data.publicKey) setVapidPublicKey(data.publicKey);
       })
       .catch(() => {});
@@ -74,21 +63,17 @@ export function NotificationSettingsCard() {
         isSupported: isPushAvailable(),
         permission,
         hasExistingSubscription: hasSub,
-        isVapidConfigured: !!vapidConfig || vapidConfigured,
+        isVapidConfigured: vapidConfigured,
       });
       setPushState(state);
     } catch {
       setPushState("unsupported");
     }
-  }, [vapidConfigured, vapidConfig, setPushSubscribed]);
-
-  // Load vapid status separately
+  }, [vapidConfigured]);
 
   useEffect(() => {
-    if (vapidConfig !== undefined) {
-      refreshPushState();
-    }
-  }, [vapidConfig, refreshPushState]);
+    refreshPushState();
+  }, [refreshPushState]);
 
   // Load reminder prefs
   useEffect(() => {
@@ -107,20 +92,48 @@ export function NotificationSettingsCard() {
     setPushMessage("");
     try {
       const key = vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
-      const sub = await subscribeToPush(key);
-      if (sub) {
-        // Register with server
-        await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscription: sub, role: "xiaoguai" }),
-        });
-        setPushMessage("通知已开启 💫");
-        await refreshPushState();
+      const result = await subscribeToPush(key);
+
+      // Check if subscribeToPush returned an error
+      if ("error" in result) {
+        const err = result as SubscribeError;
+        const msgs = getPushFailureMessages(err.error);
+        // Log detailed reason to console for debugging
+        console.warn("[Push Subscribe Failed]", err.error, err.detail || msgs.debugMessage);
+        setPushMessage(msgs.userMessage);
       } else {
-        setPushMessage("无法完成订阅，请确认浏览器允许通知。");
+        // Success — now save to backend
+        const subResult = result as { subscription: PushSubscriptionJSON };
+        try {
+          const res = await fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subscription: subResult.subscription,
+              role: "xiaoguai",
+            }),
+          });
+
+          if (res.ok) {
+            setPushMessage("通知已开启 💫");
+            await refreshPushState();
+          } else {
+            const body = await res.json();
+            console.warn("[Push Subscribe API Error]", body);
+            const reason = parseApiSubscribeError(body);
+            const msgs = getPushFailureMessages(reason);
+            setPushMessage(msgs.userMessage);
+          }
+        } catch {
+          // Network error calling API
+          console.warn("[Push Subscribe Network Error] Failed to reach /api/push/subscribe");
+          const msgs = getPushFailureMessages("save_failed");
+          setPushMessage(msgs.userMessage);
+        }
       }
     } catch {
+      // Unexpected error (should not happen with new subscribeToPush)
+      console.warn("[Push Subscribe Unexpected Error]");
       setPushMessage("订阅失败，请稍后重试。");
     } finally {
       setPushLoading(false);

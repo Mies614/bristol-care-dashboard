@@ -54,16 +54,20 @@ export async function GET(request: NextRequest) {
       loveNotesRes,
       albumsRes,
       settingsRes,
+      interactionsRes,
+      commentsRes,
     ] = await Promise.all([
       supabase.from("courses").select("*").eq("space_id", space.id).order("day").order("start_time"),
       supabase.from("deadlines").select("*").eq("space_id", space.id).order("due_date"),
       supabase.from("love_notes").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
       supabase.from("album_items").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
       supabase.from("settings").select("key,value").eq("space_id", space.id),
+      supabase.from("content_interactions").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
+      supabase.from("content_comments").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
     ]);
 
     // Check for errors
-    for (const result of [coursesRes, deadlinesRes, loveNotesRes, albumsRes, settingsRes]) {
+    for (const result of [coursesRes, deadlinesRes, loveNotesRes, albumsRes, settingsRes, interactionsRes, commentsRes]) {
       if (result.error) {
         return NextResponse.json(
           { error: "数据读取失败。", detail: result.error.message },
@@ -173,6 +177,28 @@ export async function GET(request: NextRequest) {
           deletedAt: r.deletedAt,
         })),
         periodSettings: cloudSettings.periodSettings,
+        interactions: (interactionsRes.data || []).map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          spaceId: row.space_id as string | undefined,
+          contentType: row.content_type as string,
+          contentId: row.content_id as string,
+          identity: row.identity as string,
+          interactionType: row.interaction_type as string,
+          reaction: row.reaction as string | undefined,
+          createdAt: row.created_at as string | undefined,
+          updatedAt: row.updated_at as string | undefined,
+        })),
+        comments: (commentsRes.data || []).map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          spaceId: row.space_id as string | undefined,
+          contentType: row.content_type as string,
+          contentId: row.content_id as string,
+          identity: row.identity as string,
+          body: row.body as string,
+          deletedAt: row.deleted_at as string | undefined,
+          createdAt: row.created_at as string | undefined,
+          updatedAt: row.updated_at as string | undefined,
+        })),
         appSettings: {
           nickname: cloudSettings.girlfriendName || "小乖",
           nextMeetDate: cloudSettings.nextMeetingDate || "",

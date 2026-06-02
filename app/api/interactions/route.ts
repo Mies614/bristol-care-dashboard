@@ -1,0 +1,405 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
+import { getSpaceByCode } from "@/lib/supabase/spaces";
+import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
+
+function getDefaultCode(): string {
+  return getDefaultSpaceCodeServer();
+}
+
+// Supported content types and interaction types
+const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
+const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
+
+// ─── GET /api/interactions ───
+// Query params:
+//   code, contentType, contentIds (comma-separated), identity
+// Returns a summary of interactions for the requested content items.
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get("code") || getDefaultCode();
+    const contentType = searchParams.get("contentType");
+    const contentIdsRaw = searchParams.get("contentIds");
+    const identity = searchParams.get("identity") || "xiaoguai";
+
+    if (!isSupabaseServerConfigured()) {
+      return NextResponse.json(
+        { ok: false, unavailable: true, error: "Supabase 未配置，本地模式可用。" },
+        { status: 503 }
+      );
+    }
+
+    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+      return NextResponse.json(
+        { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
+        { status: 400 }
+      );
+    }
+
+    if (!contentIdsRaw) {
+      return NextResponse.json(
+        { ok: false, error: "contentIds 不能为空。", code: "MISSING_CONTENT_IDS" },
+        { status: 400 }
+      );
+    }
+
+    const contentIds = contentIdsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+    if (contentIds.length === 0 || contentIds.length > 100) {
+      return NextResponse.json(
+        { ok: false, error: "contentIds 数量应在 1-100 之间。", code: "INVALID_CONTENT_IDS_COUNT" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createSupabaseServerClient();
+    const space = await getSpaceByCode(supabase, code);
+    if (!space) {
+      return NextResponse.json(
+        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch interactions for the requested content items
+    const { data: interactions, error: interactionsError } = await supabase
+      .from("content_interactions")
+      .select("*")
+      .eq("space_id", space.id)
+      .eq("content_type", contentType)
+      .in("content_id", contentIds);
+
+    if (interactionsError) {
+      return NextResponse.json(
+        { ok: false, error: "查询互动数据失败。", code: "INTERACTIONS_FETCH_FAILED" },
+        { status: 500 }
+      );
+    }
+
+    // Build per-content summaries
+    const summaries: Record<string, {
+      readCount: number;
+      hasRead: boolean;
+      likeCount: number;
+      hasLiked: boolean;
+      reactions: Record<string, { count: number; active: boolean }>;
+    }> = {};
+
+    for (const contentId of contentIds) {
+      const itemInteractions = (interactions || []).filter(
+        (i: Record<string, unknown>) => i.content_id === contentId
+      );
+
+      const readCount = itemInteractions.filter(
+        (i: Record<string, unknown>) => i.interaction_type === "read"
+      ).length;
+      const hasRead = itemInteractions.some(
+        (i: Record<string, unknown>) => i.interaction_type === "read" && i.identity === identity
+      );
+      const likeCount = itemInteractions.filter(
+        (i: Record<string, unknown>) => i.interaction_type === "like"
+      ).length;
+      const hasLiked = itemInteractions.some(
+        (i: Record<string, unknown>) => i.interaction_type === "like" && i.identity === identity
+      );
+
+      // Reactions
+      const reactionCounts: Record<string, number> = {};
+      const reactionActive: Record<string, boolean> = {};
+
+      const reactionsForItem = itemInteractions.filter(
+        (i: Record<string, unknown>) => i.interaction_type === "reaction"
+      );
+      for (const r of reactionsForItem) {
+        const reaction: string = (r.reaction as string) || "";
+        if (!reaction) continue;
+        reactionCounts[reaction] = (reactionCounts[reaction] || 0) + 1;
+        if (r.identity === identity) {
+          reactionActive[reaction] = true;
+        }
+      }
+
+      // Build reaction entries
+      const reactions: Record<string, { count: number; active: boolean }> = {};
+      for (const [key, count] of Object.entries(reactionCounts)) {
+        reactions[key] = { count, active: reactionActive[key] || false };
+      }
+
+      summaries[contentId] = { readCount, hasRead, likeCount, hasLiked, reactions };
+    }
+
+    return NextResponse.json({
+      ok: true,
+      summaries,
+      // Return raw interactions for the client to merge with local data
+      interactions: (interactions || []).map((i: Record<string, unknown>) => ({
+        id: i.id,
+        spaceId: i.space_id,
+        contentType: i.content_type,
+        contentId: i.content_id,
+        identity: i.identity,
+        interactionType: i.interaction_type,
+        reaction: i.reaction || undefined,
+        createdAt: i.created_at,
+        updatedAt: i.updated_at,
+      })),
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: "服务器错误。", code: "INTERACTIONS_FETCH_FAILED", debug: String(err) },
+      { status: 500 }
+    );
+  }
+}
+
+// ─── POST /api/interactions ───
+// Body:
+//   code, contentType, contentId, interactionType, reaction?, identity?
+// Creates or toggles an interaction.
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const code = body.code || getDefaultCode();
+    const contentType = body.contentType as string;
+    const contentId = body.contentId as string;
+    const interactionType = body.interactionType as string;
+    const reaction = body.reaction as string | undefined;
+    const identity = (body.identity as string) || "xiaoguai";
+
+    if (!isSupabaseServerConfigured()) {
+      return NextResponse.json(
+        { ok: false, unavailable: true, error: "Supabase 未配置，本地模式可用。" },
+        { status: 503 }
+      );
+    }
+
+    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+      return NextResponse.json(
+        { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
+        { status: 400 }
+      );
+    }
+
+    if (!contentId) {
+      return NextResponse.json(
+        { ok: false, error: "contentId 不能为空。", code: "MISSING_CONTENT_ID" },
+        { status: 400 }
+      );
+    }
+
+    if (!interactionType || !VALID_INTERACTION_TYPES.includes(interactionType as typeof VALID_INTERACTION_TYPES[number])) {
+      return NextResponse.json(
+        { ok: false, error: "interactionType 无效。", code: "INVALID_INTERACTION_TYPE" },
+        { status: 400 }
+      );
+    }
+
+    if (interactionType === "reaction" && !reaction) {
+      return NextResponse.json(
+        { ok: false, error: "reaction 类型需要提供 reaction 值。", code: "MISSING_REACTION_VALUE" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createSupabaseServerClient();
+    const space = await getSpaceByCode(supabase, code);
+    if (!space) {
+      return NextResponse.json(
+        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    // Check if this interaction already exists
+    const { data: existing, error: checkError } = await supabase
+      .from("content_interactions")
+      .select("*")
+      .eq("space_id", space.id)
+      .eq("content_type", contentType)
+      .eq("content_id", contentId)
+      .eq("identity", identity)
+      .eq("interaction_type", interactionType)
+      .eq("reaction", reaction || "");
+
+    if (checkError) {
+      return NextResponse.json(
+        { ok: false, error: "查询现有互动失败。", code: "INTERACTIONS_CHECK_FAILED" },
+        { status: 500 }
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    // If already exists and it's a "read" or "like" toggle — remove it (toggle off)
+    // For "read": always keep (idempotent)
+    // For "like": toggle on/off
+    // For "reaction": if already exists with same reaction, remove (toggle off); otherwise add
+    if (existing && existing.length > 0) {
+      if (interactionType === "read") {
+        // Read is idempotent — just return success
+        return NextResponse.json({
+          ok: true,
+          action: "kept",
+          interaction: {
+            id: existing[0].id,
+            contentType: existing[0].content_type,
+            contentId: existing[0].content_id,
+            identity: existing[0].identity,
+            interactionType: existing[0].interaction_type,
+            reaction: existing[0].reaction,
+            createdAt: existing[0].created_at,
+            updatedAt: existing[0].updated_at,
+          },
+        });
+      }
+
+      // Toggle off: remove existing
+      const { error: deleteError } = await supabase
+        .from("content_interactions")
+        .delete()
+        .eq("id", existing[0].id);
+
+      if (deleteError) {
+        return NextResponse.json(
+          { ok: false, error: "移除互动失败。", code: "INTERACTIONS_DELETE_FAILED" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        action: "removed",
+        interaction: {
+          contentType,
+          contentId,
+          identity,
+          interactionType,
+          reaction: reaction || undefined,
+        },
+      });
+    }
+
+    // Insert new interaction
+    const insertPayload: Record<string, unknown> = {
+      space_id: space.id,
+      content_type: contentType,
+      content_id: contentId,
+      identity,
+      interaction_type: interactionType,
+      created_at: now,
+      updated_at: now,
+    };
+    if (reaction) {
+      insertPayload.reaction = reaction;
+    }
+
+    const { data: newInteraction, error: insertError } = await supabase
+      .from("content_interactions")
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (insertError || !newInteraction) {
+      return NextResponse.json(
+        { ok: false, error: "创建互动失败。", code: "INTERACTIONS_CREATE_FAILED" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: "created",
+      interaction: {
+        id: newInteraction.id,
+        contentType: newInteraction.content_type,
+        contentId: newInteraction.content_id,
+        identity: newInteraction.identity,
+        interactionType: newInteraction.interaction_type,
+        reaction: newInteraction.reaction || undefined,
+        createdAt: newInteraction.created_at,
+        updatedAt: newInteraction.updated_at,
+      },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: "服务器错误。", code: "INTERACTIONS_CREATE_FAILED", debug: String(err) },
+      { status: 500 }
+    );
+  }
+}
+
+// ─── DELETE /api/interactions ───
+// Body:
+//   code, contentType, contentId, interactionType, reaction?, identity?
+// Removes a specific interaction.
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const code = body.code || getDefaultCode();
+    const contentType = body.contentType as string;
+    const contentId = body.contentId as string;
+    const interactionType = body.interactionType as string;
+    const reaction = body.reaction as string | undefined;
+    const identity = (body.identity as string) || "xiaoguai";
+
+    if (!isSupabaseServerConfigured()) {
+      return NextResponse.json(
+        { ok: false, unavailable: true, error: "Supabase 未配置，本地模式可用。" },
+        { status: 503 }
+      );
+    }
+
+    if (!contentType || !contentId || !interactionType) {
+      return NextResponse.json(
+        { ok: false, error: "必须提供 contentType, contentId 和 interactionType。", code: "MISSING_PARAMS" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createSupabaseServerClient();
+    const space = await getSpaceByCode(supabase, code);
+    if (!space) {
+      return NextResponse.json(
+        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    const query = supabase
+      .from("content_interactions")
+      .delete()
+      .eq("space_id", space.id)
+      .eq("content_type", contentType)
+      .eq("content_id", contentId)
+      .eq("identity", identity)
+      .eq("interaction_type", interactionType);
+
+    if (reaction) {
+      query.eq("reaction", reaction);
+    }
+
+    const { error: deleteError } = await query;
+
+    if (deleteError) {
+      return NextResponse.json(
+        { ok: false, error: "删除互动失败。", code: "INTERACTIONS_DELETE_FAILED" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: "deleted",
+      contentType,
+      contentId,
+      identity,
+      interactionType,
+      reaction: reaction || undefined,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: "服务器错误。", code: "INTERACTIONS_DELETE_FAILED", debug: String(err) },
+      { status: 500 }
+    );
+  }
+}

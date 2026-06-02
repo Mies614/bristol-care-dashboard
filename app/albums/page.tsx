@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -20,6 +20,8 @@ import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatApiError } from "@/lib/utils";
+import ContentComments from "@/components/ContentComments";
+import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
 
 const filters = [
@@ -59,6 +61,11 @@ export default function AlbumsPage() {
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
 
+  // Comments state
+  const [selectedComments, setSelectedComments] = useState<CommentEntry[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const identity = "xiaoguai";
+
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("upload=1")) setUploadOpen(true);
     loadItems();
@@ -76,6 +83,73 @@ export default function AlbumsPage() {
       return;
     }
     setItems(payload.items || []);
+  }
+
+  const loadAlbumComments = useCallback(async (albumId: string) => {
+    setCommentsLoading(true);
+    try {
+      const res = await fetch(
+        `/api/comments?code=${encodeURIComponent(code)}&contentType=album&contentId=${encodeURIComponent(albumId)}&identity=${identity}`
+      );
+      const payload = await res.json();
+      if (payload.ok && Array.isArray(payload.comments)) {
+        const entries: CommentEntry[] = payload.comments.map((c: Record<string, unknown>) => ({
+          id: c.id as string,
+          identity: c.identity as string,
+          body: c.body as string,
+          createdAt: c.createdAt as string,
+          deletedAt: c.deletedAt as string | undefined,
+          updatedAt: c.updatedAt as string | undefined,
+          isDeleted: Boolean(c.deletedAt),
+          isMine: (c.identity as string) === identity,
+        }));
+        setSelectedComments(entries);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [code, identity]);
+
+  // Load comments when a lightbox item is selected
+  useEffect(() => {
+    if (selected) {
+      loadAlbumComments(selected.id);
+    } else {
+      setSelectedComments([]);
+    }
+  }, [selected, loadAlbumComments]);
+
+  async function handleAddAlbumComment(body: string) {
+    if (!selected) return;
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        contentType: "album",
+        contentId: selected.id,
+        identity,
+        body,
+      }),
+    });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    await loadAlbumComments(selected.id);
+  }
+
+  function handleDeleteAlbumComment(commentId: string) {
+    if (!selected) return;
+    fetch("/api/comments", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, commentId, identity }),
+    }).then(() => {
+      loadAlbumComments(selected.id);
+    }).catch(() => {
+      // Non-critical
+    });
   }
 
   async function upload(event: React.FormEvent) {
@@ -416,6 +490,20 @@ export default function AlbumsPage() {
               {selected.location ? <p>{selected.location}</p> : null}
               {selected.note ? <p className="leading-6">{selected.note}</p> : null}
             </div>
+
+            {/* Comments section in lightbox */}
+            <ContentComments
+              contentType="album"
+              contentId={selected.id}
+              identity={identity}
+              comments={selectedComments}
+              loading={commentsLoading}
+              onAddComment={handleAddAlbumComment}
+              onDeleteComment={handleDeleteAlbumComment}
+              placeholder="写下你的想法..."
+              maxLength={200}
+            />
+
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
               <AppButton variant="secondary" size="sm" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>
                 {selected.isFavorite ? "取消精选" : "设为精选"}

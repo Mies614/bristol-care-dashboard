@@ -1,55 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSpaceByCode, getDefaultSpaceCode } from "@/lib/api/cloud";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const code = body.code || getDefaultSpaceCode();
-    const role = body.role || "admin";
-
-    if (!body.subscription || !body.subscription.endpoint) {
-      return NextResponse.json(
-        { ok: false, error: "缺少订阅信息。", code: "PUSH_SUBSCRIPTION_MISSING" },
-        { status: 400 }
-      );
-    }
-
-    const space = await getSpaceByCode(code);
-    if (!space) {
-      return NextResponse.json(
-        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
-        { status: 404 }
-      );
-    }
-
-    const supabase = createSupabaseServerClient();
-
-    const { error } = await supabase.from("push_subscriptions").upsert(
-      {
-        space_id: space.id,
-        role,
-        endpoint: body.subscription.endpoint,
-        subscription: body.subscription,
-        user_agent: body.userAgent || null,
-        enabled: true,
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: "endpoint" }
+  // Check Supabase availability first
+  if (!isSupabaseServerConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "云端服务暂不可用。", code: "SUPABASE_UNAVAILABLE" },
+      { status: 503 }
     );
+  }
 
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: "订阅失败。", code: "PUSH_SUBSCRIBE_FAILED" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ ok: true });
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "PUSH_SUBSCRIBE_FAILED" },
+      { ok: false, error: "请求格式无效。", code: "PUSH_BAD_REQUEST" },
+      { status: 400 }
+    );
+  }
+
+  const code = (typeof body.code === "string" ? body.code : undefined) || getDefaultSpaceCode();
+  const role = typeof body.role === "string" ? body.role : "admin";
+
+  if (!body.subscription || typeof body.subscription !== "object") {
+    return NextResponse.json(
+      { ok: false, error: "缺少订阅信息。", code: "PUSH_SUBSCRIPTION_MISSING" },
+      { status: 400 }
+    );
+  }
+
+  const subscription = body.subscription as Record<string, unknown>;
+  if (!subscription.endpoint || typeof subscription.endpoint !== "string") {
+    return NextResponse.json(
+      { ok: false, error: "订阅信息缺少 endpoint。", code: "PUSH_SUBSCRIPTION_MISSING" },
+      { status: 400 }
+    );
+  }
+
+  let space;
+  try {
+    space = await getSpaceByCode(code);
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "空间查询失败。", code: "SPACE_QUERY_FAILED" },
+      { status: 502 }
+    );
+  }
+
+  if (!space) {
+    return NextResponse.json(
+      { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
+      { status: 404 }
+    );
+  }
+
+  let supabase;
+  try {
+    supabase = createSupabaseServerClient();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "云端服务暂不可用。", code: "SUPABASE_UNAVAILABLE" },
+      { status: 503 }
+    );
+  }
+
+  const { error } = await supabase.from("push_subscriptions").upsert(
+    {
+      space_id: space.id,
+      role,
+      endpoint: subscription.endpoint,
+      subscription: subscription,
+      user_agent: typeof body.userAgent === "string" ? body.userAgent : null,
+      enabled: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "endpoint" }
+  );
+
+  if (error) {
+    console.error("[push/subscribe] upsert error:", error.message);
+    return NextResponse.json(
+      { ok: false, error: "订阅保存失败。", code: "PUSH_SUBSCRIBE_FAILED" },
       { status: 500 }
     );
   }
+
+  return NextResponse.json({ ok: true });
 }

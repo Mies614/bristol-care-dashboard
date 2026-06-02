@@ -1,17 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
 import { addReaction, removeReaction, getReactionsForNote, hasReaction, type ReactionId } from "@/lib/reactions";
+import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import ContentComments from "./ContentComments";
+import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 
 export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; fallback: string; onRefresh?: () => void }) {
   const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
   const [reactions, setReactions] = useState<ReturnType<typeof getReactionsForNote>>([]);
+  const [comments, setComments] = useState<CommentEntryType[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   const content = note?.content || fallback;
+  const identity = "xiaoguai";
+
+  const loadComments = useCallback(async () => {
+    if (!note) return;
+    setCommentsLoading(true);
+    try {
+      const code = getDefaultSpaceCode();
+      const res = await fetch(
+        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${identity}`
+      );
+      const payload = await res.json();
+      if (payload.ok && Array.isArray(payload.comments)) {
+        const entries: CommentEntryType[] = payload.comments.map((c: Record<string, unknown>) => ({
+          id: c.id as string,
+          identity: c.identity as string,
+          body: c.body as string,
+          createdAt: c.createdAt as string,
+          deletedAt: c.deletedAt as string | undefined,
+          updatedAt: c.updatedAt as string | undefined,
+          isDeleted: Boolean(c.deletedAt),
+          isMine: (c.identity as string) === identity,
+        } satisfies CommentEntryType));
+        setComments(entries);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [note, identity]);
 
   useEffect(() => {
     if (note) {
@@ -19,6 +55,12 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       setReactions(getReactionsForNote(note.id));
     }
   }, [note]);
+
+  useEffect(() => {
+    if (showComments && note) {
+      loadComments();
+    }
+  }, [showComments, note, loadComments]);
 
   function handleReaction(noteId: string, reactionId: ReactionId) {
     if (hasReaction(noteId, reactionId)) {
@@ -34,6 +76,39 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       markAsRead(note.id);
       setUnread(false);
     }
+  }
+
+  async function handleAddComment(body: string) {
+    if (!note) return;
+    const code = getDefaultSpaceCode();
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        contentType: "note",
+        contentId: note.id,
+        identity,
+        body,
+      }),
+    });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    await loadComments();
+  }
+
+  function handleDeleteComment(commentId: string) {
+    if (!note) return;
+    const code = getDefaultSpaceCode();
+    fetch("/api/comments", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, commentId, identity }),
+    }).then(() => {
+      loadComments();
+    }).catch(() => {
+      // Non-critical
+    });
   }
 
   return (
@@ -72,7 +147,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       {note && (
         <div className="mt-3 flex items-center gap-1 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
           {reactions.map((r) => (
-            <button aria-label={`${r.id}（${r.active ? "已点击" : "点击"}）`}
+            <button
               key={r.id}
               className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs transition ${
                 r.active
@@ -85,8 +160,32 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
               {r.count > 0 ? <span className="tabular-nums text-[10px]">{r.count}</span> : null}
             </button>
           ))}
+          <button
+            className="inline-flex items-center gap-1 rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/50 hover:bg-white/85 transition"
+            onClick={() => setShowComments(!showComments)}
+          >
+            💬
+            <span className="text-[10px]">评论</span>
+          </button>
         </div>
       )}
+
+      {/* Comments section */}
+      {note && showComments ? (
+        <div className="mt-3 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
+          <ContentComments
+            contentType="note"
+            contentId={note.id}
+            identity={identity}
+            comments={comments}
+            loading={commentsLoading}
+            onAddComment={handleAddComment}
+            onDeleteComment={handleDeleteComment}
+            placeholder="想说点什么..."
+            maxLength={200}
+          />
+        </div>
+      ) : null}
 
       {imageFailed ? <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-cocoa/65">图片暂时加载失败。</p> : null}
     </section>

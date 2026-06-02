@@ -6,9 +6,10 @@ import { AppButton } from "@/components/ui/AppButton";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { BackupImportSummary } from "@/lib/backupTypes";
 import { ReminderMonitorTab } from "@/components/admin/ReminderMonitorTab";
+import { CommentsModerationTab } from "@/components/admin/CommentsModerationTab";
 import type { LoveNote } from "@/lib/types";
 
-type Tab = "backup" | "restore" | "softDeleted" | "orphans" | "monitor";
+type Tab = "backup" | "restore" | "softDeleted" | "orphans" | "monitor" | "comments";
 
 interface OrphanSummary {
   totalDbOrphans: number;
@@ -82,12 +83,14 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
         const payload = await res.json() as ApiResponse;
         if (res.ok && payload.data) {
           const d = payload.data as Record<string, unknown>;
-          const counts = {
+          const counts: BackupImportSummary = {
             notes: getArrayLength(d.notes),
             deadlines: getArrayLength(d.deadlines),
             courses: getArrayLength(d.courses),
             albums: getArrayLength(d.albums),
             periodRecords: getArrayLength(d.periodRecords),
+            interactions: getArrayLength(d.interactions),
+            comments: getArrayLength(d.comments),
           };
           setBackupCounts(counts);
           setBackupJson(JSON.stringify(payload, null, 2));
@@ -302,6 +305,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
     { key: "softDeleted", label: "已删除", icon: "🗑" },
     { key: "orphans", label: "孤儿文件", icon: "📦" },
     { key: "monitor", label: "提醒监控", icon: "🔔" },
+    { key: "comments", label: "评论管理", icon: "💬" },
   ];
 
   return (
@@ -480,9 +484,14 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
         </div>
       )}
 
-      {/* ─── Tab: Storage Orphans ─── */}
+      {/* ─── Tab: Reminder Monitor ─── */}
       {tab === "monitor" && (
         <ReminderMonitorTab password={password} />
+      )}
+
+      {/* ─── Tab: Comments Moderation ─── */}
+      {tab === "comments" && (
+        <CommentsModerationTab password={password} />
       )}
 
       {/* ─── Tab: Storage Orphans ─── */}

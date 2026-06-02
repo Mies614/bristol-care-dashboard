@@ -406,3 +406,42 @@ create table if not exists public.reminder_run_logs (
 
 create index if not exists idx_reminder_run_logs_checked_at
 on public.reminder_run_logs(checked_at desc);
+
+-- ─── v1.3 Content Interactions (unified read/like/reaction) ───
+
+create table if not exists public.content_interactions (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  content_type text not null check (content_type in ('note', 'album', 'memory')),
+  content_id text not null,
+  identity text not null default 'default',
+  interaction_type text not null check (interaction_type in ('read', 'like', 'reaction')),
+  reaction text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(space_id, content_type, content_id, identity, interaction_type, coalesce(reaction, ''))
+);
+
+create index if not exists content_interactions_space_content_idx
+on public.content_interactions(space_id, content_type, content_id);
+
+create index if not exists content_interactions_identity_idx
+on public.content_interactions(space_id, identity);
+
+create table if not exists public.content_comments (
+  id uuid primary key default gen_random_uuid(),
+  space_id uuid references public.couple_spaces(id) on delete cascade,
+  content_type text not null check (content_type in ('note', 'album', 'memory')),
+  content_id text not null,
+  identity text not null default 'default',
+  body text not null,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists content_comments_space_content_idx
+on public.content_comments(space_id, content_type, content_id);
+
+alter table public.content_interactions enable row level security;
+alter table public.content_comments enable row level security;

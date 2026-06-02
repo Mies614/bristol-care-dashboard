@@ -3,8 +3,6 @@
  * Defines the shape of exported/imported backup JSON files.
  */
 
-
-
 import type { AppData, AlbumItem, Course, Deadline, LoveNote, PeriodSettings } from "./types";
 
 export const BACKUP_SCHEMA_VERSION = "1.0.0";
@@ -31,6 +29,8 @@ export interface BackupPayload {
     courses: BackupCourse[];
     periodRecords?: BackupPeriodRecord[];
     periodSettings?: PeriodSettings;
+    interactions?: BackupInteraction[];
+    comments?: BackupComment[];
     appSettings?: {
       nickname: string;
       nextMeetDate: string;
@@ -120,12 +120,38 @@ export interface BackupPeriodRecord {
   deletedAt?: string;
 }
 
+export interface BackupInteraction {
+  id: string;
+  spaceId?: string;
+  contentType: string;
+  contentId: string;
+  identity: string;
+  interactionType: string;
+  reaction?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BackupComment {
+  id: string;
+  spaceId?: string;
+  contentType: string;
+  contentId: string;
+  identity: string;
+  body: string;
+  deletedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface BackupImportSummary {
   notes: number;
   albums: number;
   deadlines: number;
   courses: number;
   periodRecords: number;
+  interactions: number;
+  comments: number;
 }
 
 export interface BackupValidateResult {
@@ -176,6 +202,8 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
   const deadlines = Array.isArray(data.deadlines) ? data.deadlines : [];
   const courses = Array.isArray(data.courses) ? data.courses : [];
   const periodRecords = Array.isArray(data.periodRecords) ? data.periodRecords : [];
+  const interactions = Array.isArray(data.interactions) ? data.interactions : [];
+  const comments = Array.isArray(data.comments) ? data.comments : [];
 
   const summary: BackupImportSummary = {
     notes: notes.length,
@@ -183,6 +211,8 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
     deadlines: deadlines.length,
     courses: courses.length,
     periodRecords: periodRecords.length,
+    interactions: interactions.length,
+    comments: comments.length,
   };
 
   return {
@@ -201,6 +231,8 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
         courses: courses as BackupCourse[],
         periodRecords: periodRecords as BackupPeriodRecord[],
         periodSettings: data.periodSettings as PeriodSettings | undefined,
+        interactions: interactions as BackupInteraction[],
+        comments: comments as BackupComment[],
         appSettings: data.appSettings as BackupPayload["data"]["appSettings"] | undefined,
       },
     },
@@ -212,18 +244,29 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
  * Returns counts of inserted/skipped per category.
  */
 export function computeMergeResults(
-  existing: { notes: LoveNote[]; albums: AlbumItem[]; deadlines: Deadline[]; courses: Course[] },
+  existing: {
+    notes: LoveNote[];
+    albums: AlbumItem[];
+    deadlines: Deadline[];
+    courses: Course[];
+    interactions?: { id: string }[];
+    comments?: { id: string }[];
+  },
   incoming: BackupPayload
 ): {
   notes: { toInsert: number; skipped: number };
   albums: { toInsert: number; skipped: number };
   deadlines: { toInsert: number; skipped: number };
   courses: { toInsert: number; skipped: number };
+  interactions: { toInsert: number; skipped: number };
+  comments: { toInsert: number; skipped: number };
 } {
   const existingNoteIds = new Set(existing.notes.map((n) => n.id));
   const existingAlbumIds = new Set(existing.albums.map((a) => a.id));
   const existingDeadlineIds = new Set(existing.deadlines.map((d) => d.id));
   const existingCourseIds = new Set(existing.courses.map((c) => c.id));
+  const existingInteractionIds = new Set((existing.interactions || []).map((i) => i.id));
+  const existingCommentIds = new Set((existing.comments || []).map((c) => c.id));
 
   const notesSkipped = incoming.data.notes.filter((n) => existingNoteIds.has(n.id)).length;
   const notesToInsert = incoming.data.notes.length - notesSkipped;
@@ -237,11 +280,19 @@ export function computeMergeResults(
   const coursesSkipped = incoming.data.courses.filter((c) => existingCourseIds.has(c.id)).length;
   const coursesToInsert = incoming.data.courses.length - coursesSkipped;
 
+  const interactionsSkipped = (incoming.data.interactions || []).filter((i) => existingInteractionIds.has(i.id)).length;
+  const interactionsToInsert = (incoming.data.interactions || []).length - interactionsSkipped;
+
+  const commentsSkipped = (incoming.data.comments || []).filter((c) => existingCommentIds.has(c.id)).length;
+  const commentsToInsert = (incoming.data.comments || []).length - commentsSkipped;
+
   return {
     notes: { toInsert: notesToInsert, skipped: notesSkipped },
     albums: { toInsert: albumsToInsert, skipped: albumsSkipped },
     deadlines: { toInsert: deadlinesToInsert, skipped: deadlinesSkipped },
     courses: { toInsert: coursesToInsert, skipped: coursesSkipped },
+    interactions: { toInsert: interactionsToInsert, skipped: interactionsSkipped },
+    comments: { toInsert: commentsToInsert, skipped: commentsSkipped },
   };
 }
 
@@ -315,6 +366,8 @@ export function buildBackupFromLocalData(data: AppData, spaceCode: string): Back
         deletedAt: p.deletedAt,
       })),
       periodSettings: data.periodSettings,
+      interactions: [],
+      comments: [],
       appSettings: {
         nickname: data.nickname,
         nextMeetDate: data.nextMeetDate,

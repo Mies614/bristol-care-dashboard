@@ -64,25 +64,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch existing records for merge computation
-    const [existingNotes, existingAlbums, existingDeadlines, existingCourses] =
-      await Promise.all([
-        supabase
-          .from("love_notes")
-          .select("id, deleted_at")
-          .eq("space_id", space.id),
-        supabase
-          .from("album_items")
-          .select("id, deleted_at")
-          .eq("space_id", space.id),
-        supabase
-          .from("deadlines")
-          .select("id, deleted_at")
-          .eq("space_id", space.id),
-        supabase
-          .from("courses")
-          .select("id, deleted_at")
-          .eq("space_id", space.id),
-      ]);
+    const [
+      existingNotes,
+      existingAlbums,
+      existingDeadlines,
+      existingCourses,
+      existingInteractions,
+      existingComments,
+    ] = await Promise.all([
+      supabase
+        .from("love_notes")
+        .select("id, deleted_at")
+        .eq("space_id", space.id),
+      supabase
+        .from("album_items")
+        .select("id, deleted_at")
+        .eq("space_id", space.id),
+      supabase
+        .from("deadlines")
+        .select("id, deleted_at")
+        .eq("space_id", space.id),
+      supabase
+        .from("courses")
+        .select("id, deleted_at")
+        .eq("space_id", space.id),
+      supabase
+        .from("content_interactions")
+        .select("id")
+        .eq("space_id", space.id),
+      supabase
+        .from("content_comments")
+        .select("id")
+        .eq("space_id", space.id),
+    ]);
 
     // Compute merge results
     const existing = {
@@ -105,6 +119,12 @@ export async function POST(request: NextRequest) {
         startTime: (r.start_time as string) || "09:00",
         endTime: (r.end_time as string) || "10:00",
       })) as Course[],
+      interactions: (existingInteractions.data || []).map((r: Record<string, unknown>) => ({
+        id: String(r.id || ""),
+      })),
+      comments: (existingComments.data || []).map((r: Record<string, unknown>) => ({
+        id: String(r.id || ""),
+      })),
     };
 
     const mergeResults = computeMergeResults(
@@ -113,6 +133,8 @@ export async function POST(request: NextRequest) {
         albums: existing.albums,
         deadlines: existing.deadlines,
         courses: existing.courses,
+        interactions: existing.interactions,
+        comments: existing.comments,
       },
       backup
     );
@@ -122,7 +144,9 @@ export async function POST(request: NextRequest) {
       mergeResults.notes.toInsert +
       mergeResults.albums.toInsert +
       mergeResults.deadlines.toInsert +
-      mergeResults.courses.toInsert;
+      mergeResults.courses.toInsert +
+      mergeResults.interactions.toInsert +
+      mergeResults.comments.toInsert;
 
     // If dry-run mode, just return the merge summary
     const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
@@ -137,7 +161,9 @@ export async function POST(request: NextRequest) {
           mergeResults.notes.skipped +
           mergeResults.albums.skipped +
           mergeResults.deadlines.skipped +
-          mergeResults.courses.skipped,
+          mergeResults.courses.skipped +
+          mergeResults.interactions.skipped +
+          mergeResults.comments.skipped,
       });
     }
 
@@ -152,7 +178,9 @@ export async function POST(request: NextRequest) {
           mergeResults.notes.skipped +
           mergeResults.albums.skipped +
           mergeResults.deadlines.skipped +
-          mergeResults.courses.skipped,
+          mergeResults.courses.skipped +
+          mergeResults.interactions.skipped +
+          mergeResults.comments.skipped,
       });
     }
 
@@ -283,6 +311,60 @@ export async function POST(request: NextRequest) {
       if (error) errors.push(`period_settings: ${error.message}`);
     }
 
+    // Build existing ID sets from previously fetched data
+    const existingInteractionIds = new Set(
+      existing.interactions.map((i) => i.id)
+    );
+    const existingCommentIds = new Set(
+      existing.comments.map((c) => c.id)
+    );
+
+    // Import interactions
+    const newInteractions = (backup.data.interactions || []).filter(
+      (i) => !existingInteractionIds.has(i.id)
+    );
+    let interactionsImported = 0;
+    if (newInteractions.length > 0) {
+      const rows = newInteractions.map((i) => ({
+        space_id: space.id,
+        id: i.id,
+        content_type: i.contentType,
+        content_id: i.contentId,
+        identity: i.identity,
+        interaction_type: i.interactionType,
+        reaction: i.reaction || null,
+        created_at: i.createdAt || new Date().toISOString(),
+        updated_at: i.updatedAt || new Date().toISOString(),
+      }));
+      const { error } = await supabase.from("content_interactions").insert(rows);
+      if (error) errors.push(`interactions: ${error.message}`);
+      else interactionsImported = newInteractions.length;
+    }
+    const interactionsSkipped = (backup.data.interactions || []).length - interactionsImported;
+
+    // Import comments
+    const newComments = (backup.data.comments || []).filter(
+      (c) => !existingCommentIds.has(c.id)
+    );
+    let commentsImported = 0;
+    if (newComments.length > 0) {
+      const rows = newComments.map((c) => ({
+        space_id: space.id,
+        id: c.id,
+        content_type: c.contentType,
+        content_id: c.contentId,
+        identity: c.identity,
+        body: c.body,
+        deleted_at: c.deletedAt || null,
+        created_at: c.createdAt || new Date().toISOString(),
+        updated_at: c.updatedAt || new Date().toISOString(),
+      }));
+      const { error } = await supabase.from("content_comments").insert(rows);
+      if (error) errors.push(`comments: ${error.message}`);
+      else commentsImported = newComments.length;
+    }
+    const commentsSkipped = (backup.data.comments || []).length - commentsImported;
+
     return NextResponse.json({
       ok: true,
       imported: {
@@ -290,12 +372,16 @@ export async function POST(request: NextRequest) {
         deadlines: newDeadlines.length,
         courses: newCourses.length,
         albums: newAlbums.length,
+        interactions: interactionsImported,
+        comments: commentsImported,
       },
       skipped: {
         notes: mergeResults.notes.skipped,
         deadlines: mergeResults.deadlines.skipped,
         courses: mergeResults.courses.skipped,
         albums: mergeResults.albums.skipped,
+        interactions: interactionsSkipped,
+        comments: commentsSkipped,
       },
       errors: errors.length > 0 ? errors : undefined,
     });

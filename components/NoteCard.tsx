@@ -2,8 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element */
 
+import { useState, useEffect, useCallback } from "react";
 import type { LoveNote } from "@/lib/types";
 import { getUserFacingAuthorLabel } from "@/lib/identity";
+import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import ContentComments from "./ContentComments";
+import type { CommentEntry } from "@/lib/contentInteractions";
 
 export function NoteCard({
   note,
@@ -37,6 +41,76 @@ export function NoteCard({
   const type = note.noteType || (note.videoUrl ? "video" : note.audioUrl ? "audio" : note.imageUrl ? "image" : "text");
   const bubbleAlign = style === "bubble" ? (note.author === "xiaoguai" || note.author === "user" ? "ml-auto" : "mr-auto") : "";
 
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<CommentEntry[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const identity = "xiaoguai";
+
+  const loadComments = useCallback(async () => {
+    setCommentsLoading(true);
+    try {
+      const code = getDefaultSpaceCode();
+      const res = await fetch(
+        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${identity}`
+      );
+      const payload = await res.json();
+      if (payload.ok && Array.isArray(payload.comments)) {
+        const entries: CommentEntry[] = payload.comments.map((c: Record<string, unknown>) => ({
+          id: c.id as string,
+          identity: c.identity as string,
+          body: c.body as string,
+          createdAt: c.createdAt as string,
+          deletedAt: c.deletedAt as string | undefined,
+          updatedAt: c.updatedAt as string | undefined,
+          isDeleted: Boolean(c.deletedAt),
+          isMine: (c.identity as string) === identity,
+        }));
+        setComments(entries);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [note.id, identity]);
+
+  useEffect(() => {
+    if (showComments) {
+      loadComments();
+    }
+  }, [showComments, loadComments]);
+
+  async function handleAddComment(body: string) {
+    const code = getDefaultSpaceCode();
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        contentType: "note",
+        contentId: note.id,
+        identity,
+        body,
+      }),
+    });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    await loadComments();
+  }
+
+  function handleDeleteComment(commentId: string) {
+    const code = getDefaultSpaceCode();
+    fetch("/api/comments", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, commentId, identity }),
+    }).then(() => {
+      loadComments();
+    }).catch(() => {
+      // Non-critical
+    });
+  }
+
   return (
     <article className={`${base} ${styleClass} ${pinnedClass} ${bubbleAlign} ${onClick ? "cursor-pointer" : ""} ${featured ? "w-full" : ""}`} onClick={onClick}>
       <div className="mb-2 flex items-center justify-between gap-2 text-xs text-cocoa/55">
@@ -51,7 +125,31 @@ export function NoteCard({
         {note.mood ? <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/62">{note.mood}</span> : null}
         <span className="rounded-full bg-cocoa/8 px-2.5 py-1 text-xs uppercase text-cocoa/55">{type}</span>
         {note.pinned ? <span className="rounded-full bg-blush/70 px-2.5 py-1 text-xs text-cocoa/65">置顶</span> : null}
+        <button
+          className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/50 hover:bg-white/85 transition"
+          onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+        >
+          💬 评论
+        </button>
       </div>
+
+      {/* Comments section */}
+      {showComments ? (
+        <div className="mt-3 border-t border-white/60 pt-3" onClick={(e) => e.stopPropagation()}>
+          <ContentComments
+            contentType="note"
+            contentId={note.id}
+            identity={identity}
+            comments={comments}
+            loading={commentsLoading}
+            onAddComment={handleAddComment}
+            onDeleteComment={handleDeleteComment}
+            placeholder="想说点什么..."
+            maxLength={200}
+          />
+        </div>
+      ) : null}
+
       {onPatch ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
           <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={onEdit} type="button">编辑</button>

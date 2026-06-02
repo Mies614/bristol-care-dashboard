@@ -101,3 +101,94 @@ export function getCurrentPermission(): NotificationPermission | "unsupported" {
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return Notification.permission;
 }
+
+// ─── Push Subscribe Failure Diagnostics ───
+
+/**
+ * Precise failure reasons for push subscription attempts.
+ * Used by subscribeToPush() in pushClient.ts and consumed by UI / tests.
+ */
+export type PushSubscribeFailureReason =
+  | "unsupported_notification"
+  | "unsupported_service_worker"
+  | "unsupported_push_manager"
+  | "permission_denied"
+  | "service_worker_not_ready"
+  | "vapid_public_key_missing"
+  | "vapid_public_key_invalid"
+  | "subscribe_failed"
+  | "save_failed"
+  | "supabase_unavailable";
+
+export interface PushFailureMessages {
+  /** Gentle user-facing message for the UI */
+  userMessage: string;
+  /** Technical message for console / debug panel */
+  debugMessage: string;
+}
+
+const FAILURE_MESSAGE_MAP: Record<PushSubscribeFailureReason, PushFailureMessages> = {
+  unsupported_notification: {
+    userMessage: "你的浏览器不支持通知功能。",
+    debugMessage: "Browser does not support Notification API.",
+  },
+  unsupported_service_worker: {
+    userMessage: "你的浏览器不支持后台服务。",
+    debugMessage: "Browser does not support Service Worker.",
+  },
+  unsupported_push_manager: {
+    userMessage: "你的浏览器不支持推送通知。",
+    debugMessage: "Browser does not support PushManager API.",
+  },
+  permission_denied: {
+    userMessage: "通知权限已被阻止，请在浏览器设置中重新允许。",
+    debugMessage: "Notification.permission is 'denied' or user declined the permission prompt.",
+  },
+  service_worker_not_ready: {
+    userMessage: "后台服务未就绪，请刷新页面后重试。",
+    debugMessage: "Service Worker registration failed or not yet active.",
+  },
+  vapid_public_key_missing: {
+    userMessage: "通知服务暂未配置，请联系管理员。",
+    debugMessage: "VAPID public key is empty or not set. Check NEXT_PUBLIC_VAPID_PUBLIC_KEY.",
+  },
+  vapid_public_key_invalid: {
+    userMessage: "通知服务配置有误，请联系管理员。",
+    debugMessage: "VAPID public key is not valid URL-safe base64.",
+  },
+  subscribe_failed: {
+    userMessage: "订阅失败，请稍后重试。",
+    debugMessage: "pushManager.subscribe() threw an error. Check browser console for details.",
+  },
+  save_failed: {
+    userMessage: "订阅保存失败，请检查网络后重试。",
+    debugMessage: "Backend /api/push/subscribe returned an error or network request failed.",
+  },
+  supabase_unavailable: {
+    userMessage: "云端服务暂不可用，请稍后重试。",
+    debugMessage: "Supabase is not configured or unreachable.",
+  },
+};
+
+/**
+ * Convert a PushSubscribeFailureReason into user + debug messages.
+ */
+export function getPushFailureMessages(reason: PushSubscribeFailureReason): PushFailureMessages {
+  return { ...FAILURE_MESSAGE_MAP[reason] };
+}
+
+/**
+ * Determine the PushSubscribeFailureReason from an API error response.
+ */
+export function parseApiSubscribeError(body: { code?: string; error?: string }): PushSubscribeFailureReason {
+  switch (body.code) {
+    case "SUPABASE_UNAVAILABLE":
+      return "supabase_unavailable";
+    case "PUSH_SUBSCRIBE_FAILED":
+      return "save_failed";
+    case "SPACE_NOT_FOUND":
+      return "save_failed";
+    default:
+      return "save_failed";
+  }
+}
