@@ -1,7 +1,7 @@
 {
   "name": "Bristol Care",
   "short_name": "Bristol Care",
-  "description": "A gentle Bristol life dashboard for study, weather, deadlines and care notes.",
+  "description": "给 Bristol 留学生活的温柔小助手 — 天气、课程、DDL、想念倒计时与小纸条",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fff8f0",

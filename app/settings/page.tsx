@@ -7,6 +7,7 @@ import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { SyncStatusCard } from "@/components/SyncStatusCard";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { NotificationSettingsCard } from "@/components/settings/NotificationSettingsCard";
 import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
 import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
@@ -610,19 +611,8 @@ export default function SettingsPage() {
         </SettingsSection>
 
         {/* ──────────────────── 6. Notifications ──────────────────── */}
-        <SettingsSection title="通知" subtitle="推送和提醒偏好" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">通知功能依赖云同步和浏览器推送。开启推送后，可在本设备收到重要提醒。</p>
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
-              <input type="checkbox" className="accent-[var(--app-accent)]" disabled />
-              <span className="text-sm text-[var(--app-muted)]">想你提醒（开发中）</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
-              <input type="checkbox" className="accent-[var(--app-accent)]" disabled />
-              <span className="text-sm text-[var(--app-muted)]">DDL 临近提醒（开发中）</span>
-            </label>
-            <p className="text-xs text-[var(--app-muted)]/60">提醒功能将在后续版本中开放。</p>
-          </div>
+        <SettingsSection title="通知" subtitle="推送通知和每日关怀提醒" defaultOpen={false}>
+          <NotificationSettingsCard />
         </SettingsSection>
 
         {/* ──────────────────── 7. Advanced ──────────────────── */}
