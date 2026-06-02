@@ -13,6 +13,7 @@ import { getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { AppCard } from "@/components/ui/AppCard";
+import { DataMaintenanceCenter } from "@/components/admin/DataMaintenanceCenter";
 import { safeVariants, staggerContainer, staggerItem, fadeInScale } from "@/lib/design/motion";
 
 export default function AdminDashboardPage() {
@@ -280,6 +281,12 @@ export default function AdminDashboardPage() {
               <div className="text-left">
                 <p className="section-kicker mb-1">🔧 系统状态</p>
                 <h2 className="font-semibold text-cocoa">
+
+        {/* ── 9. 数据维护中心 —— 备份/恢复/软删除/孤儿文件 ── */}
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <DataMaintenanceCenter onRefresh={fetchAdminData} />
+        </motion.div>
+
                   {pushStatus ? "运行正常" : "加载中…"}
                 </h2>
               </div>
@@ -299,6 +306,12 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="rounded-xl bg-white/55 px-3 py-2">
                     <span className="text-cocoa/40">Push</span>
+
+        {/* ── 9. 数据维护中心 —— 备份/恢复/软删除/孤儿文件 ── */}
+        <motion.div variants={safeVariants(staggerItem, false)}>
+          <DataMaintenanceCenter onRefresh={fetchAdminData} />
+        </motion.div>
+
                     {pushStatus ? (
                       <span className="ml-1.5 text-emerald font-medium">ok</span>
                     ) : (
