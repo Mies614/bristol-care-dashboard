@@ -8,6 +8,7 @@ import { fetchBristolWeather } from "@/lib/weather";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { scheduleReminders, type ServerReminderPreference, type SpaceData, type ReminderDeliveryRecord } from "@/lib/serverReminderScheduler";
 import { DEFAULT_PERIOD_SETTINGS, getDaysUntilNextPeriod, getCurrentCycleDay } from "@/lib/period";
+import type { PeriodRecord } from "@/lib/types";
 
 function getCronSecret(): string {
   return process.env.CRON_SECRET || "";
@@ -217,8 +218,8 @@ export async function GET(request: NextRequest) {
         try { weather = await fetchBristolWeather(); } catch { /* optional */ }
 
         const periodSettings = DEFAULT_PERIOD_SETTINGS;
-        const daysUntilNext = getDaysUntilNextPeriod(periodRecords as Parameters<typeof getDaysUntilNextPeriod>[0], periodSettings, now);
-        const cycleDay = getCurrentCycleDay(periodRecords as Parameters<typeof getCurrentCycleDay>[0], now);
+        const daysUntilNext = getDaysUntilNextPeriod(periodRecords as PeriodRecord[], periodSettings, now);
+        const cycleDay = getCurrentCycleDay(periodRecords as PeriodRecord[], now);
 
         spacesData.push({
           spaceCode,

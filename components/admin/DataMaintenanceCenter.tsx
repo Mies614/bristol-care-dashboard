@@ -82,15 +82,16 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
         const payload = await res.json() as ApiResponse;
         if (res.ok && payload.data) {
           const d = payload.data as Record<string, unknown>;
-          setBackupCounts({
-            notes: (Array.isArray(d.notes) ? d.notes.length : 0) as number,
-            albums: (Array.isArray(d.albums) ? d.albums.length : 0) as number,
-            deadlines: (Array.isArray(d.deadlines) ? d.deadlines.length : 0) as number,
-            courses: (Array.isArray(d.courses) ? d.courses.length : 0) as number,
-            periodRecords: (Array.isArray(d.periodRecords) ? d.periodRecords.length : 0) as number,
-          });
+          const counts = {
+            notes: getArrayLength(d.notes),
+            deadlines: getArrayLength(d.deadlines),
+            courses: getArrayLength(d.courses),
+            albums: getArrayLength(d.albums),
+            periodRecords: getArrayLength(d.periodRecords),
+          };
+          setBackupCounts(counts);
           setBackupJson(JSON.stringify(payload, null, 2));
-          setMessage(`备份已生成，包含 notes x${backupCounts?.notes || getArrayLength(d.notes) || 0}, DDL x${backupCounts?.deadlines || getArrayLength(d.deadlines) || 0}, 课程 x${backupCounts?.courses || getArrayLength(d.courses) || 0}`);
+          setMessage(`备份已生成，包含 notes x${counts.notes}, DDL x${counts.deadlines}, 课程 x${counts.courses}`);
         } else {
           setMessage((payload.error as string) || "导出失败");
         }
@@ -109,7 +110,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
     } finally {
       setLoading(false);
     }
-  }, [code, password, backupCounts]);
+  }, [code, password]);
 
   function downloadJsonFromState() {
     if (!backupJson) return;

@@ -8,6 +8,7 @@ import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/su
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { validateBackupPayload, computeMergeResults } from "@/lib/backupTypes";
 import { loveNoteFromRow } from "@/lib/mappers";
+import type { AlbumItem, Course, Deadline } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,13 +89,22 @@ export async function POST(request: NextRequest) {
       notes: (existingNotes.data || []).map((r) => loveNoteFromRow(r as Parameters<typeof loveNoteFromRow>[0])),
       albums: (existingAlbums.data || []).map((r: Record<string, unknown>) => ({
         id: String(r.id || ""),
-      })) as { id: string }[],
+        type: (r.type as AlbumItem["type"]) || "photo",
+      })) as AlbumItem[],
       deadlines: (existingDeadlines.data || []).map((r: Record<string, unknown>) => ({
         id: String(r.id || ""),
-      })) as { id: string }[],
+        title: (r.title as string) || "",
+        dueDate: (r.due_date as string) || "",
+        priority: (r.priority as Deadline["priority"]) || "medium",
+        status: (r.status as Deadline["status"]) || "todo",
+      })) as Deadline[],
       courses: (existingCourses.data || []).map((r: Record<string, unknown>) => ({
         id: String(r.id || ""),
-      })) as { id: string }[],
+        name: (r.name as string) || "",
+        day: (r.day as Course["day"]) || "Monday",
+        startTime: (r.start_time as string) || "09:00",
+        endTime: (r.end_time as string) || "10:00",
+      })) as Course[],
     };
 
     const mergeResults = computeMergeResults(

@@ -5,7 +5,7 @@
 
 
 
-import type { PeriodSettings } from "./types";
+import type { AppData, AlbumItem, Course, Deadline, LoveNote, PeriodSettings } from "./types";
 
 export const BACKUP_SCHEMA_VERSION = "1.0.0";
 
