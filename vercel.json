@@ -5,5 +5,11 @@
   "installCommand": "npm install",
   "env": {
     "NEXT_PUBLIC_VERCEL_URL": "${VERCEL_URL}"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }

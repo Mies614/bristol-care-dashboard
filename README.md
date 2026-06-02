@@ -52,6 +52,7 @@ npm run dev                   # 启动后访问 http://localhost:3000
 - **经期记录** — 周期预测，.ics 提醒
 - **PWA** — 可添加到手机桌面
 - **Push 通知** — Web Push 订阅（需 VAPID 密钥）
+- **定时提醒** — Vercel Cron 每天发送天气/DDL/想念/经期 Push 提醒（v1.1）
 - **Cloud Sync** — Supabase 云同步，自动 fallback 到 localStorage
 
 ## Admin 入口

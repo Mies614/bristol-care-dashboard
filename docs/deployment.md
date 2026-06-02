@@ -62,3 +62,22 @@ npm run generate:vapid
 - `.env.local` 和 `.env*.local` 已加入 `.gitignore`，不会提交到仓库。
 - `SUPABASE_SERVICE_ROLE_KEY` 只在服务端 Route Handler 中使用，不会暴露到浏览器。
 - VAPID 私钥只在服务端使用，`NEXT_PUBLIC_VAPID_PUBLIC_KEY` 可以安全暴露给客户端。
+
+## 定时提醒（Cron）
+
+项目使用 Vercel Cron 实现每天定时触发提醒。
+
+1. 在 Vercel 环境变量中设置 `CRON_SECRET`（一个随机字符串）
+2. Vercel 会按 `vercel.json` 中的 schedule 自动调用 `/api/cron/reminders`
+3. 默认每天 **UTC 09:00** 触发（英国冬季 09:00，夏季 10:00）
+
+手动测试：
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reminders
+```
+
+注意事项：
+- 定时提醒依赖 Supabase（需要服务端 reminder_preferences 表）
+- 提醒偏好需要在 settings 页开启并同步到 Supabase
+- 无 Supabase 或 VAPID 时 Cron 返回 unavailable 状态，不会崩溃

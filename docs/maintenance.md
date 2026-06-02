@@ -65,3 +65,31 @@
 - 不会弹出权限请求。
 - App 其他功能不受影响。
 - 配置 VAPID 密钥后，刷新页面即可看到「开启通知」按钮。
+
+## 定时提醒管理
+
+定时提醒需要以下条件同时满足：
+
+1. `CRON_SECRET` 环境变量已配置
+2. Supabase 可正常连接
+3. VAPID 密钥已配置
+4. `reminder_preferences` 表中有启用的偏好记录
+5. 用户在 settings 页开启了提醒并同步到 Supabase
+
+### 提醒发送机制
+
+- Vercel Cron 每天 UTC 09:00 调用 `/api/cron/reminders`
+- 每个 space 每种提醒每天只发一次（通过 `reminder_delivery_log` 去重）
+- 支持：天气、Deadline（1-3天内的）、Miss-you、经期
+- Push 订阅失效（410/404）时自动标记为 inactive
+
+### 测试提醒
+
+1. 在 settings 页→通知设置，点击「发送测试通知」
+2. 或用 curl 手动测试 Cron：
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reminders
+```
+
+3. 查看返回的 `notificationsGenerated` 和 `notificationsSent` 确认运行正常

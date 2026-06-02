@@ -43,6 +43,8 @@ export async function GET(): Promise<NextResponse<HealthResponse>> {
   addCheck("ADMIN_PASSWORD", "后台管理密码");
 
   // Required: Space code
+  // Cron
+
   addCheck("NEXT_PUBLIC_DEFAULT_SPACE_CODE", "默认空间访问码");
 
   // Optional: VAPID for push notifications
@@ -51,6 +53,7 @@ export async function GET(): Promise<NextResponse<HealthResponse>> {
 
   // Optional: Supabase service role (server-side only)
   addCheck("SUPABASE_SERVICE_ROLE_KEY", "Supabase 服务端密钥（仅服务端）");
+  addCheck("CRON_SECRET", "定时提醒 Cron 密钥");
 
   // Service status (derived from Supabase config)
   const hasSupabase =

@@ -76,16 +76,16 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
       if (res.headers.get("content-type")?.includes("application/json")) {
         const payload = await res.json() as ApiResponse;
         if (res.ok && payload.data) {
-          const data = payload.data as Record<string, unknown>;
+          const d = payload.data as Record<string, unknown>;
           setBackupCounts({
-            notes: (Array.isArray(data.notes) ? data.notes.length : 0) as number,
-            albums: (Array.isArray(data.albums) ? data.albums.length : 0) as number,
-            deadlines: (Array.isArray(data.deadlines) ? data.deadlines.length : 0) as number,
-            courses: (Array.isArray(data.courses) ? data.courses.length : 0) as number,
-            periodRecords: (Array.isArray(data.periodRecords) ? data.periodRecords.length : 0) as number,
+            notes: (Array.isArray(d.notes) ? d.notes.length : 0) as number,
+            albums: (Array.isArray(d.albums) ? d.albums.length : 0) as number,
+            deadlines: (Array.isArray(d.deadlines) ? d.deadlines.length : 0) as number,
+            courses: (Array.isArray(d.courses) ? d.courses.length : 0) as number,
+            periodRecords: (Array.isArray(d.periodRecords) ? d.periodRecords.length : 0) as number,
           });
           setBackupJson(JSON.stringify(payload, null, 2));
-          setMessage(`备份已生成，包含 notes x${backupCounts?.notes || data.notes?.length || 0}, DDL x${backupCounts?.deadlines || data.deadlines?.length || 0}, 课程 x${backupCounts?.courses || data.courses?.length || 0}`);
+          setMessage(`备份已生成，包含 notes x${backupCounts?.notes || d.notes?.length || 0}, DDL x${backupCounts?.deadlines || d.deadlines?.length || 0}, 课程 x${backupCounts?.courses || d.courses?.length || 0}`);
         } else {
           setMessage((payload.error as string) || "导出失败");
         }

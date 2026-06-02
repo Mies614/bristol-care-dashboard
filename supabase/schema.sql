@@ -353,3 +353,37 @@ on conflict (space_id, key) do update set value = excluded.value, updated_at = n
 -- create policy "Allow public reads from backgrounds"
 -- on storage.objects for select to anon
 -- using (bucket_id = 'backgrounds');
+-- ─── v1.1 Server-scheduled reminders ───
+
+create table if not exists public.reminder_preferences (
+  id uuid primary key default gen_random_uuid(),
+  space_code text not null,
+  identity text not null default 'default',
+  enabled boolean not null default true,
+  weather_enabled boolean not null default true,
+  deadline_enabled boolean not null default true,
+  miss_you_enabled boolean not null default true,
+  period_enabled boolean not null default true,
+  reminder_time text not null default '09:00',
+  timezone text not null default 'Europe/London',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(space_code, identity)
+);
+
+create index if not exists idx_reminder_prefs_space_code
+on public.reminder_preferences(space_code);
+
+create table if not exists public.reminder_delivery_log (
+  id uuid primary key default gen_random_uuid(),
+  space_code text not null,
+  identity text not null default 'default',
+  reminder_type text not null,
+  delivery_date date not null,
+  status text not null default 'sent',
+  created_at timestamptz not null default now(),
+  unique(space_code, identity, reminder_type, delivery_date)
+);
+
+create index if not exists idx_reminder_delivery_log_space_date
+on public.reminder_delivery_log(space_code, delivery_date);
