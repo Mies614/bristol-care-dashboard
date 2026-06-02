@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
+import { SyncStatusCard } from "@/components/SyncStatusCard";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
@@ -521,6 +522,7 @@ export default function SettingsPage() {
         <SettingsSection title="云同步" subtitle="同步状态、手动操作和错误诊断">
           <div className="space-y-1">
             <AutoSyncStatusBadge />
+          <SyncStatusCard />
           </div>
           {lastSync ? (
             <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p>

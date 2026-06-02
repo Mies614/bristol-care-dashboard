@@ -8,6 +8,7 @@ import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUpload";
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
 import { VoiceRecorder } from "./VoiceRecorder";
+import { classifyUploadError } from "@/lib/uploadError";
 
 type Draft = {
   content: string;
@@ -17,10 +18,6 @@ type Draft = {
 
 const moods = ["", "开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"];
 
-function formatError(stage: string, error: unknown) {
-  return `stage: ${stage} · detail: ${error instanceof Error ? error.message : String(error || "未知错误")}`;
-}
-
 export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | void }) {
   const [draft, setDraft] = useState<Draft>({ content: "", displayStyle: "sticky", mood: "" });
   const [image, setImage] = useState<File | null>(null);
@@ -28,6 +25,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
   const [audio, setAudio] = useState<File | Blob | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadCanRetry, setUploadCanRetry] = useState(false);
   const cancelRef = useRef(false);
 
   async function submit(event: React.FormEvent) {
@@ -51,6 +49,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
     }
 
     setSubmitting(true);
+    setUploadCanRetry(false);
     cancelRef.current = false;
     const code = getDefaultSpaceCode();
     let uploadedImage: UploadedNoteMedia | null = null;
@@ -94,18 +93,25 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         setMessage([payload.error || "文件已上传，但记录保存失败，请重试保存。", payload.code ? `code: ${payload.code}` : "", payload.step ? `step: ${payload.step}` : "", payload.detail ? `detail: ${payload.detail}` : ""].filter(Boolean).join(" · "));
+        setUploadCanRetry(true);
         return;
       }
       setDraft({ content: "", displayStyle: "sticky", mood: "" });
       setImage(null);
       setVideo(null);
       setAudio(null);
+      setUploadCanRetry(false);
       toast.success("小纸条已贴到墙上 ✨");
       await onCreated();
     } catch (error) {
-      const errMsg = formatError("upload_or_save_note", error);
-      setMessage(errMsg);
-      toast.error("小纸条发布失败，请重试");
+      const info = classifyUploadError(error, {
+        fileKind: video ? "video" : image ? "image" : audio ? "audio" : undefined,
+        fileSize: video?.size || image?.size || (audio as Blob)?.size || undefined,
+        fileType: video?.type || image?.type || (audio as Blob)?.type || undefined,
+      });
+      setMessage(info.friendlyMessage);
+      setUploadCanRetry(info.canRetry);
+      toast.error(info.friendlyMessage);
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +165,11 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
       ) : message ? <p className="notice">{message}</p> : null}
       <div className="flex gap-2">
         <button className="btn-primary flex-1" disabled={submitting} type="submit">{submitting ? "请稍候..." : "贴到小纸条墙"}</button>
-        {submitting ? <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>取消</button> : null}
+        {submitting ? (
+          <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>取消</button>
+        ) : uploadCanRetry && message ? (
+          <button className="btn-secondary" type="submit">重试上传</button>
+        ) : null}
       </div>
     </form>
   );
