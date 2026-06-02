@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { getIdentityDisplayName } from "@/lib/identity";
+import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
+import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { addLocalComment, softDeleteLocalComment } from "@/lib/interactionsLocal";
 
@@ -14,14 +16,14 @@ export interface ContentCommentsProps {
   contentId: string;
   /** Space code for localStorage fallback */
   spaceCode: string;
-  /** Current user's identity */
-  identity: string;
+  /** Current user's identity (optional — falls back to identityStorage) */
+  identity?: string;
   /** Existing comment entries to display */
   comments: CommentEntryType[];
   /** Called when user submits a new comment. Throw to trigger local fallback. */
-  onAddComment: (body: string) => Promise<void>;
+  onAddComment: (body: string, identity: string) => Promise<void>;
   /** Called when user deletes their own comment. Throw to trigger local fallback. */
-  onDeleteComment: (commentId: string) => Promise<void>;
+  onDeleteComment: (commentId: string, identity: string) => Promise<void>;
   /** Whether to disable comment input */
   disabled?: boolean;
   /** Max comment body length */
@@ -34,13 +36,15 @@ export interface ContentCommentsProps {
   deleteLabel?: string;
   /** Whether the component has loaded data from remote */
   loading?: boolean;
+  /** Called when identity changes and comments should be reloaded */
+  onIdentityChanged?: () => void;
 }
 
 export default function ContentComments({
   contentType,
   contentId,
   spaceCode,
-  identity,
+  identity: identityProp,
   comments,
   onAddComment,
   onDeleteComment,
@@ -50,11 +54,46 @@ export default function ContentComments({
   submitLabel = "发送",
   deleteLabel = "删除",
   loading = false,
+  onIdentityChanged,
 }: ContentCommentsProps) {
   const [inputValue, setInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Resolve identity: prefer prop, fall back to identityStorage
+  const [internalIdentity, setInternalIdentity] = useState<string>(() => {
+    if (identityProp) return identityProp;
+    const code = spaceCode || getDefaultSpaceCode();
+    return getCurrentIdentityId(code);
+  });
+
+  const activeIdentity = identityProp || internalIdentity;
+
+  // Sync when prop identity changes from parent
+  useEffect(() => {
+    if (identityProp) {
+      setInternalIdentity(identityProp);
+    }
+  }, [identityProp]);
+
+  // Listen for identity changes (e.g. from settings card)
+  useEffect(() => {
+    const handler = () => {
+      const code = spaceCode || getDefaultSpaceCode();
+      const newId = getCurrentIdentityId(code);
+      setInternalIdentity((prev) => {
+        if (prev !== newId) {
+          // Identity changed — notify parent to reload comments
+          onIdentityChanged?.();
+          return newId;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
+  }, [spaceCode, onIdentityChanged]);
 
   /** Save comment to localStorage when API is unavailable */
   const fallbackSaveCommentLocally = useCallback(async (body: string): Promise<boolean> => {
@@ -63,7 +102,7 @@ export default function ContentComments({
         id: `local_cmt_${contentType}_${contentId}_${Date.now()}`,
         contentType,
         contentId,
-        identity,
+        identity: activeIdentity,
         body,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -74,7 +113,7 @@ export default function ContentComments({
     } catch {
       return false;
     }
-  }, [contentType, contentId, identity, spaceCode]);
+  }, [contentType, contentId, activeIdentity, spaceCode]);
 
   const handleSubmit = useCallback(async () => {
     const trimmed = inputValue.trim();
@@ -88,7 +127,7 @@ export default function ContentComments({
     setError(null);
     setSubmitting(true);
     try {
-      await onAddComment(trimmed);
+      await onAddComment(trimmed, activeIdentity);
       setInputValue("");
       setExpanded(true);
     } catch {
@@ -104,13 +143,13 @@ export default function ContentComments({
     } finally {
       setSubmitting(false);
     }
-  }, [inputValue, maxLength, onAddComment, fallbackSaveCommentLocally]);
+  }, [inputValue, maxLength, onAddComment, fallbackSaveCommentLocally, activeIdentity]);
 
   /** Handle comment deletion with local fallback */
   const handleDelete = useCallback(async (commentId: string) => {
     setError(null);
     try {
-      await onDeleteComment(commentId);
+      await onDeleteComment(commentId, activeIdentity);
     } catch {
       try {
         softDeleteLocalComment(spaceCode, contentType, commentId);
@@ -119,7 +158,7 @@ export default function ContentComments({
         setError("删除失败，请稍后再试。");
       }
     }
-  }, [onDeleteComment, spaceCode, contentType]);
+  }, [onDeleteComment, spaceCode, contentType, activeIdentity]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -138,10 +177,12 @@ export default function ContentComments({
   const visibleComments = expanded ? comments : comments.slice(0, 3);
   const hasMore = comments.length > 3;
 
+  const isInputReady = !disabled && !submitting && inputValue.trim().length > 0;
+
   return (
     <div className="mt-4 pt-3 border-t border-white/10">
-      {/* Comment input area */}
-      <div className="flex gap-2">
+      {/* Comment input area — stacked layout for mobile readability */}
+      <div className="flex flex-col gap-2">
         <textarea
           value={inputValue}
           onChange={(e) => {
@@ -153,20 +194,26 @@ export default function ContentComments({
           disabled={disabled || submitting}
           rows={2}
           maxLength={maxLength + 50}
-          className="flex-1 px-3 py-2 rounded-lg bg-white/70 border border-cocoa/15 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose/30 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/35"
+          className="w-full px-3 py-2 rounded-lg bg-white/80 border border-cocoa/10 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/40"
         />
-        <button
-          onClick={handleSubmit}
-          disabled={disabled || submitting || !inputValue.trim()}
-          className="self-end px-4 py-2 rounded-lg bg-rose/80 hover:bg-rose text-white text-sm transition disabled:bg-cocoa/20 disabled:text-cocoa/35 disabled:cursor-not-allowed shrink-0"
-        >
-          {submitting ? "..." : submitLabel}
-        </button>
+        <div className="flex justify-end">
+          <button
+            onClick={handleSubmit}
+            disabled={!isInputReady}
+            className={
+              isInputReady
+                ? "bg-rose-400 text-white px-5 py-2 rounded-full font-semibold shadow-sm transition hover:bg-rose-500 active:scale-95"
+                : "bg-rose-100 text-cocoa/40 px-5 py-2 rounded-full font-medium cursor-not-allowed"
+            }
+          >
+            {submitting ? "..." : submitLabel}
+          </button>
+        </div>
       </div>
 
       {/* Error message */}
       {error && (
-          <p className="mt-2 text-xs text-rose-600 font-medium">{error}</p>
+        <p className="mt-2 text-xs text-rose-500 font-medium">{error}</p>
       )}
 
       {/* Loading state */}
@@ -188,15 +235,17 @@ export default function ContentComments({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  {/* Identity label */}
-                  <span className="text-xs font-medium text-rose/70 mr-2">
-                    {getIdentityDisplayName(comment.identity)}
-                  </span>
-                  {/* Timestamp */}
-                  <span className="text-xs text-cocoa/30">
-                    {formatCommentTime(comment.createdAt)}
-                  </span>
-                  {/* Body */}
+                  {/* Identity + timestamp line */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-medium text-rose/70">
+                      {getIdentityDisplayName(comment.identity)}
+                    </span>
+                    <span className="text-xs text-cocoa/30">·</span>
+                    <span className="text-xs text-cocoa/30">
+                      {formatCommentTime(comment.createdAt)}
+                    </span>
+                  </div>
+                  {/* Body on next line */}
                   {comment.isDeleted ? (
                     <p className="text-xs mt-1">此评论已删除</p>
                   ) : (
@@ -243,24 +292,51 @@ export default function ContentComments({
 
 // ─── Helpers ───
 
+/**
+ * Format a comment timestamp in a human-readable relative style.
+ * “刚刚 / 3分钟前 / 今天 15:44 / 6月2日 15:44”
+ */
 function formatCommentTime(iso: string): string {
+  if (!iso) return "";
   try {
     const date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const mins = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const _days = Math.floor(diff / 86400000);
 
+    // Within last minute
     if (mins < 1) return "刚刚";
-    if (mins < 60) return `${mins} 分钟前`;
-    if (hours < 24) return `${hours} 小时前`;
-    if (days < 7) return `${days} 天前`;
 
+    // Within last hour
+    if (mins < 60) return `${mins}分钟前`;
+
+    // Today: show "今天 HH:MM"
+    if (isSameDay(date, now) || hours < 24) {
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      return `今天 ${hh}:${mm}`;
+    }
+
+    // Within this year: "M月D日 HH:MM"
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    return `${month}月${day}日`;
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${month}月${day}日 ${hh}:${mm}`;
   } catch {
     return "";
   }
+}
+
+/** Check if two dates share the same calendar day. */
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }

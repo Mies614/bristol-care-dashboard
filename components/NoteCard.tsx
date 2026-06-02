@@ -111,7 +111,7 @@ export function NoteCard({
     }
   }, [showComments, loadComments]);
 
-  async function handleAddComment(body: string) {
+  async function handleAddComment(body: string, _identity: string) {
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -133,7 +133,7 @@ export function NoteCard({
     await loadComments();
   }
 
-  async function handleDeleteComment(commentId: string) {
+  async function handleDeleteComment(commentId: string, _identity: string) {
     const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

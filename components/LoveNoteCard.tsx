@@ -104,7 +104,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
     }
   }
 
-  async function handleAddComment(body: string) {
+  async function handleAddComment(body: string, _identity: string) {
     if (!note) throw new Error("No note");
     const code = spaceCode || getDefaultSpaceCode();
     const res = await fetch("/api/comments", {
@@ -128,7 +128,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
     await loadComments();
   }
 
-  async function handleDeleteComment(commentId: string) {
+  async function handleDeleteComment(commentId: string, _identity: string) {
     if (!note) throw new Error("No note");
     const code = spaceCode || getDefaultSpaceCode();
     const res = await fetch("/api/comments", {

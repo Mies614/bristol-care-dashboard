@@ -177,7 +177,7 @@ export default function AlbumsPage() {
     }
   }, [selected, loadAlbumComments]);
 
-  async function handleAddAlbumComment(body: string) {
+  async function handleAddAlbumComment(body: string, _identity: string) {
     if (!selected) return;
     const res = await fetch("/api/comments", {
       method: "POST",
@@ -200,7 +200,7 @@ export default function AlbumsPage() {
     await loadAlbumComments(selected.id);
   }
 
-  async function handleDeleteAlbumComment(commentId: string) {
+  async function handleDeleteAlbumComment(commentId: string, _identity: string) {
     if (!selected) return;
     const res = await fetch("/api/comments", {
       method: "DELETE",
