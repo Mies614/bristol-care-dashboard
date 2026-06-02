@@ -387,3 +387,22 @@ create table if not exists public.reminder_delivery_log (
 
 create index if not exists idx_reminder_delivery_log_space_date
 on public.reminder_delivery_log(space_code, delivery_date);
+
+-- ─── v1.2 Cron monitoring ───
+
+create table if not exists public.reminder_run_logs (
+  id uuid primary key default gen_random_uuid(),
+  checked_at timestamptz not null default now(),
+  trigger_type text not null default 'cron',
+  ok boolean not null default false,
+  spaces_checked integer not null default 0,
+  notifications_generated integer not null default 0,
+  notifications_sent integer not null default 0,
+  skipped jsonb not null default '[]'::jsonb,
+  errors jsonb not null default '[]'::jsonb,
+  duration_ms integer,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_reminder_run_logs_checked_at
+on public.reminder_run_logs(checked_at desc);

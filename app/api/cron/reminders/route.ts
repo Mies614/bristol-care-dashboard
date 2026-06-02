@@ -7,7 +7,6 @@ import { getVapidConfig } from "@/lib/push";
 import { fetchBristolWeather } from "@/lib/weather";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { scheduleReminders } from "@/lib/serverReminderScheduler";
-import type { ReminderDeliveryRecord, ServerReminderPreference, SpaceData } from "@/lib/serverReminderScheduler";
 import { getDaysUntilNextPeriod, getCurrentCycleDay, DEFAULT_PERIOD_SETTINGS } from "@/lib/period";
 
 function getCronSecret(): string {
@@ -21,7 +20,46 @@ function isAuthorized(request: NextRequest): boolean {
   return authHeader === `Bearer ${secret}`;
 }
 
+async function writeRunLog(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  data: {
+    checkedAt: string;
+    triggerType: string;
+    ok: boolean;
+    spacesChecked: number;
+    generated: number;
+    sent: number;
+    skipped: Array<{ reason: string; count: number }>;
+    errors: Array<{ scope: string; message: string }>;
+    durationMs: number;
+  }
+) {
+  try {
+    await supabase.from("reminder_run_logs").insert({
+      checked_at: data.checkedAt,
+      trigger_type: data.triggerType,
+      ok: data.ok,
+      spaces_checked: data.spacesChecked,
+      notifications_generated: data.generated,
+      notifications_sent: data.sent,
+      skipped: JSON.stringify(data.skipped.slice(0, 20)),
+      errors: JSON.stringify(data.errors.slice(0, 10)),
+      duration_ms: data.durationMs,
+    });
+  } catch {
+    // Run log write failure is non-fatal
+  }
+}
+
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const triggerType = "cron";
+  let spacesChecked = 0;
+  let generated = 0;
+  let sent = 0;
+  const skipped: Array<{ reason: string; count: number }> = [];
+  const errors: Array<{ scope: string; message: string }> = [];
+
   try {
     const secret = getCronSecret();
     if (!secret) {
@@ -66,10 +104,12 @@ export async function GET(request: NextRequest) {
       .eq("enabled", true);
 
     if (prefsError) {
+      errors.push({ scope: "preferences", message: prefsError.message });
+      await writeRunLog(supabase, { checkedAt: now.toISOString(), triggerType, ok: false, spacesChecked: 0, generated: 0, sent: 0, skipped, errors, durationMs: Date.now() - startTime });
       return NextResponse.json({
         ok: false, checkedAt: now.toISOString(),
         spacesChecked: 0, notificationsGenerated: 0, notificationsSent: 0,
-        skipped: [], errors: [{ scope: "preferences", message: prefsError.message }],
+        skipped: [], errors,
       });
     }
 
@@ -88,10 +128,12 @@ export async function GET(request: NextRequest) {
     );
 
     if (preferences.length === 0) {
+      skipped.push({ reason: "no_preferences", count: 1 });
+      await writeRunLog(supabase, { checkedAt: now.toISOString(), triggerType, ok: true, spacesChecked: 0, generated: 0, sent: 0, skipped, errors, durationMs: Date.now() - startTime });
       return NextResponse.json({
         ok: true, checkedAt: now.toISOString(),
         spacesChecked: 0, notificationsGenerated: 0, notificationsSent: 0,
-        skipped: [{ reason: "no_preferences", count: 1 }], errors: [],
+        skipped, errors: [],
       });
     }
 
@@ -102,10 +144,12 @@ export async function GET(request: NextRequest) {
       .eq("delivery_date", today);
 
     if (logError) {
+      errors.push({ scope: "delivery_log", message: logError.message });
+      await writeRunLog(supabase, { checkedAt: now.toISOString(), triggerType, ok: false, spacesChecked: 0, generated: 0, sent: 0, skipped, errors, durationMs: Date.now() - startTime });
       return NextResponse.json({
         ok: false, checkedAt: now.toISOString(),
         spacesChecked: 0, notificationsGenerated: 0, notificationsSent: 0,
-        skipped: [], errors: [{ scope: "delivery_log", message: logError.message }],
+        skipped: [], errors,
       });
     }
 
@@ -118,12 +162,8 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // 3. Fetch space data + push subscriptions per space
+    // 3. Fetch space data
     const uniqueSpaceCodes = [...new Set(preferences.map((p) => p.spaceCode))];
-    const spacesData: SpaceData[] = [];
-    const errors: Array<{ scope: string; message: string }> = [];
-
-    // Fetch all couple_spaces at once
     const { data: allSpaces } = await supabase
       .from("couple_spaces")
       .select("id, code, girlfriend_name")
@@ -135,6 +175,8 @@ export async function GET(request: NextRequest) {
       ])
     );
 
+    const spacesData: SpaceData[] = [];
+
     for (const spaceCode of uniqueSpaceCodes) {
       try {
         const space = spaceMap.get(spaceCode);
@@ -143,7 +185,6 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Fetch deadlines in parallel
         const { data: deadlines } = await supabase
           .from("deadlines")
           .select("*")
@@ -151,7 +192,16 @@ export async function GET(request: NextRequest) {
           .is("deleted_at", null)
           .order("due_date");
 
-        // Fetch period records
+        const { data: appSetting } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("space_id", space.id)
+          .eq("key", "app_settings")
+          .maybeSingle();
+
+        const appSettings = (appSetting?.value as Record<string, unknown>) || {};
+        const nextMeetDate = (appSettings.nextMeetingDate) as string || null;
+
         const { data: periodSetting } = await supabase
           .from("settings")
           .select("value")
@@ -163,26 +213,11 @@ export async function GET(request: NextRequest) {
           ? ((periodSetting?.value as Record<string, unknown>).records as Array<Record<string, unknown>>)
           : [];
 
-        // Fetch app settings
-        const { data: appSetting } = await supabase
-          .from("settings")
-          .select("value")
-          .eq("space_id", space.id)
-          .eq("key", "app_settings")
-          .maybeSingle();
-
-        const appSettings = (appSetting?.value as Record<string, unknown>) || {};
-        const nextMeetDate = (appSettings.nextMeetingDate || (appSetting?.value as Record<string, unknown>)?.nextMeetingDate) as string || null;
-
-        // Weather
         let weather;
         try { weather = await fetchBristolWeather(); } catch { /* optional */ }
 
         const periodSettings = DEFAULT_PERIOD_SETTINGS;
-        const daysUntilNext = getDaysUntilNextPeriod(
-          periodRecords as Parameters<typeof getDaysUntilNextPeriod>[0],
-          periodSettings, now
-        );
+        const daysUntilNext = getDaysUntilNextPeriod(periodRecords as Parameters<typeof getDaysUntilNextPeriod>[0], periodSettings, now);
         const cycleDay = getCurrentCycleDay(periodRecords as Parameters<typeof getCurrentCycleDay>[0], now);
 
         spacesData.push({
@@ -205,9 +240,11 @@ export async function GET(request: NextRequest) {
 
     // 4. Run scheduler
     const scheduleResult = scheduleReminders({ preferences, spacesData, deliveryLog, now });
+    generated = scheduleResult.notifications.length;
+    spacesChecked = uniqueSpaceCodes.length;
+    for (const s of scheduleResult.skipped) skipped.push(s);
 
     // 5. Send notifications
-    let notificationsSent = 0;
     webpush.setVapidDetails(vapidConfig.subject!, vapidConfig.publicKey!, vapidConfig.privateKey!);
 
     for (const notif of scheduleResult.notifications) {
@@ -235,7 +272,7 @@ export async function GET(request: NextRequest) {
         for (const sub of subscriptions) {
           try {
             await webpush.sendNotification(sub.subscription as webpush.PushSubscription, payload);
-            notificationsSent++;
+            sent++;
           } catch (sendError: unknown) {
             const err = sendError as { statusCode?: number };
             if (err.statusCode === 410 || err.statusCode === 404) {
@@ -254,20 +291,49 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 6. Write run log
+    await writeRunLog(supabase, {
+      checkedAt: now.toISOString(),
+      triggerType,
+      ok: errors.length === 0,
+      spacesChecked,
+      generated,
+      sent,
+      skipped,
+      errors,
+      durationMs: Date.now() - startTime,
+    });
+
     return NextResponse.json({
       ok: true, checkedAt: now.toISOString(),
-      spacesChecked: uniqueSpaceCodes.length,
-      notificationsGenerated: scheduleResult.notifications.length,
-      notificationsSent,
+      spacesChecked,
+      notificationsGenerated: generated,
+      notificationsSent: sent,
       skipped: scheduleResult.skipped,
       errors,
     });
   } catch (err) {
+    errors.push({ scope: "cron", message: err instanceof Error ? err.message : String(err) });
+    // Attempt to log even on catch
+    try {
+      const supabase = createSupabaseServerClient();
+      await writeRunLog(supabase, {
+        checkedAt: new Date().toISOString(),
+        triggerType,
+        ok: false,
+        spacesChecked: 0,
+        generated,
+        sent,
+        skipped,
+        errors,
+        durationMs: Date.now() - startTime,
+      });
+    } catch { /* log failure is non-fatal */ }
+
     return NextResponse.json({
       ok: false, checkedAt: new Date().toISOString(),
       spacesChecked: 0, notificationsGenerated: 0, notificationsSent: 0,
-      skipped: [],
-      errors: [{ scope: "cron", message: err instanceof Error ? err.message : String(err) }],
+      skipped: [], errors,
     }, { status: 500 });
   }
 }

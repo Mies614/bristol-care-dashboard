@@ -5,9 +5,10 @@ import { AppCard } from "@/components/ui/AppCard";
 import { AppButton } from "@/components/ui/AppButton";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { BackupImportSummary } from "@/lib/backupTypes";
+import { ReminderMonitorTab } from "@/components/admin/ReminderMonitorTab";
 import type { LoveNote } from "@/lib/types";
 
-type Tab = "backup" | "restore" | "softDeleted" | "orphans";
+type Tab = "backup" | "restore" | "softDeleted" | "orphans" | "monitor";
 
 interface OrphanSummary {
   totalDbOrphans: number;
@@ -295,6 +296,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
     { key: "restore", label: "导入恢复", icon: "📤" },
     { key: "softDeleted", label: "已删除", icon: "🗑" },
     { key: "orphans", label: "孤儿文件", icon: "📦" },
+    { key: "monitor", label: "提醒监控", icon: "🔔" },
   ];
 
   return (
@@ -471,6 +473,11 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
             </div>
           ))}
         </div>
+      )}
+
+      {/* ─── Tab: Storage Orphans ─── */}
+      {tab === "monitor" && (
+        <ReminderMonitorTab password={password} />
       )}
 
       {/* ─── Tab: Storage Orphans ─── */}
