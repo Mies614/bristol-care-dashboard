@@ -387,3 +387,53 @@ Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变
 - JSON 备份不包含任何 secret、password、VAPID key 或 Supabase key
 - 本地设备状态（readState、reactions 等）不包含在备份中
 - 推荐在切换设备或做危险操作前先导出一份备份
+
+## 上线前检查清单
+
+部署到 Vercel 前请逐项确认：
+
+### 环境变量
+
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` — Supabase 项目 URL
+- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase 匿名密钥
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` — Supabase 服务端密钥（仅服务端，不暴露）
+- [ ] `ADMIN_PASSWORD` — 后台管理密码（自己设定）
+- [ ] `NEXT_PUBLIC_DEFAULT_SPACE_CODE` — 默认空间码，如 `xiaoguai520`
+
+### 可选环境变量
+
+- [ ] `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — Web Push 公钥
+- [ ] `VAPID_PRIVATE_KEY` — Web Push 私钥
+- [ ] `VAPID_SUBJECT` — Push 通知 subject（通常为 `mailto:you@example.com`）
+
+### Supabase 初始化
+
+- [ ] 执行 `supabase/schema.sql` 建表
+- [ ] 创建 Storage buckets：`love-notes`、`couple-albums`、`backgrounds`（均设为 public）
+- [ ] 确认 `couple_spaces` 有默认空间 `xiaoguai520`
+
+### VAPID (Push 通知)
+
+- [ ] 运行 `npm run generate:vapid` 生成 VAPID 密钥对
+- [ ] 将公钥/私钥填入 `.env.local` 和 Vercel 环境变量
+
+### 验证命令
+
+```bash
+npm run lint      # 代码检查
+npm test          # 运行测试
+npm run build     # 生产构建
+npm run dev       # 本地开发
+```
+
+### 本地 fallback 行为
+
+- [ ] 不配置任何 Supabase 环境变量时，App 可以正常打开
+- [ ] 首页显示默认数据（localStorage 模式）
+- [ ] 在 settings 页输入 `xiaoguai520` 连接 Supabase 后可同步
+
+### admin 检查
+
+- [ ] 访问 `/admin`，输入 `ADMIN_PASSWORD` 可登录
+- [ ] 数据维护中心：导出备份、导入恢复、已删除纸条、孤儿文件检查 均可用
+- [ ] 访问 `/debug`，诊断页面可加载
