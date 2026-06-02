@@ -46,15 +46,28 @@ const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
 
 // ─── GET /api/interactions ───
 // Query params:
-//   code, contentType, contentIds (comma-separated), identity
+//   spaceCode (or legacy: code), contentType, contentIds (comma-separated), identity
 // Returns a summary of interactions for the requested content items.
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const code = searchParams.get("code") || getDefaultCode();
+    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
     const contentType = searchParams.get("contentType");
     const contentIdsRaw = searchParams.get("contentIds");
     const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
+
+    // ── Required param validation ──
+    const missing: string[] = [];
+    if (!spaceCode) missing.push("spaceCode");
+    if (!contentType) missing.push("contentType");
+    if (!contentIdsRaw) missing.push("contentIds");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "缺少必需参数。", code: "MISSING_REQUIRED_PARAMS", missing },
+        { status: 400 }
+      );
+    }
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -63,21 +76,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+    if (!VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
       return NextResponse.json(
         { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
         { status: 400 }
       );
     }
 
-    if (!contentIdsRaw) {
-      return NextResponse.json(
-        { ok: false, error: "contentIds 不能为空。", code: "MISSING_CONTENT_IDS" },
-        { status: 400 }
-      );
-    }
-
-    const contentIds = contentIdsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+    // Safe: contentIdsRaw was checked above
+    const contentIds = (contentIdsRaw as string).split(",").map((s) => s.trim()).filter(Boolean);
     if (contentIds.length === 0 || contentIds.length > 100) {
       return NextResponse.json(
         { ok: false, error: "contentIds 数量应在 1-100 之间。", code: "INVALID_CONTENT_IDS_COUNT" },
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
@@ -187,17 +194,31 @@ export async function GET(request: NextRequest) {
 
 // ─── POST /api/interactions ───
 // Body:
-//   code, contentType, contentId, interactionType, reaction?, identity?
+//   spaceCode (or legacy: code), contentType, contentId, interactionType, reaction?, identity?
 // Creates or toggles an interaction.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
+    const spaceCode = body.spaceCode || body.code || getDefaultCode();
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
     const reaction = body.reaction as string | undefined;
     const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
+
+    // ── Required param validation ──
+    const missing: string[] = [];
+    if (!spaceCode) missing.push("spaceCode");
+    if (!contentType) missing.push("contentType");
+    if (!contentId) missing.push("contentId");
+    if (!interactionType) missing.push("interactionType");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "缺少必需参数。", code: "MISSING_REQUIRED_PARAMS", missing },
+        { status: 400 }
+      );
+    }
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -206,21 +227,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+    if (!VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
       return NextResponse.json(
         { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
         { status: 400 }
       );
     }
 
-    if (!contentId) {
-      return NextResponse.json(
-        { ok: false, error: "contentId 不能为空。", code: "MISSING_CONTENT_ID" },
-        { status: 400 }
-      );
-    }
-
-    if (!interactionType || !VALID_INTERACTION_TYPES.includes(interactionType as typeof VALID_INTERACTION_TYPES[number])) {
+    if (!VALID_INTERACTION_TYPES.includes(interactionType as typeof VALID_INTERACTION_TYPES[number])) {
       return NextResponse.json(
         { ok: false, error: "interactionType 无效。", code: "INVALID_INTERACTION_TYPE" },
         { status: 400 }
@@ -235,7 +249,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
@@ -367,12 +381,12 @@ export async function POST(request: NextRequest) {
 
 // ─── DELETE /api/interactions ───
 // Body:
-//   code, contentType, contentId, interactionType, reaction?, identity?
+//   spaceCode (or legacy: code), contentType, contentId, interactionType, reaction?, identity?
 // Removes a specific interaction.
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
+    const spaceCode = body.spaceCode || body.code || getDefaultCode();
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
@@ -394,7 +408,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },

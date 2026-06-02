@@ -121,7 +121,7 @@ export default function ContentInteractionBar({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code,
+          spaceCode: code,
           contentType,
           contentId,
           identity: identityId,

@@ -61,7 +61,7 @@ export function NoteCard({
     const fetchSummary = async () => {
       try {
         const res = await fetch(
-          `/api/interactions?code=${encodeURIComponent(spaceCode)}&contentType=note&contentIds=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
+          `/api/interactions?spaceCode=${encodeURIComponent(spaceCode)}&contentType=note&contentIds=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
         );
         const payload = await res.json();
         if (payload.ok && payload.summaries?.[note.id]) {
@@ -79,9 +79,8 @@ export function NoteCard({
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
     try {
-      const code = spaceCode;
       const res = await fetch(
-        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
+        `/api/comments?spaceCode=${encodeURIComponent(spaceCode)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
       );
       const payload = await res.json();
       if (payload.ok && Array.isArray(payload.comments)) {
@@ -112,12 +111,11 @@ export function NoteCard({
   }, [showComments, loadComments]);
 
   async function handleAddComment(body: string) {
-    const code = spaceCode;
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        code,
+        spaceCode,
         contentType: "note",
         contentId: note.id,
         identity,
@@ -130,11 +128,10 @@ export function NoteCard({
   }
 
   async function handleDeleteComment(commentId: string) {
-    const code = spaceCode;
     const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, commentId, identity }),
+      body: JSON.stringify({ spaceCode, commentId, identity }),
     });
     const payload = await res.json();
     if (!payload.ok) throw new Error(payload.error || "删除失败");

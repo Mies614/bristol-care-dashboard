@@ -13,15 +13,28 @@ function getDefaultCode(): string {
 
 // ─── GET /api/comments ───
 // Query params:
-//   code, contentType, contentId, includeDeleted (optional, admin only via x-admin-password)
+//   spaceCode (or legacy: code), contentType, contentId, includeDeleted (optional)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const code = searchParams.get("code") || getDefaultCode();
+    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
     const contentType = searchParams.get("contentType");
     const contentId = searchParams.get("contentId");
     const includeDeleted = searchParams.get("includeDeleted") === "true";
     const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
+
+    // ── Required param validation ──
+    const missing: string[] = [];
+    if (!spaceCode) missing.push("spaceCode");
+    if (!contentType) missing.push("contentType");
+    if (!contentId) missing.push("contentId");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "缺少必需参数。", code: "MISSING_REQUIRED_PARAMS", missing },
+        { status: 400 }
+      );
+    }
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -30,22 +43,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+    if (!VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
       return NextResponse.json(
         { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
         { status: 400 }
       );
     }
 
-    if (!contentId) {
-      return NextResponse.json(
-        { ok: false, error: "contentId 不能为空。", code: "MISSING_CONTENT_ID" },
-        { status: 400 }
-      );
-    }
-
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
@@ -98,15 +104,28 @@ export async function GET(request: NextRequest) {
 }
 
 // ─── POST /api/comments ───
-// Body: code, contentType, contentId, body, identity
+// Body: spaceCode (or legacy: code), contentType, contentId, body, identity
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
+    const spaceCode = body.spaceCode || body.code || getDefaultCode();
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const commentBody = (body.body as string || "").trim();
     const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
+
+    // ── Required param validation ──
+    const missing: string[] = [];
+    if (!spaceCode) missing.push("spaceCode");
+    if (!contentType) missing.push("contentType");
+    if (!contentId) missing.push("contentId");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "缺少必需参数。", code: "MISSING_REQUIRED_PARAMS", missing },
+        { status: 400 }
+      );
+    }
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -115,16 +134,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
+    if (!VALID_CONTENT_TYPES.includes(contentType as typeof VALID_CONTENT_TYPES[number])) {
       return NextResponse.json(
         { ok: false, error: "contentType 无效。", code: "INVALID_CONTENT_TYPE" },
-        { status: 400 }
-      );
-    }
-
-    if (!contentId) {
-      return NextResponse.json(
-        { ok: false, error: "contentId 不能为空。", code: "MISSING_CONTENT_ID" },
         { status: 400 }
       );
     }
@@ -144,7 +156,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
@@ -197,16 +209,27 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── DELETE /api/comments ───
-// Body: code, commentId, identity (to verify ownership — admin can delete any)
-// Header: x-admin-password (admin password for admin override)
+// Body: spaceCode (or legacy: code), commentId, identity (to verify ownership — admin can delete any)
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
+    const spaceCode = body.spaceCode || body.code || getDefaultCode();
     const commentId = body.commentId as string;
     const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
     // x-admin-password header reserved for future admin auth
     void request.headers.get("x-admin-password");
+
+    // ── Required param validation ──
+    const missing: string[] = [];
+    if (!spaceCode) missing.push("spaceCode");
+    if (!commentId) missing.push("commentId");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "缺少必需参数。", code: "MISSING_REQUIRED_PARAMS", missing },
+        { status: 400 }
+      );
+    }
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(
@@ -215,15 +238,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!commentId) {
-      return NextResponse.json(
-        { ok: false, error: "commentId 不能为空。", code: "MISSING_COMMENT_ID" },
-        { status: 400 }
-      );
-    }
-
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, code);
+    const space = await getSpaceByCode(supabase, spaceCode);
     if (!space) {
       return NextResponse.json(
         { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
