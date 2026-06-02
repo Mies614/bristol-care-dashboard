@@ -17,6 +17,7 @@ import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
+import { CoupleCareStrip } from "@/components/CoupleCareStrip";
 import { getCurrentDayName } from "@/lib/schedule";
 import { getDaysUntil } from "@/lib/ddlPriority";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
@@ -280,6 +281,16 @@ export default function HomePage() {
 
         {/* 5. 今日照顾摘要条（课程 / DDL / 经期） */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+        {/* 4.5 情侣关怀条 */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <CoupleCareStrip
+            notes={data.loveNotes}
+            albums={albumItems}
+            nextMeetDate={data.nextMeetDate}
+            nickname={data.nickname}
+          />
+        </motion.div>
+
           <TodayCareStrip items={careStripItems} />
         </motion.div>
 

@@ -76,7 +76,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
       if (res.headers.get("content-type")?.includes("application/json")) {
         const payload = await res.json() as ApiResponse;
         if (res.ok && payload.data) {
-          const data = (payload.data as Record<string, unknown>) || {};
+          const data = payload.data as Record<string, unknown>;
           setBackupCounts({
             notes: (Array.isArray(data.notes) ? data.notes.length : 0) as number,
             albums: (Array.isArray(data.albums) ? data.albums.length : 0) as number,
