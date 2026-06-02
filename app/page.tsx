@@ -19,7 +19,6 @@ import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
 import { CoupleCareStrip } from "@/components/CoupleCareStrip";
 import { getCurrentDayName } from "@/lib/schedule";
-import { getDaysUntil } from "@/lib/ddlPriority";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
 
 function safeTodayLabel() {
@@ -177,24 +176,6 @@ export default function HomePage() {
       href: "/schedule"
     });
 
-    // DDL
-    const undones = data.deadlines.filter((d) => d.status !== "done");
-    const sortedDdls = undones
-      .map((d) => ({ d, days: getDaysUntil(d, now) }))
-      .sort((a, b) => a.days - b.days);
-    const nearestDdl = sortedDdls.length > 0 ? sortedDdls[0] : null;
-    const ddlValue = undones.length > 0
-      ? (nearestDdl
-        ? (nearestDdl.days === 0 ? "今天" : nearestDdl.days < 0 ? `超${Math.abs(nearestDdl.days)}天` : `${nearestDdl.days}天`)
-        : `${undones.length} 个`)
-      : "无";
-    items.push({
-      id: "ddl",
-      icon: "📋",
-      label: "DDL",
-      value: undones.length > 0 ? `${undones.length}待办·${ddlValue}` : "全部完成",
-      href: "/deadlines"
-    });
 
     // 经期
     const cycleDay = getCurrentCycleDay(periodRecords);
@@ -211,7 +192,7 @@ export default function HomePage() {
     });
 
     return items;
-  }, [data.courses, data.deadlines, periodRecords, periodSettings, now]);
+  }, [data.courses, periodRecords, periodSettings, now]);
 
   useEffect(() => {
     const localDate = now.toISOString().slice(0, 10);
