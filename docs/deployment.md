@@ -81,3 +81,17 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/remi
 - 定时提醒依赖 Supabase（需要服务端 reminder_preferences 表）
 - 提醒偏好需要在 settings 页开启并同步到 Supabase
 - 无 Supabase 或 VAPID 时 Cron 返回 unavailable 状态，不会崩溃
+
+## 定时提醒部署检查
+
+1. 设置 `CRON_SECRET` 环境变量（随机字符串）
+2. 确认 `vercel.json` 包含 cron 配置（默认 UTC 09:00）
+3. 确认 Supabase schema 包含以下表：
+   - `reminder_preferences` — 提醒偏好
+   - `reminder_delivery_log` — 去重记录
+   - `reminder_run_logs` — 运行日志
+4. 确认 VAPID 密钥已配置
+5. 部署后验证：
+   - `GET /api/health` — 确认 CRON_SECRET 显示 "configured"
+   - `/admin` → 数据维护中心 → 提醒监控 → 点击"模拟运行"
+   - settings 页 → 通知设置 → 开启通知 → 发送测试通知

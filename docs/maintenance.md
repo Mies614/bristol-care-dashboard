@@ -93,3 +93,39 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/remi
 ```
 
 3. 查看返回的 `notificationsGenerated` 和 `notificationsSent` 确认运行正常
+
+## 定时提醒维护
+
+### 查看 Cron 运行状态
+
+访问 `/admin` → 数据维护中心 → **提醒监控** tab：
+
+- 配置状态栏显示 Cron 密钥、Push 密钥、活跃订阅、偏好数量
+- 最近运行记录显示每次触发的成功/失败、生成/发送数量
+- 自动诊断提示常见问题
+
+### 常见问题
+
+| 提示 | 原因 | 解决方案 |
+|---|---|---|
+| Cron 密钥还没配置 | `CRON_SECRET` 环境变量缺失 | 在 Vercel 环境变量中设置 |
+| Push 密钥未配置 | VAPID keys 缺失 | 运行 `npm run generate:vapid` 并设置环境变量 |
+| 还没有设备订阅通知 | 无活跃 push_subscriptions | 在 settings 页开启通知并点击"发送测试通知" |
+| 还没有云端提醒偏好 | reminder_preferences 表为空 | 打开 settings 页，调整提醒偏好并保存 |
+| Cron 正常运行但 sent=0 | 无可发送的提醒或订阅 | 检查 preferences 是否开启对应类型 |
+| delivery log 已去重 | 同天已发送 | 正常，每天每种提醒只发一次 |
+
+### 手动 Dry-run
+
+在提醒监控 tab 点击 **🧪 模拟运行**：
+
+- **不发送真实 Push 通知**
+- 展示将要生成哪些提醒（类型、space、标题、内容预览）
+- 结果写入 `reminder_run_logs`（trigger_type: `manual_dry_run`），不影响 delivery_log
+- 用于验证提醒偏好和空间数据是否正确配置
+
+### Supabase 不可用时
+
+- Cron 返回 `503` 状态，不崩溃
+- 提醒监控 tab 显示 "Supabase 未配置"
+- 前端提醒偏好仍可保存在 localStorage（仅本设备）

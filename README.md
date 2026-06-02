@@ -96,3 +96,14 @@ npm run dev       # 本地开发
 ## 版本
 
 v1.0.0 — 详见 `CHANGELOG.md`。
+
+## 定时提醒（v1.1）
+
+服务端每天定时生成并发送 Push 提醒，支持天气、Deadline、Miss-you、经期四种类型。
+
+- 依赖 Vercel Cron（`vercel.json` 中配置，每天 UTC 09:00 触发）
+- 需要 `CRON_SECRET`、VAPID 密钥、Supabase 连接
+- 提醒偏好在 settings 页开启并同步到 Supabase 后生效
+- Admin → 数据维护中心 → 提醒监控：查看运行记录、统计、Dry-run 测试
+- Dry-run 不发送真实通知，用于验证提醒将生成什么内容
+- 无 Supabase 时前端仍可用，但服务端定时提醒不可用
