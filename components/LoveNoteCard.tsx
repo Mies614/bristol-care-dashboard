@@ -5,8 +5,7 @@ import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentityId, loadIdentities, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
@@ -18,41 +17,9 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   const [comments, setComments] = useState<CommentEntryType[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [identity, setIdentity] = useState<string>(DEFAULT_NORMAL_IDENTITY_ID);
 
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
-
-  /** Load and refresh identity, used both on mount and on identity-changed event */
-  const refreshIdentity = useCallback(async () => {
-    const code = spaceCode || getDefaultSpaceCode();
-    const currentId = getCurrentIdentityId(code);
-    if (currentId) {
-      setIdentity(currentId);
-      return;
-    }
-    // Fallback: load identities and pick first
-    try {
-      const identities = await loadIdentities(code);
-      const defaultId = identities.find((id) => id.isDefault);
-      setIdentity(defaultId?.id || identities[0]?.id || DEFAULT_NORMAL_IDENTITY_ID);
-    } catch {
-      setIdentity(DEFAULT_NORMAL_IDENTITY_ID);
-    }
-  }, [spaceCode]);
-
-  // Load current identity on mount
-  useEffect(() => {
-    refreshIdentity();
-  }, [refreshIdentity]);
-
-  // Re-read identity when it's changed elsewhere (e.g. settings card)
-  useEffect(() => {
-    const handler = () => {
-      refreshIdentity();
-    };
-    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
-  }, [refreshIdentity]);
+  const { identityId: identity } = useCurrentIdentity(spaceCode);
 
   const content = note?.content || fallback;
 

@@ -8,7 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { NoteCard } from "@/components/NoteCard";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { buildRandomMemoryItems, pickRandomMemory, type RandomMemoryItem } from "@/lib/randomMemory";
 import { buildMemoryTimelineItems, groupTimelineByMonth } from "@/lib/memoryTimeline";
@@ -23,16 +23,7 @@ export default function MemoriesPage() {
   const [message, setMessage] = useState("");
   const [nextMeetingDate, setNextMeetingDate] = useState("");
   const code = getDefaultSpaceCode();
-  const [identityId, setIdentityId] = useState(() => getCurrentIdentityId(code));
-
-  // Re-read identity when it's changed elsewhere (e.g. settings card)
-  useEffect(() => {
-    const handler = () => {
-      setIdentityId(getCurrentIdentityId(getDefaultSpaceCode()));
-    };
-    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
-  }, []);
+  const { identityId } = useCurrentIdentity(code);
 
   useEffect(() => {
     try {

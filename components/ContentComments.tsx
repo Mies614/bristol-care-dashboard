@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { getIdentityDisplayName } from "@/lib/identity";
-import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
-import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { addLocalComment, softDeleteLocalComment } from "@/lib/interactionsLocal";
 
@@ -61,39 +60,19 @@ export default function ContentComments({
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Resolve identity: prefer prop, fall back to identityStorage
-  const [internalIdentity, setInternalIdentity] = useState<string>(() => {
-    if (identityProp) return identityProp;
-    const code = spaceCode || getDefaultSpaceCode();
-    return getCurrentIdentityId(code);
-  });
+  // Resolve identity: prefer prop, fall back to useCurrentIdentity hook
+  const { identityId: hookIdentity } = useCurrentIdentity(spaceCode);
 
-  const activeIdentity = identityProp || internalIdentity;
+  const activeIdentity = identityProp || hookIdentity;
 
-  // Sync when prop identity changes from parent
+  // Track previous hook identity to detect changes and notify parent
+  const prevHookIdentityRef = useRef(hookIdentity);
   useEffect(() => {
-    if (identityProp) {
-      setInternalIdentity(identityProp);
+    if (!identityProp && prevHookIdentityRef.current !== hookIdentity) {
+      prevHookIdentityRef.current = hookIdentity;
+      onIdentityChanged?.();
     }
-  }, [identityProp]);
-
-  // Listen for identity changes (e.g. from settings card)
-  useEffect(() => {
-    const handler = () => {
-      const code = spaceCode || getDefaultSpaceCode();
-      const newId = getCurrentIdentityId(code);
-      setInternalIdentity((prev) => {
-        if (prev !== newId) {
-          // Identity changed — notify parent to reload comments
-          onIdentityChanged?.();
-          return newId;
-        }
-        return prev;
-      });
-    };
-    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
-  }, [spaceCode, onIdentityChanged]);
+  }, [hookIdentity, identityProp, onIdentityChanged]);
 
   /** Save comment to localStorage when API is unavailable */
   const fallbackSaveCommentLocally = useCallback(async (body: string): Promise<boolean> => {

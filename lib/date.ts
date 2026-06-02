@@ -96,12 +96,15 @@ export function formatRelativeTimeSafe(input: string | Date | null | undefined, 
  * Format countdown from a target date string ("YYYY-MM-DD").
  * Returns gentle Chinese text.
  */
-export function formatCountdownSafe(targetDate: string | null | undefined): string | null {
+export function formatCountdownSafe(targetDate: string | null | undefined, now = Date.now()): string | null {
   if (!targetDate) return null;
   try {
-    const target = new Date(`${targetDate}T00:00:00`);
+    // Parse as midnight UTC to make countdown timezone-independent.
+    // Input is always a YYYY-MM-DD date string, so UTC midnight
+    // gives a consistent anchor regardless of the user's timezone.
+    const target = new Date(`${targetDate}T00:00:00Z`);
     if (isNaN(target.getTime())) return null;
-    const days = Math.ceil((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((target.getTime() - now) / (1000 * 60 * 60 * 24));
     if (days < 0) return "已经到啦";
     if (days === 0) return "今天";
     if (days === 1) return "明天";

@@ -1,31 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NoteCard } from "./NoteCard";
 import { NoteEditorModal } from "./NoteEditorModal";
 import { staggerContainer, staggerItem, useAccessibleMotion, safeVariants } from "@/lib/design/motion";
-import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
-import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import type { LoveNote } from "@/lib/types";
 
 export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (body: Record<string, unknown>) => Promise<void> }) {
-  const [identityId, setIdentityId] = useState<string>("");
-
-  useEffect(() => {
-    const code = getDefaultSpaceCode();
-    setIdentityId(getCurrentIdentityId(code));
-  }, []);
-
-  // Re-read identity when it's changed elsewhere (e.g. settings card)
-  useEffect(() => {
-    const handler = () => {
-      const code = getDefaultSpaceCode();
-      setIdentityId(getCurrentIdentityId(code));
-    };
-    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
-  }, []);
+  const { identityId } = useCurrentIdentity();
   const [selected, setSelected] = useState<LoveNote | null>(null);
   const [editing, setEditing] = useState<LoveNote | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
