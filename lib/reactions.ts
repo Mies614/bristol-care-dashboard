@@ -6,8 +6,9 @@
  * Each note can have reactions from users.
  * Supported reactions: ❤️ heart, 🫶 hug, 🌙 night
  *
- * Stored in localStorage per identity.
- * Format: { [noteId]: { [reactionId]: { count: number, users: string[] } } }
+ * Stored in localStorage per identity + spaceCode.
+ * This is device-local state — NOT synced to Supabase.
+ * Export/backup does not include reactions.
  */
 
 export type ReactionId = "heart" | "hug" | "night";
@@ -20,28 +21,31 @@ export const REACTIONS: { id: ReactionId; emoji: string; label: string }[] = [
 
 interface ReactionState {
   count: number;
-  /** Who has reacted (identity keys) */
   users: string[];
 }
 
-type ReactionsMap = Record<string, Record<string, ReactionState>>; // noteId -> reactionId -> state
+type ReactionsMap = Record<string, Record<string, ReactionState>>;
 
-const STORAGE_KEY = "bristol_dashboard_reactions";
+const STORAGE_PREFIX = "bristol_dashboard_reactions";
 
-function loadReactions(): ReactionsMap {
+function getStorageKey(spaceCode: string): string {
+  return `${STORAGE_PREFIX}_${spaceCode || "default"}`;
+}
+
+function loadReactions(spaceCode: string): ReactionsMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(getStorageKey(spaceCode));
     return raw ? (JSON.parse(raw) as ReactionsMap) : {};
   } catch {
     return {};
   }
 }
 
-function saveReactions(map: ReactionsMap): void {
+function saveReactions(spaceCode: string, map: ReactionsMap): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+    window.localStorage.setItem(getStorageKey(spaceCode), JSON.stringify(map));
   } catch {
     // Non-critical
   }
@@ -54,8 +58,8 @@ function getCurrentUser(): string {
 /**
  * Add a reaction to a note. Returns the new count.
  */
-export function addReaction(noteId: string, reactionId: ReactionId): number {
-  const map = loadReactions();
+export function addReaction(noteId: string, reactionId: ReactionId, spaceCode = "default"): number {
+  const map = loadReactions(spaceCode);
   const user = getCurrentUser();
 
   if (!map[noteId]) map[noteId] = {};
@@ -64,21 +68,19 @@ export function addReaction(noteId: string, reactionId: ReactionId): number {
   }
 
   const state = map[noteId][reactionId];
-
-  // Don't double-count the same user
   if (state.users.includes(user)) return state.count;
 
   state.count += 1;
   state.users.push(user);
-  saveReactions(map);
+  saveReactions(spaceCode, map);
   return state.count;
 }
 
 /**
  * Remove a reaction from a note. Returns the new count.
  */
-export function removeReaction(noteId: string, reactionId: ReactionId): number {
-  const map = loadReactions();
+export function removeReaction(noteId: string, reactionId: ReactionId, spaceCode = "default"): number {
+  const map = loadReactions(spaceCode);
   const user = getCurrentUser();
 
   if (!map[noteId]?.[reactionId]) return 0;
@@ -97,15 +99,15 @@ export function removeReaction(noteId: string, reactionId: ReactionId): number {
     }
   }
 
-  saveReactions(map);
+  saveReactions(spaceCode, map);
   return state.count;
 }
 
 /**
- * Check if current user has already reacted with a specific reaction.
+ * Check if current user has already reacted.
  */
-export function hasReaction(noteId: string, reactionId: ReactionId): boolean {
-  const map = loadReactions();
+export function hasReaction(noteId: string, reactionId: ReactionId, spaceCode = "default"): boolean {
+  const map = loadReactions(spaceCode);
   const user = getCurrentUser();
   return map[noteId]?.[reactionId]?.users.includes(user) ?? false;
 }
@@ -113,8 +115,8 @@ export function hasReaction(noteId: string, reactionId: ReactionId): boolean {
 /**
  * Get reaction counts for a note.
  */
-export function getReactionsForNote(noteId: string): Array<{ id: ReactionId; emoji: string; count: number; active: boolean }> {
-  const map = loadReactions();
+export function getReactionsForNote(noteId: string, spaceCode = "default"): Array<{ id: ReactionId; emoji: string; count: number; active: boolean }> {
+  const map = loadReactions(spaceCode);
   const user = getCurrentUser();
   const noteReactions = map[noteId] || {};
 
@@ -129,7 +131,7 @@ export function getReactionsForNote(noteId: string): Array<{ id: ReactionId; emo
 /**
  * Get total reaction count across all types for a note.
  */
-export function getTotalReactionCount(noteId: string): number {
-  const reactions = getReactionsForNote(noteId);
+export function getTotalReactionCount(noteId: string, spaceCode = "default"): number {
+  const reactions = getReactionsForNote(noteId, spaceCode);
   return reactions.reduce((sum, r) => sum + r.count, 0);
 }

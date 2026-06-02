@@ -72,7 +72,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       {note && (
         <div className="mt-3 flex items-center gap-1 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
           {reactions.map((r) => (
-            <button
+            <button aria-label={`${r.label}（${r.active ? "已点击" : "点击"}）`}
               key={r.id}
               className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs transition ${
                 r.active

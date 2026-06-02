@@ -5,54 +5,50 @@
  *
  * Detects new notes, albums, and memories since the last time
  * the user checked. Stores the last check timestamp in localStorage.
+ *
+ * This is device-local state — NOT synced to Supabase.
+ * Export/backup does not include update check state.
+ *
+ * Ignores: own notes, soft-deleted notes, soft-deleted albums.
  */
 
 import type { LoveNote, AlbumItem } from "./types";
 
-const STORAGE_KEY = "bristol_dashboard_last_check_at";
+const STORAGE_PREFIX = "bristol_dashboard_last_check_at";
+
+function getStorageKey(spaceCode: string): string {
+  return `${STORAGE_PREFIX}_${spaceCode || "default"}`;
+}
 
 export interface PartnerUpdate {
-  /** Number of new love notes from the other side */
   newNotesCount: number;
-  /** Number of new album items */
   newAlbumsCount: number;
-  /** ISO timestamp of the most recent new item */
   latestAt: string | null;
-  /** Whether there are any unread updates */
   hasUpdates: boolean;
 }
 
-/**
- * Get the timestamp of the last check. Returns null if never checked.
- */
-export function getLastCheckAt(): string | null {
+export function getLastCheckAt(spaceCode = "default"): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(STORAGE_KEY);
+    return window.localStorage.getItem(getStorageKey(spaceCode));
   } catch {
     return null;
   }
 }
 
-/**
- * Save the current time as the last check timestamp.
- */
-export function markChecked(): void {
+export function markChecked(spaceCode = "default"): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, new Date().toISOString());
+    window.localStorage.setItem(getStorageKey(spaceCode), new Date().toISOString());
   } catch {
     // Non-critical
   }
 }
 
-/**
- * Reset the last check timestamp (for testing).
- */
-export function resetLastCheck(): void {
+export function resetLastCheck(spaceCode = "default"): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(getStorageKey(spaceCode));
   } catch {
     // Non-critical
   }
@@ -60,14 +56,16 @@ export function resetLastCheck(): void {
 
 /**
  * Check for new notes from the other side since last check.
+ * Ignores own notes and soft-deleted notes.
  */
-export function getNewNotes(notes: LoveNote[]): LoveNote[] {
-  const lastCheck = getLastCheckAt();
-  if (!lastCheck) return notes.filter((n) => n.author !== "xiaoguai");
+export function getNewNotes(notes: LoveNote[], spaceCode = "default"): LoveNote[] {
+  const lastCheck = getLastCheckAt(spaceCode);
+  if (!lastCheck) return notes.filter((n) => n.author !== "xiaoguai" && !n.deletedAt);
 
   const lastDate = new Date(lastCheck);
   return notes.filter((n) => {
-    if (n.author === "xiaoguai") return false; // Own notes don't count
+    if (n.author === "xiaoguai") return false;
+    if (n.deletedAt) return false;
     const createdAt = n.createdAt ? new Date(n.createdAt) : null;
     return createdAt && createdAt > lastDate;
   });
@@ -75,13 +73,15 @@ export function getNewNotes(notes: LoveNote[]): LoveNote[] {
 
 /**
  * Check for new albums since last check.
+ * Ignores soft-deleted albums.
  */
-export function getNewAlbums(albums: AlbumItem[]): AlbumItem[] {
-  const lastCheck = getLastCheckAt();
-  if (!lastCheck) return albums;
+export function getNewAlbums(albums: AlbumItem[], spaceCode = "default"): AlbumItem[] {
+  const lastCheck = getLastCheckAt(spaceCode);
+  if (!lastCheck) return albums.filter((a) => !a.deletedAt);
 
   const lastDate = new Date(lastCheck);
   return albums.filter((a) => {
+    if (a.deletedAt) return false;
     const createdAt = a.createdAt ? new Date(a.createdAt) : null;
     return createdAt && createdAt > lastDate;
   });
@@ -90,9 +90,9 @@ export function getNewAlbums(albums: AlbumItem[]): AlbumItem[] {
 /**
  * Get a summary of partner updates since last check.
  */
-export function getPartnerUpdates(notes: LoveNote[], albums: AlbumItem[]): PartnerUpdate {
-  const newNotes = getNewNotes(notes);
-  const newAlbums = getNewAlbums(albums);
+export function getPartnerUpdates(notes: LoveNote[], albums: AlbumItem[], spaceCode = "default"): PartnerUpdate {
+  const newNotes = getNewNotes(notes, spaceCode);
+  const newAlbums = getNewAlbums(albums, spaceCode);
 
   let latestAt: string | null = null;
   for (const n of newNotes) {
@@ -110,12 +110,8 @@ export function getPartnerUpdates(notes: LoveNote[], albums: AlbumItem[]): Partn
   };
 }
 
-/**
- * Clear the "seen" state for updates (mark everything as checked).
- * After calling this, getPartnerUpdates will return zero updates.
- */
-export function clearSeenUpdates(): void {
-  markChecked();
+export function clearSeenUpdates(spaceCode = "default"): void {
+  markChecked(spaceCode);
 }
 
 /**

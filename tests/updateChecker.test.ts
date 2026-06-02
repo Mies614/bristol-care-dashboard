@@ -57,7 +57,7 @@ describe("updateChecker", () => {
 
   it("returns only notes after last check", async () => {
     // Set a last check time
-    localStorage.setItem("bristol_dashboard_last_check_at", "2026-06-01T12:00:00Z");
+    localStorage.setItem("bristol_dashboard_last_check_at_default", "2026-06-01T12:00:00Z");
 
     const { getNewNotes } = await import("@/lib/updateChecker");
     const notes = [
@@ -70,7 +70,7 @@ describe("updateChecker", () => {
   });
 
   it("getPartnerUpdates returns full summary", async () => {
-    localStorage.setItem("bristol_dashboard_last_check_at", "2026-06-01T12:00:00Z");
+    localStorage.setItem("bristol_dashboard_last_check_at_default", "2026-06-01T12:00:00Z");
 
     const { getPartnerUpdates } = await import("@/lib/updateChecker");
     const notes = [
@@ -89,7 +89,7 @@ describe("updateChecker", () => {
   });
 
   it("getPartnerUpdates returns empty after marking checked", async () => {
-    localStorage.setItem("bristol_dashboard_last_check_at", "2026-06-01T12:00:00Z");
+    localStorage.setItem("bristol_dashboard_last_check_at_default", "2026-06-01T12:00:00Z");
     const notes = [makeNote("n1", "admin", "2026-06-02T00:00:00Z")];
 
     const { getPartnerUpdates } = await import("@/lib/updateChecker");

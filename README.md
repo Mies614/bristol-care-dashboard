@@ -345,3 +345,45 @@ Vercel 部署相册功能不需要额外环境变量，只要已有 Supabase 变
 - 增加图片删除和 Storage 清理
 - 增加 Supabase Edge Function 或定时任务做数据备份
 - 如果未来需要多用户，再引入 Supabase Auth
+
+## 数据存储边界
+
+### 云端数据（Supabase，可同步）
+
+- 小纸条（love_notes）
+- 课程（courses）
+- Deadline（deadlines）
+- 相册（album_items）
+- 经期记录（period_records）
+- 应用设置（settings 表）
+- Push 订阅（push_subscriptions）
+- Miss-you 事件（miss_you_events）
+
+### 本地设备状态（localStorage，不同步）
+
+以下状态仅保存在当前设备上，切换设备后不会自动同步，备份导出也不包含：
+
+- `readState` — 小纸条已读/未读状态
+- `reactions` — 小纸条互动反馈（❤️ 🫶 🌙）
+- `reminderConfig` — 每日关怀提醒偏好（时间、开关）
+- `updateChecker` — 对方更新检测时间戳
+- `autoSync` 状态（lastSyncAt、lastError 等）
+- `PWA install dismissed` — 安装提示关闭记录
+- `themeSettings` 部分本地缓存
+
+这些本地状态的设计原则是：不依赖云端、不增加 Supabase 字段、设备独立、可随时清空重建。
+
+## Admin 数据维护中心
+
+在 `/admin` 页面底部可访问数据维护中心，包含四个工具：
+
+1. **导出备份** — 从 Supabase 导出完整 JSON 备份（小纸条、DDL、课程、相册、经期）
+2. **导入恢复** — 预览后 merge 模式导入（已存在的 ID 跳过，不会覆盖数据）
+3. **已删除** — 查看已软删除的小纸条，支持恢复和永久删除
+4. **孤儿文件** — 检查 Supabase Storage 中未被引用或缺失的文件引用
+
+## 备份注意事项
+
+- JSON 备份不包含任何 secret、password、VAPID key 或 Supabase key
+- 本地设备状态（readState、reactions 等）不包含在备份中
+- 推荐在切换设备或做危险操作前先导出一份备份
