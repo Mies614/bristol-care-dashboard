@@ -26,11 +26,27 @@ import {
 export function NotificationSettingsCard() {
   // Push state
   const [pushState, setPushState] = useState<PushState>("unsupported");
-  const [ setPushSubscribed] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_pushSubscribed, setPushSubscribed] = useState(false);
   const [vapidConfigured, setVapidConfigured] = useState(false);
   const [vapidPublicKey, setVapidPublicKey] = useState("");
   const [pushMessage, setPushMessage] = useState("");
   const [pushLoading, setPushLoading] = useState(false);
+  const [vapidConfig, setVapidConfigState] = useState(false);
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch("/api/push/status");
+        const data = await res.json();
+        setVapidConfigState(data.supportedByServer || false);
+        if (data.publicKey) setVapidPublicKey(data.publicKey);
+        setVapidConfigured(data.supportedByServer || false);
+      } catch {
+        setVapidConfigState(false);
+      }
+    };
+    check();
+  }, []);
 
   // Reminder prefs
   const [prefs, setPrefs] = useState<ReminderPreferences>(DEFAULT_REMINDER_PREFERENCES);
@@ -67,21 +83,6 @@ export function NotificationSettingsCard() {
   }, [vapidConfigured, vapidConfig, setPushSubscribed]);
 
   // Load vapid status separately
-  const [vapidConfig, setVapidConfigState] = useState(false);
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch("/api/push/status");
-        const data = await res.json();
-        setVapidConfigState(data.supportedByServer || false);
-        if (data.publicKey) setVapidPublicKey(data.publicKey);
-        setVapidConfigured(data.supportedByServer || false);
-      } catch {
-        setVapidConfigState(false);
-      }
-    };
-    check();
-  }, []);
 
   useEffect(() => {
     if (vapidConfig !== undefined) {

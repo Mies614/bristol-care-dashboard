@@ -148,7 +148,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
         return;
       }
       const s = payload.summary as Record<string, unknown> | undefined;
-      setImportSummary(s as BackupImportSummary);
+      setImportSummary(s as unknown as BackupImportSummary);
       setMessage(
         `预览：notes x${s?.notes || 0}, DDL x${s?.deadlines || 0}, 课程 x${s?.courses || 0}, albums x${s?.albums || 0}。` +
           `将新增 ${payload.totalToInsert || 0} 条，跳过 ${payload.totalSkipped || 0} 条（已存在）。`
