@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { NoteCard } from "@/components/NoteCard";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { buildRandomMemoryItems, pickRandomMemory, type RandomMemoryItem } from "@/lib/randomMemory";
 import { buildMemoryTimelineItems, groupTimelineByMonth } from "@/lib/memoryTimeline";
@@ -22,6 +23,16 @@ export default function MemoriesPage() {
   const [message, setMessage] = useState("");
   const [nextMeetingDate, setNextMeetingDate] = useState("");
   const code = getDefaultSpaceCode();
+  const [identityId, setIdentityId] = useState(() => getCurrentIdentityId(code));
+
+  // Re-read identity when it's changed elsewhere (e.g. settings card)
+  useEffect(() => {
+    const handler = () => {
+      setIdentityId(getCurrentIdentityId(getDefaultSpaceCode()));
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     try {
@@ -138,7 +149,7 @@ export default function MemoriesPage() {
             </div>
             {noteSummary.length ? (
               <div className="space-y-2">
-                {noteSummary.map((note) => <NoteCard featured key={note.id} note={note} />)}
+                {noteSummary.map((note) => <NoteCard featured key={note.id} note={note} identityId={identityId} />)}
               </div>
             ) : (
               <p className="py-4 text-center text-sm text-cocoa/45">还没有小纸条，从这里开始写下第一张吧。</p>
