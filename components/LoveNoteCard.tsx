@@ -7,11 +7,7 @@ import { isRead, markAsRead } from "@/lib/readState";
 import { addReaction, removeReaction, getReactionsForNote, hasReaction, type ReactionId } from "@/lib/reactions";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { getCurrentIdentityId, loadIdentities, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
-import {
-  DEFAULT_NORMAL_IDENTITY_ID,
-  getIdentityLabel,
-  ADMIN_IDENTITY_ID,
-} from "@/lib/identity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
@@ -96,7 +92,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       setUnread(!isRead(note.id) && note.author !== identity);
       setReactions(getReactionsForNote(note.id));
     }
-  }, [note]);
+  }, [note, identity]);
 
   useEffect(() => {
     if (showComments && note) {
