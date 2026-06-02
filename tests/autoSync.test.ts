@@ -56,13 +56,35 @@ describe("auto sync", () => {
   });
 
   it("debounces scheduled sync", async () => {
-    const { scheduleAutoSync } = await import("@/lib/autoSync");
+    vi.useFakeTimers();
+
+    // Pre-load modules so dynamic imports inside runAutoSyncNow resolve instantly
+    await import("@/lib/cloudSync");
+    await import("@/lib/storage");
+
+    const { scheduleAutoSync, resetAutoSyncForTests } = await import("@/lib/autoSync");
+    resetAutoSyncForTests();
+
     scheduleAutoSync("a");
     scheduleAutoSync("b");
+
+    // Debounce timer should not have fired yet
     expect(fetch).not.toHaveBeenCalled();
-    await new Promise((resolve) => setTimeout(resolve, 2700));
+
+    // Advance to just before the 2500ms debounce threshold
+    vi.advanceTimersByTime(2499);
+    await Promise.resolve();
+    expect(fetch).not.toHaveBeenCalled();
+
+    // Fire the debounce timer (triggers runAutoSyncNow via setTimeout callback)
+    vi.advanceTimersByTime(1);
+    // flush all pending timers (retry timer, etc.) and async microtasks
+    await vi.runAllTimersAsync();
+
     expect(fetch).toHaveBeenCalledTimes(1);
-  }, 4000);
+
+    vi.useRealTimers();
+  }, 10000);
 
   it("updates last sync after success", async () => {
     const { runAutoSyncNow, getPendingSyncState } = await import("@/lib/autoSync");
