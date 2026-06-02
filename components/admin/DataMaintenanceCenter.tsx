@@ -65,6 +65,10 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
 
   const code = getDefaultSpaceCode();
 
+  function getArrayLength(value: unknown): number {
+    return Array.isArray(value) ? value.length : 0;
+  }
+
   // ─── Backup Export ───
   const handleExport = useCallback(async () => {
     setLoading(true);
@@ -86,7 +90,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
             periodRecords: (Array.isArray(d.periodRecords) ? d.periodRecords.length : 0) as number,
           });
           setBackupJson(JSON.stringify(payload, null, 2));
-          setMessage(`备份已生成，包含 notes x${backupCounts?.notes || d.notes?.length || 0}, DDL x${backupCounts?.deadlines || d.deadlines?.length || 0}, 课程 x${backupCounts?.courses || d.courses?.length || 0}`);
+          setMessage(`备份已生成，包含 notes x${backupCounts?.notes || getArrayLength(d.notes) || 0}, DDL x${backupCounts?.deadlines || getArrayLength(d.deadlines) || 0}, 课程 x${backupCounts?.courses || getArrayLength(d.courses) || 0}`);
         } else {
           setMessage((payload.error as string) || "导出失败");
         }

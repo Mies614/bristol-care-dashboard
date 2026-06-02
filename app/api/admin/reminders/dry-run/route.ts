@@ -6,8 +6,7 @@ import { validateAdminPassword } from "@/lib/adminAuth";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getVapidConfig } from "@/lib/push";
 import { fetchBristolWeather } from "@/lib/weather";
-import { scheduleReminders } from "@/lib/serverReminderScheduler";
-import { } from "@/lib/period";
+import { scheduleReminders, type ServerReminderPreference, type SpaceData } from "@/lib/serverReminderScheduler";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
