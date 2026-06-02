@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { LoveNote } from "@/lib/types";
 import { getUserFacingAuthorLabel, DEFAULT_NORMAL_IDENTITY_ID, isSameIdentity } from "@/lib/identity";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry } from "@/lib/contentInteractions";
@@ -123,7 +124,12 @@ export function NoteCard({
       }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "发送失败");
+      }
+      throw new Error(payload.error || "发送失败");
+    }
     await loadComments();
   }
 
@@ -134,7 +140,12 @@ export function NoteCard({
       body: JSON.stringify({ spaceCode, commentId, identity }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "删除失败");
+      }
+      throw new Error(payload.error || "删除失败");
+    }
     await loadComments();
   }
 

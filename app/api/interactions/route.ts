@@ -3,6 +3,7 @@ import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/su
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { toSafeApiError } from "@/lib/apiError";
 
 function getDefaultCode(): string {
   return getDefaultSpaceCodeServer();
@@ -28,8 +29,14 @@ async function buildLikeCountResponse(
     .eq("content_id", contentId)
     .eq("interaction_type", "like");
 
-  const likeCount = countError ? 0 : (allLikes || []).length;
-  const liked = !countError && (allLikes || []).some(
+  if (countError) {
+    // Count failed — return base without like counts, plus diagnostics
+    const safeError = toSafeApiError(countError, "LIKE_COUNT_FAILED");
+    return NextResponse.json({ ...base, ...safeError }, { status: 500 });
+  }
+
+  const likeCount = (allLikes || []).length;
+  const liked = (allLikes || []).some(
     (i: Record<string, unknown>) => i.identity === identity
   );
 
@@ -110,10 +117,8 @@ export async function GET(request: NextRequest) {
       .in("content_id", contentIds);
 
     if (interactionsError) {
-      return NextResponse.json(
-        { ok: false, error: "查询互动数据失败。", code: "INTERACTIONS_FETCH_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(interactionsError, "INTERACTIONS_FETCH_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     // Build per-content summaries
@@ -151,11 +156,11 @@ export async function GET(request: NextRequest) {
         (i: Record<string, unknown>) => i.interaction_type === "reaction"
       );
       for (const r of reactionsForItem) {
-        const reaction: string = (r.reaction as string) || "";
-        if (!reaction) continue;
-        reactionCounts[reaction] = (reactionCounts[reaction] || 0) + 1;
+        const reactionVal: string = (r.reaction as string) || "";
+        if (!reactionVal) continue;
+        reactionCounts[reactionVal] = (reactionCounts[reactionVal] || 0) + 1;
         if (r.identity === identity) {
-          reactionActive[reaction] = true;
+          reactionActive[reactionVal] = true;
         }
       }
 
@@ -185,10 +190,8 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "INTERACTIONS_FETCH_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "INTERACTIONS_FETCH_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }
 
@@ -257,22 +260,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if this interaction already exists
-    const { data: existing, error: checkError } = await supabase
+    // Build the check query — use .is("reaction", null) when reaction is null,
+    // NOT .eq("reaction", "") because "" ≠ NULL in Postgres.
+    let checkQuery = supabase
       .from("content_interactions")
       .select("*")
       .eq("space_id", space.id)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
-      .eq("interaction_type", interactionType)
-      .eq("reaction", reaction || "");
+      .eq("interaction_type", interactionType);
+
+    if (reaction) {
+      checkQuery = checkQuery.eq("reaction", reaction);
+    } else {
+      // reaction is null/undefined — query for rows where reaction IS NULL
+      checkQuery = checkQuery.is("reaction", null);
+    }
+
+    // Use .select("*") without .single() or .maybeSingle() — it returns an array.
+    // Empty array = no existing interaction, which is NOT an error.
+    const { data: existing, error: checkError } = await checkQuery;
 
     if (checkError) {
-      return NextResponse.json(
-        { ok: false, error: "查询现有互动失败。", code: "INTERACTIONS_CHECK_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(checkError, "INTERACTIONS_CHECK_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     const now = new Date().toISOString();
@@ -307,10 +319,8 @@ export async function POST(request: NextRequest) {
         .eq("id", existing[0].id);
 
       if (deleteError) {
-        return NextResponse.json(
-          { ok: false, error: "移除互动失败。", code: "INTERACTIONS_DELETE_FAILED" },
-          { status: 500 }
-        );
+        const safeError = toSafeApiError(deleteError, "INTERACTIONS_DELETE_FAILED");
+        return NextResponse.json(safeError, { status: 500 });
       }
 
       return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
@@ -331,6 +341,7 @@ export async function POST(request: NextRequest) {
     // Insert new interaction
     const insertPayload: Record<string, unknown> = {
       space_id: space.id,
+      space_code: spaceCode,
       content_type: contentType,
       content_id: contentId,
       identity,
@@ -349,10 +360,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError || !newInteraction) {
-      return NextResponse.json(
-        { ok: false, error: "创建互动失败。", code: "INTERACTIONS_CREATE_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(insertError, "INTERACTIONS_CREATE_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
@@ -372,10 +381,8 @@ export async function POST(request: NextRequest) {
       likeCount: undefined, // will be filled by buildLikeCountResponse
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "INTERACTIONS_CREATE_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "INTERACTIONS_CREATE_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }
 
@@ -432,10 +439,8 @@ export async function DELETE(request: NextRequest) {
     const { error: deleteError } = await query;
 
     if (deleteError) {
-      return NextResponse.json(
-        { ok: false, error: "删除互动失败。", code: "INTERACTIONS_DELETE_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(deleteError, "INTERACTIONS_DELETE_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     return NextResponse.json({
@@ -448,9 +453,7 @@ export async function DELETE(request: NextRequest) {
       reaction: reaction || undefined,
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "INTERACTIONS_DELETE_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "INTERACTIONS_DELETE_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }

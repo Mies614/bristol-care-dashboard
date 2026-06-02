@@ -8,6 +8,7 @@ import { addReaction, removeReaction, getReactionsForNote, hasReaction, type Rea
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { getCurrentIdentityId, loadIdentities } from "@/lib/identityStorage";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
@@ -119,7 +120,12 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "发送失败");
+      }
+      throw new Error(payload.error || "发送失败");
+    }
     await loadComments();
   }
 
@@ -132,7 +138,12 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       body: JSON.stringify({ code, commentId, identity }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "删除失败");
+      }
+      throw new Error(payload.error || "删除失败");
+    }
     await loadComments();
   }
 

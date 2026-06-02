@@ -22,6 +22,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatApiError } from "@/lib/utils";
+import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
@@ -146,7 +147,12 @@ export default function AlbumsPage() {
       }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "发送失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "发送失败");
+      }
+      throw new Error(payload.error || "发送失败");
+    }
     await loadAlbumComments(selected.id);
   }
 
@@ -158,7 +164,12 @@ export default function AlbumsPage() {
       body: JSON.stringify({ code, commentId, identity }),
     });
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    if (!payload.ok) {
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiClientError(payload.error || "删除失败");
+      }
+      throw new Error(payload.error || "删除失败");
+    }
     await loadAlbumComments(selected.id);
   }
 

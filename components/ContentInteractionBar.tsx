@@ -131,7 +131,17 @@ export default function ContentInteractionBar({
       const payload = await res.json();
 
       if (!payload.ok) {
-        // API failed — try localStorage fallback
+        // If it's a 400-series client error, don't treat as network issue
+        if (res.status >= 400 && res.status < 500) {
+          console.warn("[ContentInteractionBar] Like toggle failed (client error)", payload);
+          // Rollback optimistic update
+          setLiked(prevLiked);
+          setLikeCount(prevCount);
+          setError("操作失败，请检查参数后重试。");
+          return;
+        }
+        // 500+ — server/network issue, try localStorage fallback
+        console.warn("[ContentInteractionBar] Like toggle failed (server error), falling back to localStorage", payload);
         await fallbackLikeToggleLocally(code, newLiked);
         return;
       }

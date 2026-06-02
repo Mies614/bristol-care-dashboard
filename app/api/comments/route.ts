@@ -3,6 +3,7 @@ import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/su
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { toSafeApiError } from "@/lib/apiError";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const MAX_COMMENT_LENGTH = 500;
@@ -75,12 +76,11 @@ export async function GET(request: NextRequest) {
     const { data: comments, error: fetchError } = await query;
 
     if (fetchError) {
-      return NextResponse.json(
-        { ok: false, error: "查询评论失败。", code: "COMMENTS_FETCH_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(fetchError, "COMMENTS_FETCH_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
+    // Return empty array when no comments — not an error
     return NextResponse.json({
       ok: true,
       comments: (comments || []).map((c: Record<string, unknown>) => ({
@@ -96,10 +96,8 @@ export async function GET(request: NextRequest) {
       identity,
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "COMMENTS_FETCH_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "COMMENTS_FETCH_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }
 
@@ -170,6 +168,7 @@ export async function POST(request: NextRequest) {
       .from("content_comments")
       .insert({
         space_id: space.id,
+        space_code: spaceCode,
         content_type: contentType,
         content_id: contentId,
         identity,
@@ -181,10 +180,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError || !comment) {
-      return NextResponse.json(
-        { ok: false, error: "创建评论失败。", code: "COMMENT_CREATE_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(insertError, "COMMENT_CREATE_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     return NextResponse.json({
@@ -201,10 +198,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "COMMENT_CREATE_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "COMMENT_CREATE_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }
 
@@ -216,8 +211,6 @@ export async function DELETE(request: NextRequest) {
     const spaceCode = body.spaceCode || body.code || getDefaultCode();
     const commentId = body.commentId as string;
     const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
-    // x-admin-password header reserved for future admin auth
-    void request.headers.get("x-admin-password");
 
     // ── Required param validation ──
     const missing: string[] = [];
@@ -247,15 +240,20 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Fetch the comment to verify
+    // Fetch the comment to verify ownership
     const { data: comment, error: fetchError } = await supabase
       .from("content_comments")
       .select("*")
       .eq("id", commentId)
       .eq("space_id", space.id)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !comment) {
+    if (fetchError) {
+      const safeError = toSafeApiError(fetchError, "COMMENT_FETCH_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
+    }
+
+    if (!comment) {
       return NextResponse.json(
         { ok: false, error: "评论未找到或已被删除。", code: "COMMENT_NOT_FOUND" },
         { status: 404 }
@@ -279,10 +277,8 @@ export async function DELETE(request: NextRequest) {
       .eq("id", commentId);
 
     if (updateError) {
-      return NextResponse.json(
-        { ok: false, error: "删除评论失败。", code: "COMMENT_DELETE_FAILED" },
-        { status: 500 }
-      );
+      const safeError = toSafeApiError(updateError, "COMMENT_DELETE_FAILED");
+      return NextResponse.json(safeError, { status: 500 });
     }
 
     return NextResponse.json({
@@ -291,9 +287,7 @@ export async function DELETE(request: NextRequest) {
       commentId,
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: "服务器错误。", code: "COMMENT_DELETE_FAILED", debug: String(err) },
-      { status: 500 }
-    );
+    const safeError = toSafeApiError(err, "COMMENT_DELETE_FAILED");
+    return NextResponse.json(safeError, { status: 500 });
   }
 }
