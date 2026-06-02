@@ -26,6 +26,24 @@ const LS_PREFIX = "bristol_identity";
 const LS_KEY_CURRENT = (spaceCode: string) => `${LS_PREFIX}_current_${spaceCode}`;
 const LS_KEY_LIST = (spaceCode: string) => `${LS_PREFIX}_list_${spaceCode}`;
 
+// ─── Event name for identity changes ───
+
+export const IDENTITY_CHANGED_EVENT = "bristol-identity-changed";
+
+/** Dispatch the identity-changed event so all listening components re-read the current identity. */
+function dispatchIdentityChanged(spaceCode: string, identityId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent(IDENTITY_CHANGED_EVENT, {
+        detail: { spaceCode, identityId },
+      })
+    );
+  } catch {
+    // Non-critical
+  }
+}
+
 // ─── In-memory cache (placeholder for future use) ───
 
 function invalidateCache(): void {
@@ -258,6 +276,7 @@ export async function deleteIdentity(
 /**
  * Set the current (active) identity for a spaceCode.
  * This is a local preference, stored in localStorage only.
+ * Also dispatches a browser event so all listening components re-read the identity.
  */
 export function setCurrentIdentity(
   spaceCode: string,
@@ -265,6 +284,7 @@ export function setCurrentIdentity(
 ): void {
   lsSet(LS_KEY_CURRENT(spaceCode), identityId);
   invalidateCache();
+  dispatchIdentityChanged(spaceCode, identityId);
 }
 
 /**

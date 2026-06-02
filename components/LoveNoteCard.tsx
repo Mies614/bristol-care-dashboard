@@ -6,8 +6,12 @@ import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
 import { addReaction, removeReaction, getReactionsForNote, hasReaction, type ReactionId } from "@/lib/reactions";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentityId, loadIdentities } from "@/lib/identityStorage";
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { getCurrentIdentityId, loadIdentities, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
+import {
+  DEFAULT_NORMAL_IDENTITY_ID,
+  getIdentityLabel,
+  ADMIN_IDENTITY_ID,
+} from "@/lib/identity";
 import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
@@ -24,26 +28,37 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
 
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
 
-  // Load current identity
-  useEffect(() => {
-    const load = async () => {
-      const code = spaceCode || getDefaultSpaceCode();
-      const currentId = getCurrentIdentityId(code);
-      if (currentId) {
-        setIdentity(currentId);
-        return;
-      }
-      // Fallback: load identities and pick first
-      try {
-        const identities = await loadIdentities(code);
-        const defaultId = identities.find((id) => id.isDefault);
-        setIdentity(defaultId?.id || identities[0]?.id || DEFAULT_NORMAL_IDENTITY_ID);
-      } catch {
-        setIdentity(DEFAULT_NORMAL_IDENTITY_ID);
-      }
-    };
-    load();
+  /** Load and refresh identity, used both on mount and on identity-changed event */
+  const refreshIdentity = useCallback(async () => {
+    const code = spaceCode || getDefaultSpaceCode();
+    const currentId = getCurrentIdentityId(code);
+    if (currentId) {
+      setIdentity(currentId);
+      return;
+    }
+    // Fallback: load identities and pick first
+    try {
+      const identities = await loadIdentities(code);
+      const defaultId = identities.find((id) => id.isDefault);
+      setIdentity(defaultId?.id || identities[0]?.id || DEFAULT_NORMAL_IDENTITY_ID);
+    } catch {
+      setIdentity(DEFAULT_NORMAL_IDENTITY_ID);
+    }
   }, [spaceCode]);
+
+  // Load current identity on mount
+  useEffect(() => {
+    refreshIdentity();
+  }, [refreshIdentity]);
+
+  // Re-read identity when it's changed elsewhere (e.g. settings card)
+  useEffect(() => {
+    const handler = () => {
+      refreshIdentity();
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
+  }, [refreshIdentity]);
 
   const content = note?.content || fallback;
 
@@ -78,7 +93,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
 
   useEffect(() => {
     if (note) {
-      setUnread(!isRead(note.id) && note.author !== "xiaoguai");
+      setUnread(!isRead(note.id) && note.author !== identity);
       setReactions(getReactionsForNote(note.id));
     }
   }, [note]);

@@ -9,7 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { getCurrentIdentityId } from "@/lib/identityStorage";
+import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
 import ContentInteractionBar from "@/components/ContentInteractionBar";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
@@ -65,11 +65,20 @@ export default function AlbumsPage() {
   const [video, setVideo] = useState<File | null>(null);
 
   // Identity - from storage
-  const [identity, setIdentity] = useState("xiaoguai");
+  const [identity, setIdentity] = useState(getCurrentIdentityId(code));
 
-  // Load identity from storage
+  // Load identity from storage on mount
   useEffect(() => {
     setIdentity(getCurrentIdentityId(code));
+  }, [code]);
+
+  // Re-read identity when it's changed elsewhere (e.g. settings card)
+  useEffect(() => {
+    const handler = () => {
+      setIdentity(getCurrentIdentityId(code));
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
   }, [code]);
 
   // Comments state
@@ -232,7 +241,7 @@ export default function AlbumsPage() {
           draft,
           imageUpload: uploadedImage,
           videoUpload: uploadedVideo,
-          createdBy: "xiaoguai",
+          createdBy: identity,
           typeOverride: generatedThumbnail ? "video" : undefined
         }))
       });

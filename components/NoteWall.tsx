@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { NoteCard } from "./NoteCard";
 import { NoteEditorModal } from "./NoteEditorModal";
 import { staggerContainer, staggerItem, useAccessibleMotion, safeVariants } from "@/lib/design/motion";
-import { getCurrentIdentityId } from "@/lib/identityStorage";
+import { getCurrentIdentityId, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { LoveNote } from "@/lib/types";
 
@@ -15,6 +15,16 @@ export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (bod
   useEffect(() => {
     const code = getDefaultSpaceCode();
     setIdentityId(getCurrentIdentityId(code));
+  }, []);
+
+  // Re-read identity when it's changed elsewhere (e.g. settings card)
+  useEffect(() => {
+    const handler = () => {
+      const code = getDefaultSpaceCode();
+      setIdentityId(getCurrentIdentityId(code));
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, handler);
   }, []);
   const [selected, setSelected] = useState<LoveNote | null>(null);
   const [editing, setEditing] = useState<LoveNote | null>(null);

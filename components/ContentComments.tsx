@@ -158,7 +158,7 @@ export default function ContentComments({
         <button
           onClick={handleSubmit}
           disabled={disabled || submitting || !inputValue.trim()}
-          className="self-end px-4 py-2 rounded-lg bg-rose/80 hover:bg-rose text-white text-sm transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+          className="self-end px-4 py-2 rounded-lg bg-rose/80 hover:bg-rose text-white text-sm transition disabled:bg-cocoa/20 disabled:text-cocoa/35 disabled:cursor-not-allowed shrink-0"
         >
           {submitting ? "..." : submitLabel}
         </button>
