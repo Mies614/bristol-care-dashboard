@@ -129,17 +129,16 @@ export function NoteCard({
     await loadComments();
   }
 
-  function handleDeleteComment(commentId: string) {
+  async function handleDeleteComment(commentId: string) {
     const code = spaceCode;
-    fetch("/api/comments", {
+    const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, commentId, identity }),
-    }).then(() => {
-      loadComments();
-    }).catch(() => {
-      // Non-critical
     });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    await loadComments();
   }
 
   const isHidden = note.active === false;
@@ -182,6 +181,7 @@ export function NoteCard({
           <ContentComments
             contentType="note"
             contentId={note.id}
+            spaceCode={spaceCode}
             identity={identity}
             comments={comments}
             loading={commentsLoading}

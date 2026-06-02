@@ -150,17 +150,16 @@ export default function AlbumsPage() {
     await loadAlbumComments(selected.id);
   }
 
-  function handleDeleteAlbumComment(commentId: string) {
+  async function handleDeleteAlbumComment(commentId: string) {
     if (!selected) return;
-    fetch("/api/comments", {
+    const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, commentId, identity }),
-    }).then(() => {
-      loadAlbumComments(selected.id);
-    }).catch(() => {
-      // Non-critical
     });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    await loadAlbumComments(selected.id);
   }
 
   async function upload(event: React.FormEvent) {
@@ -519,6 +518,7 @@ export default function AlbumsPage() {
             <ContentComments
               contentType="album"
               contentId={selected.id}
+              spaceCode={code}
               identity={identity}
               comments={selectedComments}
               loading={commentsLoading}

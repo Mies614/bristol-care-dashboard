@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
 import { addReaction, removeReaction, getReactionsForNote, hasReaction, type ReactionId } from "@/lib/reactions";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { getCurrentIdentityId, loadIdentities } from "@/lib/identityStorage";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import ContentComments from "./ContentComments";
+import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 
 export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; fallback: string; onRefresh?: () => void }) {
@@ -16,17 +19,40 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   const [comments, setComments] = useState<CommentEntryType[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [identity, setIdentity] = useState<string>(DEFAULT_NORMAL_IDENTITY_ID);
+
+  const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
+
+  // Load current identity
+  useEffect(() => {
+    const load = async () => {
+      const code = spaceCode || getDefaultSpaceCode();
+      const currentId = getCurrentIdentityId(code);
+      if (currentId) {
+        setIdentity(currentId);
+        return;
+      }
+      // Fallback: load identities and pick first
+      try {
+        const identities = await loadIdentities(code);
+        const defaultId = identities.find((id) => id.isDefault);
+        setIdentity(defaultId?.id || identities[0]?.id || DEFAULT_NORMAL_IDENTITY_ID);
+      } catch {
+        setIdentity(DEFAULT_NORMAL_IDENTITY_ID);
+      }
+    };
+    load();
+  }, [spaceCode]);
 
   const content = note?.content || fallback;
-  const identity = "xiaoguai";
 
   const loadComments = useCallback(async () => {
     if (!note) return;
     setCommentsLoading(true);
     try {
-      const code = getDefaultSpaceCode();
+      const code = spaceCode || getDefaultSpaceCode();
       const res = await fetch(
-        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${identity}`
+        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
       );
       const payload = await res.json();
       if (payload.ok && Array.isArray(payload.comments)) {
@@ -43,11 +69,11 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
         setComments(entries);
       }
     } catch {
-      // Non-critical
+      // Non-critical — fallback to local comments
     } finally {
       setCommentsLoading(false);
     }
-  }, [note, identity]);
+  }, [note, identity, spaceCode]);
 
   useEffect(() => {
     if (note) {
@@ -79,8 +105,8 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   }
 
   async function handleAddComment(body: string) {
-    if (!note) return;
-    const code = getDefaultSpaceCode();
+    if (!note) throw new Error("No note");
+    const code = spaceCode || getDefaultSpaceCode();
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,18 +123,17 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
     await loadComments();
   }
 
-  function handleDeleteComment(commentId: string) {
-    if (!note) return;
-    const code = getDefaultSpaceCode();
-    fetch("/api/comments", {
+  async function handleDeleteComment(commentId: string) {
+    if (!note) throw new Error("No note");
+    const code = spaceCode || getDefaultSpaceCode();
+    const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, commentId, identity }),
-    }).then(() => {
-      loadComments();
-    }).catch(() => {
-      // Non-critical
     });
+    const payload = await res.json();
+    if (!payload.ok) throw new Error(payload.error || "删除失败");
+    await loadComments();
   }
 
   return (
@@ -143,9 +168,20 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       {note?.audioUrl ? <audio className="mt-4 w-full" src={note.audioUrl} controls /> : null}
       {note?.videoUrl ? <video className="mt-4 max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls /> : null}
 
-      {/* Light reactions bar */}
+      {/* Interaction bar: likes + reactions + comment toggle */}
       {note && (
-        <div className="mt-3 flex items-center gap-1 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
+          {/* Unified like button via ContentInteractionBar */}
+          <ContentInteractionBar
+            spaceCode={spaceCode}
+            contentType="note"
+            contentId={note.id}
+            identityId={identity}
+            compact
+            showComments={false}
+          />
+
+          {/* Legacy reactions (kept for backward compatibility) */}
           {reactions.map((r) => (
             <button
               key={r.id}
@@ -160,12 +196,14 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
               {r.count > 0 ? <span className="tabular-nums text-[10px]">{r.count}</span> : null}
             </button>
           ))}
+
+          {/* Comment toggle */}
           <button
             className="inline-flex items-center gap-1 rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/50 hover:bg-white/85 transition"
             onClick={() => setShowComments(!showComments)}
           >
             💬
-            <span className="text-[10px]">评论</span>
+            <span className="text-[10px]">{showComments ? "收起" : "评论"}</span>
           </button>
         </div>
       )}
@@ -176,6 +214,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
           <ContentComments
             contentType="note"
             contentId={note.id}
+            spaceCode={spaceCode}
             identity={identity}
             comments={comments}
             loading={commentsLoading}

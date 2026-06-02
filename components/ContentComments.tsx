@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { getIdentityDisplayName } from "@/lib/identity";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
+import { addLocalComment, softDeleteLocalComment } from "@/lib/interactionsLocal";
 
 export type { CommentEntryType };
 
@@ -11,14 +12,16 @@ export interface ContentCommentsProps {
   contentType: "note" | "album" | "memory";
   /** ID of the content item */
   contentId: string;
+  /** Space code for localStorage fallback */
+  spaceCode: string;
   /** Current user's identity */
   identity: string;
   /** Existing comment entries to display */
   comments: CommentEntryType[];
-  /** Called when user submits a new comment */
+  /** Called when user submits a new comment. Throw to trigger local fallback. */
   onAddComment: (body: string) => Promise<void>;
-  /** Called when user deletes their own comment */
-  onDeleteComment: (commentId: string) => void;
+  /** Called when user deletes their own comment. Throw to trigger local fallback. */
+  onDeleteComment: (commentId: string) => Promise<void>;
   /** Whether to disable comment input */
   disabled?: boolean;
   /** Max comment body length */
@@ -34,9 +37,10 @@ export interface ContentCommentsProps {
 }
 
 export default function ContentComments({
-  contentType: _contentType,
-  contentId: _contentId,
-  identity: _identity,
+  contentType,
+  contentId,
+  spaceCode,
+  identity,
   comments,
   onAddComment,
   onDeleteComment,
@@ -52,6 +56,26 @@ export default function ContentComments({
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Save comment to localStorage when API is unavailable */
+  const fallbackSaveCommentLocally = useCallback(async (body: string): Promise<boolean> => {
+    try {
+      const localComment = {
+        id: `local_cmt_${contentType}_${contentId}_${Date.now()}`,
+        contentType,
+        contentId,
+        identity,
+        body,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      addLocalComment(spaceCode, localComment);
+      setError("网络有点慢，先帮你存在本机了。");
+      return true;
+    } catch {
+      return false;
+    }
+  }, [contentType, contentId, identity, spaceCode]);
+
   const handleSubmit = useCallback(async () => {
     const trimmed = inputValue.trim();
     if (!trimmed) return;
@@ -66,13 +90,36 @@ export default function ContentComments({
     try {
       await onAddComment(trimmed);
       setInputValue("");
-      setExpanded(true); // show comments after posting
+      setExpanded(true);
     } catch {
-      setError("发送失败，请重试");
+      // API failed — try localStorage fallback
+      const fallbackSucceeded = await fallbackSaveCommentLocally(trimmed);
+      if (fallbackSucceeded) {
+        setInputValue("");
+        setExpanded(true);
+      } else {
+        // Keep input, show gentle error
+        setError("发送失败了，内容还在，可以再试一次。");
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [inputValue, maxLength, onAddComment]);
+  }, [inputValue, maxLength, onAddComment, fallbackSaveCommentLocally]);
+
+  /** Handle comment deletion with local fallback */
+  const handleDelete = useCallback(async (commentId: string) => {
+    setError(null);
+    try {
+      await onDeleteComment(commentId);
+    } catch {
+      try {
+        softDeleteLocalComment(spaceCode, contentType, commentId);
+        setError("暂时删除在本机，联网后就会同步。");
+      } catch {
+        setError("删除失败，请稍后再试。");
+      }
+    }
+  }, [onDeleteComment, spaceCode, contentType]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -105,13 +152,13 @@ export default function ContentComments({
           placeholder={placeholder}
           disabled={disabled || submitting}
           rows={2}
-          maxLength={maxLength + 50} // allow slight overflow for UX
-          className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm resize-none focus:outline-none focus:border-pink-400/50 disabled:opacity-50 placeholder:text-white/30"
+          maxLength={maxLength + 50}
+          className="flex-1 px-3 py-2 rounded-lg bg-white/70 border border-cocoa/15 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose/30 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/35"
         />
         <button
           onClick={handleSubmit}
           disabled={disabled || submitting || !inputValue.trim()}
-          className="self-end px-4 py-2 rounded-lg bg-pink-500/80 hover:bg-pink-500 text-white text-sm transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+          className="self-end px-4 py-2 rounded-lg bg-rose/80 hover:bg-rose text-white text-sm transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
         >
           {submitting ? "..." : submitLabel}
         </button>
@@ -119,12 +166,12 @@ export default function ContentComments({
 
       {/* Error message */}
       {error && (
-        <p className="mt-2 text-xs text-red-400">{error}</p>
+          <p className="mt-2 text-xs text-rose-600 font-medium">{error}</p>
       )}
 
       {/* Loading state */}
       {loading && (
-        <p className="mt-3 text-xs text-white/40 text-center">加载评论中...</p>
+        <p className="mt-3 text-xs text-cocoa/40 text-center">加载评论中...</p>
       )}
 
       {/* Comments list */}
@@ -135,18 +182,18 @@ export default function ContentComments({
               key={comment.id}
               className={`p-2 rounded-lg ${
                 comment.isDeleted
-                  ? "bg-white/5 text-white/30 italic"
-                  : "bg-white/5 text-white/80"
+                  ? "bg-white/30 text-cocoa/30 italic"
+                  : "bg-white/50 text-cocoa/80"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   {/* Identity label */}
-                  <span className="text-xs font-medium text-pink-300/80 mr-2">
+                  <span className="text-xs font-medium text-rose/70 mr-2">
                     {getIdentityDisplayName(comment.identity)}
                   </span>
                   {/* Timestamp */}
-                  <span className="text-xs text-white/30">
+                  <span className="text-xs text-cocoa/30">
                     {formatCommentTime(comment.createdAt)}
                   </span>
                   {/* Body */}
@@ -160,9 +207,9 @@ export default function ContentComments({
                 {/* Delete button (only for own comments that aren't deleted) */}
                 {!comment.isDeleted && comment.isMine && (
                   <button
-                    onClick={() => onDeleteComment(comment.id)}
+                    onClick={() => handleDelete(comment.id)}
                     disabled={disabled}
-                    className="text-xs text-white/20 hover:text-red-400 transition shrink-0 disabled:opacity-30"
+                    className="text-xs text-cocoa/20 hover:text-red-500 transition shrink-0 disabled:opacity-30"
                     title={deleteLabel}
                   >
                     ×
@@ -176,7 +223,7 @@ export default function ContentComments({
           {hasMore && (
             <button
               onClick={toggleExpanded}
-              className="w-full text-xs text-pink-300/60 hover:text-pink-300 transition pt-1"
+              className="w-full text-xs text-rose/60 hover:text-rose transition pt-1"
             >
               {expanded ? "收起评论" : `查看全部 ${comments.length} 条评论`}
             </button>
@@ -186,7 +233,7 @@ export default function ContentComments({
 
       {/* Empty state */}
       {!loading && comments.length === 0 && expanded && (
-        <p className="mt-3 text-xs text-white/30 text-center">
+        <p className="mt-3 text-xs text-cocoa/30 text-center">
           还没有评论，来说点什么吧
         </p>
       )}

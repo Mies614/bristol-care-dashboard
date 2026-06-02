@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { ContentType, InteractionSummary } from "@/lib/contentInteractions";
 import { getLikeCount, getCommentCount, isLikedByIdentity } from "@/lib/contentInteractions";
+// Local interaction helpers are dynamically imported for code splitting
 
 export interface ContentInteractionBarProps {
   /** Space code for multi-space isolation */
@@ -68,6 +69,38 @@ export default function ContentInteractionBar({
     if (likeCountOverride !== undefined) setLikeCount(likeCountOverride);
   }, [likeCountOverride]);
 
+  /** Toggle like in localStorage when API is unavailable */
+  const fallbackLikeToggleLocally = useCallback(async (code: string, shouldLike: boolean) => {
+    const { addLocalInteraction, removeLocalInteraction } = await import("@/lib/interactionsLocal");
+    if (shouldLike) {
+      addLocalInteraction(code, {
+        id: `local_${contentType}_${contentId}_${identityId}_like`,
+        contentType,
+        contentId,
+        identity: identityId,
+        interactionType: "like",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      removeLocalInteraction(code, contentType, contentId, identityId, "like");
+    }
+    // Recalculate counts from local storage
+    const { getLocalInteractions } = await import("@/lib/interactionsLocal");
+    const localInteractions = getLocalInteractions(code, identityId, contentType);
+    const itemLikes = localInteractions.filter(
+      (i) => i.contentId === contentId && i.interactionType === "like"
+    );
+    const newLikeCount = itemLikes.length;
+    const newLikedState = itemLikes.some((i) => i.identity === identityId);
+    setLiked(newLikedState);
+    setLikeCount(newLikeCount);
+    setError("网络有点慢，先帮你存在本机了。");
+    if (onLikeChanged) {
+      onLikeChanged({ liked: newLikedState, count: newLikeCount });
+    }
+  }, [contentType, contentId, identityId, onLikeChanged]);
+
   const toggleLike = useCallback(async () => {
     if (disabled || busy) return;
     setError(null);
@@ -81,8 +114,9 @@ export default function ContentInteractionBar({
     setLikeCount(newCount);
     setBusy(true);
 
+    const code = spaceCode || getDefaultSpaceCode();
+
     try {
-      const code = spaceCode || getDefaultSpaceCode();
       const res = await fetch("/api/interactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,10 +131,8 @@ export default function ContentInteractionBar({
       const payload = await res.json();
 
       if (!payload.ok) {
-        // Rollback on failure
-        setLiked(prevLiked);
-        setLikeCount(prevCount);
-        setError(payload.error || "操作失败，请稍后重试");
+        // API failed — try localStorage fallback
+        await fallbackLikeToggleLocally(code, newLiked);
         return;
       }
 
@@ -114,14 +146,19 @@ export default function ContentInteractionBar({
         });
       }
     } catch {
-      // Network error — rollback
-      setLiked(prevLiked);
-      setLikeCount(prevCount);
-      setError("网络异常，请稍后重试");
+      // Network error — try localStorage fallback
+      try {
+        await fallbackLikeToggleLocally(code, newLiked);
+      } catch {
+        // Local fallback also failed — rollback
+        setLiked(prevLiked);
+        setLikeCount(prevCount);
+        setError("喜欢没有保存成功，等网络好一点再试试。");
+      }
     } finally {
       setBusy(false);
     }
-  }, [disabled, busy, liked, likeCount, spaceCode, contentType, contentId, identityId, onLikeChanged]);
+  }, [disabled, busy, liked, likeCount, spaceCode, contentType, contentId, identityId, onLikeChanged, fallbackLikeToggleLocally]);
 
   // Clear error after a few seconds
   useEffect(() => {
