@@ -55,6 +55,13 @@ export default function AlbumsPage() {
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
   const [message, setMessage] = useState("");
   const code = getDefaultSpaceCode();
+  // Batch interaction summaries for the entire grid
+  const [gridSummaries, setGridSummaries] = useState<Record<string, {
+    likeCount: number;
+    hasLiked: boolean;
+    commentCount: number;
+    reactions: Record<string, { count: number; active: boolean }>;
+  }>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadStage, setUploadStage] = useState("");
   const [cancelled, setCancelled] = useState(false);
@@ -103,7 +110,35 @@ export default function AlbumsPage() {
       setMessage(formatApiError(payload, "相册加载失败。"));
       return;
     }
-    setItems(payload.items || []);
+    const albumItems: AlbumItem[] = payload.items || [];
+    setItems(albumItems);
+
+    // Batch-fetch interaction summaries for all grid items
+    if (albumItems.length > 0 && identity) {
+      try {
+        const ids = albumItems.map((a) => a.id).join(",");
+        const res = await fetch(
+          `/api/interactions?spaceCode=${encodeURIComponent(code)}&contentType=album&contentIds=${encodeURIComponent(ids)}&identity=${encodeURIComponent(identity)}`
+        );
+        const ip = await res.json();
+        if (ip.ok && ip.summaries) {
+          setGridSummaries((prev) => {
+            const next = { ...prev };
+            for (const [cid, s] of Object.entries(ip.summaries as Record<string, {
+              likeCount: number;
+              hasLiked: boolean;
+              commentCount: number;
+              reactions: Record<string, { count: number; active: boolean }>;
+            }>)) {
+              next[cid] = s;
+            }
+            return next;
+          });
+        }
+      } catch {
+        // Non-critical
+      }
+    }
   }
 
   const loadAlbumComments = useCallback(async (albumId: string) => {
@@ -409,49 +444,69 @@ export default function AlbumsPage() {
               animate="visible"
               key={items.length}
             >
-              {items.map((item) => (
-                <motion.button
-                  className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm"
-                  key={item.id}
-                  variants={staggerItem}
-                  onClick={() => { setSelected(item); setPlaying(false); }}
-                  type="button"
-                >
-                  {item.imageUrl ? (
-                    <ImageWithSkeleton
-                      src={item.imageUrl}
-                      alt={item.title || "相册照片"}
-                      aspectRatio="portrait"
-                      className="transition group-hover:scale-105"
-                    />
-                  ) : item.videoUrl ? (
-                    <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/65 to-lilac/60">
-                      <span className="text-4xl text-white/80 drop-shadow-lg">▶</span>
-                    </div>
-                  ) : (
-                    <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/40 to-blush/35">
-                      <span className="text-3xl text-white/60">🖼</span>
-                    </div>
-                  )}
-                  {/* 类型标签 — 清晰但不遮挡内容 */}
-                  {item.type === "video" ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
-                      ▶ VIDEO
-                    </span>
-                  ) : item.type === "live_photo" ? (
-                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
-                      ◉ LIVE
-                    </span>
-                  ) : null}
-                  {item.isFavorite ? (
-                    <span className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium text-cocoa shadow-sm">★</span>
-                  ) : null}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-2.5 text-left text-white">
-                    <p className="truncate text-sm font-medium leading-snug">{item.title || "未命名回忆"}</p>
-                    <p className="mt-0.5 text-[11px] opacity-70">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
-                  </div>
-                </motion.button>
-              ))}
+                  {items.map((item) => {
+                    const s = gridSummaries[item.id];
+                    return (
+                    <motion.button
+                      className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm"
+                      key={item.id}
+                      variants={staggerItem}
+                      onClick={() => { setSelected(item); setPlaying(false); }}
+                      type="button"
+                    >
+                      {item.imageUrl ? (
+                        <ImageWithSkeleton
+                          src={item.imageUrl}
+                          alt={item.title || "相册照片"}
+                          aspectRatio="portrait"
+                          className="transition group-hover:scale-105"
+                        />
+                      ) : item.videoUrl ? (
+                        <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/65 to-lilac/60">
+                          <span className="text-4xl text-white/80 drop-shadow-lg">▶</span>
+                        </div>
+                      ) : (
+                        <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/40 to-blush/35">
+                          <span className="text-3xl text-white/60">🖼</span>
+                        </div>
+                      )}
+                      {/* 类型标签 — 清晰但不遮挡内容 */}
+                      {item.type === "video" ? (
+                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
+                          ▶ VIDEO
+                        </span>
+                      ) : item.type === "live_photo" ? (
+                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
+                          ◉ LIVE
+                        </span>
+                      ) : null}
+                      {item.isFavorite ? (
+                        <span className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium text-cocoa shadow-sm">★</span>
+                      ) : null}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-2.5 text-left text-white">
+                        <p className="truncate text-sm font-medium leading-snug">{item.title || "未命名回忆"}</p>
+                        <p className="mt-0.5 text-[11px] opacity-70">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
+                      </div>
+                      {/* Interactions overlay */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-2 pt-6"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ContentInteractionBar
+                          spaceCode={code}
+                          contentType="album"
+                          contentId={item.id}
+                          identityId={identity}
+                          compact
+                          showReactions={false}
+                          showComments={false}
+                          likeCountOverride={s?.likeCount}
+                          hasLikedOverride={s?.hasLiked}
+                          disabled={false}
+                        />
+                      </div>
+                    </motion.button>
+                  );
+                  })}
             </motion.div>
           ) : (
             <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有放进相册的照片，之后慢慢补上。</p>

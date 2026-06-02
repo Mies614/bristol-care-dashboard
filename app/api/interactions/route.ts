@@ -10,10 +10,10 @@ function getDefaultCode(): string {
 }
 
 /**
- * Helper: after creating/removing a like interaction, count all likes
- * for this content item and return liked/likeCount in the response.
+ * Helper: after creating/removing an interaction, count all interactions
+ * for this content item and return a full summary (likes + reactions).
  */
-async function buildLikeCountResponse(
+async function buildFullSummaryResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
   spaceCode: string,
   contentType: string,
@@ -21,29 +21,61 @@ async function buildLikeCountResponse(
   identity: string,
   base: Record<string, unknown>
 ): Promise<NextResponse> {
-  const { data: allLikes, error: countError } = await supabase
+  const { data: allInteractions, error: countError } = await supabase
     .from("content_interactions")
-    .select("identity")
+    .select("identity, interaction_type, reaction")
     .eq("space_code", spaceCode)
     .eq("content_type", contentType)
-    .eq("content_id", contentId)
-    .eq("interaction_type", "like");
+    .eq("content_id", contentId);
 
   if (countError) {
-    // Count failed — return base without like counts, plus diagnostics
-    const safeError = toSafeApiError(countError, "LIKE_COUNT_FAILED");
+    const safeError = toSafeApiError(countError, "SUMMARY_FETCH_FAILED");
     return NextResponse.json({ ...base, ...safeError }, { status: 500 });
   }
 
-  const likeCount = (allLikes || []).length;
-  const liked = (allLikes || []).some(
-    (i: Record<string, unknown>) => i.identity === identity
-  );
+  type InteractionRow = { identity: string; interaction_type: string; reaction: string | null };
+  const items = (allInteractions || []) as InteractionRow[];
+
+  // Likes
+  const likeItems = items.filter((i) => i.interaction_type === "like");
+  const likeCount = likeItems.length;
+  const liked = likeItems.some((i) => i.identity === identity);
+
+  // Reactions (fire, hug, moon etc.)
+  const reactionItems = items.filter((i) => i.interaction_type === "reaction" && i.reaction);
+  const reactionCounts: Record<string, number> = {};
+  const reactionActive: Record<string, boolean> = {};
+  for (const r of reactionItems) {
+    const key = r.reaction!;
+    reactionCounts[key] = (reactionCounts[key] || 0) + 1;
+    if (r.identity === identity) {
+      reactionActive[key] = true;
+    }
+  }
+  const reactions: Record<string, { count: number; active: boolean }> = {};
+  for (const [key, count] of Object.entries(reactionCounts)) {
+    reactions[key] = { count, active: reactionActive[key] || false };
+  }
+
+  // Comment count (non-deleted only)
+  let commentCount = 0;
+  const { count: ccCount, error: ccError } = await supabase
+    .from("content_comments")
+    .select("*", { count: "exact", head: true })
+    .eq("space_code", spaceCode)
+    .eq("content_type", contentType)
+    .eq("content_id", contentId)
+    .is("deleted_at", null);
+  if (!ccError && ccCount !== null) {
+    commentCount = ccCount;
+  }
 
   return NextResponse.json({
     ...base,
     liked,
     likeCount,
+    commentCount,
+    reactions,
   });
 }
 
@@ -121,12 +153,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    // Build per-content summaries
+    // Build per-content summaries — include commentCount
+    const { data: commentCounts, error: commentCountError } = await supabase
+      .from("content_comments")
+      .select("content_id")
+      .eq("space_code", spaceCode)
+      .eq("content_type", contentType)
+      .in("content_id", contentIds)
+      .is("deleted_at", null);
+
+    const commentCountMap: Record<string, number> = {};
+    if (!commentCountError && commentCounts) {
+      for (const row of commentCounts) {
+        const cid = row.content_id as string;
+        commentCountMap[cid] = (commentCountMap[cid] || 0) + 1;
+      }
+    }
+
     const summaries: Record<string, {
       readCount: number;
       hasRead: boolean;
       likeCount: number;
       hasLiked: boolean;
+      commentCount: number;
       reactions: Record<string, { count: number; active: boolean }>;
     }> = {};
 
@@ -170,7 +219,8 @@ export async function GET(request: NextRequest) {
         reactions[key] = { count, active: reactionActive[key] || false };
       }
 
-      summaries[contentId] = { readCount, hasRead, likeCount, hasLiked, reactions };
+      const commentCount = commentCountMap[contentId] || 0;
+      summaries[contentId] = { readCount, hasRead, likeCount, hasLiked, commentCount, reactions };
     }
 
     return NextResponse.json({
@@ -295,8 +345,8 @@ export async function POST(request: NextRequest) {
     // For "reaction": if already exists with same reaction, remove (toggle off); otherwise add
     if (existing && existing.length > 0) {
       if (interactionType === "read") {
-        // Read is idempotent — just return success with aggregate counts
-        return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
+        // Read is idempotent — just return success with full summary
+        return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
           ok: true,
           action: "kept",
           interaction: {
@@ -323,7 +373,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(safeError, { status: 500 });
       }
 
-      return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
+      return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
         ok: true,
         action: "removed",
         interaction: {
@@ -334,7 +384,7 @@ export async function POST(request: NextRequest) {
           reaction: reaction || undefined,
         },
         liked: false,
-        likeCount: undefined, // will be filled by buildLikeCountResponse
+        likeCount: undefined, // will be filled by buildFullSummaryResponse
       });
     }
 
@@ -363,7 +413,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
+    return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
         ok: true,
         action: "created",
       interaction: {
@@ -377,7 +427,7 @@ export async function POST(request: NextRequest) {
         updatedAt: newInteraction.updated_at,
       },
       liked: true,
-      likeCount: undefined, // will be filled by buildLikeCountResponse
+      likeCount: undefined, // will be filled by buildFullSummaryResponse
     });
   } catch (err) {
     const safeError = toSafeApiError(err, "INTERACTIONS_CREATE_FAILED");

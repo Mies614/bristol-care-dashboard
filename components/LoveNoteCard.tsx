@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
-import { addReaction, removeReaction, getReactionsForNote, hasReaction, type ReactionId } from "@/lib/reactions";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { getCurrentIdentityId, loadIdentities, IDENTITY_CHANGED_EVENT } from "@/lib/identityStorage";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
@@ -16,7 +15,6 @@ import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions
 export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; fallback: string; onRefresh?: () => void }) {
   const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
-  const [reactions, setReactions] = useState<ReturnType<typeof getReactionsForNote>>([]);
   const [comments, setComments] = useState<CommentEntryType[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -90,7 +88,6 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   useEffect(() => {
     if (note) {
       setUnread(!isRead(note.id) && note.author !== identity);
-      setReactions(getReactionsForNote(note.id));
     }
   }, [note, identity]);
 
@@ -99,15 +96,6 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       loadComments();
     }
   }, [showComments, note, loadComments]);
-
-  function handleReaction(noteId: string, reactionId: ReactionId) {
-    if (hasReaction(noteId, reactionId)) {
-      removeReaction(noteId, reactionId);
-    } else {
-      addReaction(noteId, reactionId);
-    }
-    setReactions(getReactionsForNote(noteId));
-  }
 
   function handleRead() {
     if (note && unread) {
@@ -193,40 +181,16 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       {/* Interaction bar: likes + reactions + comment toggle */}
       {note && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
-          {/* Unified like button via ContentInteractionBar */}
+          {/* Unified interaction bar: likes + reactions + comment toggle */}
           <ContentInteractionBar
             spaceCode={spaceCode}
             contentType="note"
             contentId={note.id}
             identityId={identity}
             compact
-            showComments={false}
+            showComments
+            onOpenComments={() => setShowComments(!showComments)}
           />
-
-          {/* Legacy reactions (kept for backward compatibility) */}
-          {reactions.map((r) => (
-            <button
-              key={r.id}
-              className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs transition ${
-                r.active
-                  ? "bg-roseSoft/70 text-cocoa/80 shadow-sm"
-                  : "bg-white/60 text-cocoa/50 hover:bg-white/85"
-              }`}
-              onClick={() => handleReaction(note.id, r.id)}
-            >
-              <span>{r.emoji}</span>
-              {r.count > 0 ? <span className="tabular-nums text-[10px]">{r.count}</span> : null}
-            </button>
-          ))}
-
-          {/* Comment toggle */}
-          <button
-            className="inline-flex items-center gap-1 rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/50 hover:bg-white/85 transition"
-            onClick={() => setShowComments(!showComments)}
-          >
-            💬
-            <span className="text-[10px]">{showComments ? "收起" : "评论"}</span>
-          </button>
         </div>
       )}
 
