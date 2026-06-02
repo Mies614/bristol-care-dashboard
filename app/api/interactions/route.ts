@@ -15,7 +15,7 @@ function getDefaultCode(): string {
  */
 async function buildLikeCountResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
-  spaceId: string,
+  spaceCode: string,
   contentType: string,
   contentId: string,
   identity: string,
@@ -24,7 +24,7 @@ async function buildLikeCountResponse(
   const { data: allLikes, error: countError } = await supabase
     .from("content_interactions")
     .select("identity")
-    .eq("space_id", spaceId)
+    .eq("space_code", spaceCode)
     .eq("content_type", contentType)
     .eq("content_id", contentId)
     .eq("interaction_type", "like");
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     const { data: interactions, error: interactionsError } = await supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .in("content_id", contentIds);
 
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
     let checkQuery = supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     if (existing && existing.length > 0) {
       if (interactionType === "read") {
         // Read is idempotent — just return success with aggregate counts
-        return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
+        return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
           ok: true,
           action: "kept",
           interaction: {
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(safeError, { status: 500 });
       }
 
-      return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
+      return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
         ok: true,
         action: "removed",
         interaction: {
@@ -340,7 +340,6 @@ export async function POST(request: NextRequest) {
 
     // Insert new interaction
     const insertPayload: Record<string, unknown> = {
-      space_id: space.id,
       space_code: spaceCode,
       content_type: contentType,
       content_id: contentId,
@@ -364,9 +363,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    return await buildLikeCountResponse(supabase, space.id, contentType, contentId, identity, {
-      ok: true,
-      action: "created",
+    return await buildLikeCountResponse(supabase, spaceCode, contentType, contentId, identity, {
+        ok: true,
+        action: "created",
       interaction: {
         id: newInteraction.id,
         contentType: newInteraction.content_type,
@@ -426,7 +425,7 @@ export async function DELETE(request: NextRequest) {
     const query = supabase
       .from("content_interactions")
       .delete()
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)

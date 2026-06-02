@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
       supabase
         .from("content_interactions")
         .select("id")
-        .eq("space_id", space.id),
+        .eq("space_code", space.code),
       supabase
         .from("content_comments")
         .select("id")
-        .eq("space_id", space.id),
+        .eq("space_code", space.code),
     ]);
 
     // Compute merge results
@@ -326,7 +326,7 @@ export async function POST(request: NextRequest) {
     let interactionsImported = 0;
     if (newInteractions.length > 0) {
       const rows = newInteractions.map((i) => ({
-        space_id: space.id,
+        space_code: space.code,
         id: i.id,
         content_type: i.contentType,
         content_id: i.contentId,
@@ -349,7 +349,7 @@ export async function POST(request: NextRequest) {
     let commentsImported = 0;
     if (newComments.length > 0) {
       const rows = newComments.map((c) => ({
-        space_id: space.id,
+        space_code: space.code,
         id: c.id,
         content_type: c.contentType,
         content_id: c.contentId,

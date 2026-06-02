@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
       supabase.from("love_notes").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
       supabase.from("album_items").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
       supabase.from("settings").select("key,value").eq("space_id", space.id),
-      supabase.from("content_interactions").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
-      supabase.from("content_comments").select("*").eq("space_id", space.id).order("created_at", { ascending: false }),
+      supabase.from("content_interactions").select("*").eq("space_code", space.code).order("created_at", { ascending: false }),
+      supabase.from("content_comments").select("*").eq("space_code", space.code).order("created_at", { ascending: false }),
     ]);
 
     // Check for errors
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
         periodSettings: cloudSettings.periodSettings,
         interactions: (interactionsRes.data || []).map((row: Record<string, unknown>) => ({
           id: row.id as string,
-          spaceId: row.space_id as string | undefined,
+          spaceCode: row.space_code as string | undefined,
           contentType: row.content_type as string,
           contentId: row.content_id as string,
           identity: row.identity as string,
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
         })),
         comments: (commentsRes.data || []).map((row: Record<string, unknown>) => ({
           id: row.id as string,
-          spaceId: row.space_id as string | undefined,
+          spaceCode: row.space_code as string | undefined,
           contentType: row.content_type as string,
           contentId: row.content_id as string,
           identity: row.identity as string,
