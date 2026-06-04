@@ -288,6 +288,7 @@ export default function HomePage() {
           <CoupleCareStrip
             notes={data.loveNotes}
             albums={albumItems}
+          identityId={identityId}
           />
         </motion.div>
 

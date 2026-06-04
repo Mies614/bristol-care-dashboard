@@ -8,7 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { NoteCard } from "@/components/NoteCard";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { buildRandomMemoryItems, pickRandomMemory, type RandomMemoryItem } from "@/lib/randomMemory";
 import { buildMemoryTimelineItems, groupTimelineByMonth } from "@/lib/memoryTimeline";
@@ -23,7 +23,7 @@ export default function MemoriesPage() {
   const [message, setMessage] = useState("");
   const [nextMeetingDate, setNextMeetingDate] = useState("");
   const code = getDefaultSpaceCode();
-  const { identityId } = useCurrentIdentity(code);
+  const identityId = DEFAULT_NORMAL_IDENTITY_ID;
 
   useEffect(() => {
     try {

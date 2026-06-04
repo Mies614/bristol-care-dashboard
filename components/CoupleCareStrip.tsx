@@ -6,25 +6,23 @@ import { AppCard } from "@/components/ui/AppCard";
 import { getUnreadCount } from "@/lib/readState";
 import { getPartnerUpdates, getUpdateMessage, clearSeenUpdates } from "@/lib/updateChecker";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import type { LoveNote, AlbumItem } from "@/lib/types";
 
 interface CoupleCareStripProps {
   notes: LoveNote[];
   albums: AlbumItem[];
+  identityId?: string;
 }
 
 /**
  * A gentle strip on the homepage showing couple-relevant updates:
  * - Unread notes count
  * - Partner update hint (new notes/albums from the other side)
- *
- * Very light — collapses to nothing if there's nothing to show.
- * Meet countdown is already covered by MissYouCombinedCard — not duplicated here.
  */
-export function CoupleCareStrip({ notes, albums }: CoupleCareStripProps) {
+export function CoupleCareStrip({ notes, albums, identityId: propIdentityId }: CoupleCareStripProps) {
   const spaceCode = getDefaultSpaceCode();
-  const { identityId } = useCurrentIdentity(spaceCode);
+  const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
   const [updates, setUpdates] = useState<ReturnType<typeof getPartnerUpdates>>(() =>
     getPartnerUpdates(notes, albums, spaceCode)
   );

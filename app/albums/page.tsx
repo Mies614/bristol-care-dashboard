@@ -9,7 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import ContentInteractionBar from "@/components/ContentInteractionBar";
 import { createUploadStageMessage, isLargeMediaFile } from "@/lib/mediaUpload";
 import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValidation";
@@ -73,7 +73,7 @@ export default function AlbumsPage() {
   const [video, setVideo] = useState<File | null>(null);
 
   // Identity — unified hook
-  const { identityId: identity } = useCurrentIdentity(code);
+  const identity = DEFAULT_NORMAL_IDENTITY_ID;
 
   // Comments state
   const [selectedComments, setSelectedComments] = useState<CommentEntry[]>([]);
