@@ -26,6 +26,7 @@ import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
+import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
 
 const filters = [
   ["all", "全部"],
@@ -311,6 +312,8 @@ export default function AlbumsPage() {
     patchItem(item.id, { action: "delete" });
   }
 
+  const selectedDownloadUrl = useMemo(() => selected ? getAlbumMediaDownloadUrl(selected) : null, [selected]);
+  const selectedDownloadLabel = useMemo(() => selected ? getAlbumMediaDownloadLabel(selected) : "打开原文件", [selected]);
   const reduceMotion = useAccessibleMotion();
 
   return (
@@ -596,15 +599,15 @@ export default function AlbumsPage() {
               <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
                 删除
               </AppButton>
-              {getAlbumMediaDownloadUrl(selected) && (
+              {selectedDownloadUrl && (
                 <a
-                  href={getAlbumMediaDownloadUrl(selected)!}
+                  href={selectedDownloadUrl}
                   download
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/85 active:scale-[var(--tap-scale)]"
                 >
-                  {getAlbumMediaDownloadLabel(selected)}
+                  {selectedDownloadLabel}
                 </a>
               )}
               <div className="flex-1" />
