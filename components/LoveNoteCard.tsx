@@ -135,15 +135,42 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
       </div>
       <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
       {note?.imageUrl && !imageFailed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={note.imageAlt || "小纸条图片"}
-          className="mt-4 max-h-[280px] w-full rounded-[1.5rem] border border-white/80 bg-white/60 object-cover shadow-sm"
-          src={note.imageUrl}
-          onError={() => setImageFailed(true)}
-        />
+        <div className="mt-4 space-y-2">
+          <img
+            alt={note.imageAlt || "小纸条图片"}
+            className="max-h-[280px] w-full rounded-[1.5rem] border border-white/80 bg-white/60 object-cover shadow-sm"
+            src={note.imageUrl}
+            onError={() => setImageFailed(true)}
+          />
+          {note ? (
+            <a
+              href={getNoteMediaDownloadUrl(note) ?? undefined}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
+            >
+              {getNoteMediaDownloadLabel(note)}
+            </a>
+          ) : null}
+        </div>
       ) : null}
-      {note?.audioUrl ? <audio className="mt-4 w-full" src={note.audioUrl} controls /> : null}
+      {note?.audioUrl ? (
+        <div className="mt-4 space-y-2">
+          <audio className="w-full" src={note.audioUrl} controls />
+          {note ? (
+            <a
+              href={getNoteMediaDownloadUrl(note) ?? undefined}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
+            >
+              {getNoteMediaDownloadLabel(note)}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       {note?.videoUrl ? (
         <div className="mt-4 space-y-2">
           <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls />

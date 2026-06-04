@@ -1,12 +1,10 @@
 /**
- * Note media download URL helper.
+ * Media download URL helpers for notes and albums.
  *
- * Extracts a download URL for media attachments on love notes.
- * Returns null if no download URL can be determined.
- * Pure function — no Supabase, no browser APIs.
+ * Pure functions — no Supabase, no browser APIs.
  */
 
-import type { LoveNote } from "./types";
+import type { LoveNote, AlbumItem } from "./types";
 
 /**
  * Get a downloadable URL for a note's media.
@@ -20,18 +18,44 @@ export function getNoteMediaDownloadUrl(note: LoveNote): string | null {
 }
 
 /**
- * Check if a note has downloadable media.
+ * Get a human-readable label for the download button based on media type.
+ */
+export function getNoteMediaDownloadLabel(note: LoveNote): string {
+  if (note.videoUrl) return "保存视频";
+  if (note.imageUrl) return "保存照片";
+  if (note.audioUrl) return "保存语音";
+  return "下载";
+}
+
+/**
+ * Whether a note has photo, video, or audio media that can be downloaded.
  */
 export function hasNoteDownloadableMedia(note: LoveNote): boolean {
   return getNoteMediaDownloadUrl(note) !== null;
 }
 
 /**
- * Get a human-readable label for the download button based on media type.
+ * Get a downloadable URL for an album item's media.
+ * Priority: videoUrl > imageUrl
  */
-export function getNoteMediaDownloadLabel(note: LoveNote): string {
-  if (note.videoUrl) return "下载视频";
-  if (note.imageUrl) return "下载图片";
-  if (note.audioUrl) return "下载语音";
+export function getAlbumMediaDownloadUrl(album: AlbumItem): string | null {
+  if (album.videoUrl) return album.videoUrl;
+  if (album.imageUrl) return album.imageUrl;
+  return null;
+}
+
+/**
+ * Get a human-readable label for the download button based on album media type.
+ */
+export function getAlbumMediaDownloadLabel(album: AlbumItem): string {
+  if (album.videoUrl) return "保存视频";
+  if (album.imageUrl) return "保存照片";
   return "下载";
+}
+
+/**
+ * Whether an album item has downloadable media.
+ */
+export function hasAlbumDownloadableMedia(album: AlbumItem): boolean {
+  return getAlbumMediaDownloadUrl(album) !== null;
 }
