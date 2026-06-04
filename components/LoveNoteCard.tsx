@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -188,10 +189,9 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
         </div>
       ) : null}
 
-      {/* Interaction bar: likes + reactions + comment toggle */}
+      {/* Interaction bar */}
       {note && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
-          {/* Unified interaction bar: likes + reactions + comment toggle */}
           <ContentInteractionBar
             spaceCode={spaceCode}
             contentType="note"
@@ -204,7 +204,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
         </div>
       )}
 
-      {/* Comments section */}
+      {/* Comments */}
       {note && showComments ? (
         <div className="mt-3 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
           <ContentComments
