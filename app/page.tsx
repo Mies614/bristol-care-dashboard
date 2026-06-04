@@ -214,7 +214,7 @@ export default function HomePage() {
     <AppShell>
       {/* ── 1. Hero ── */}
       <motion.header
-        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/58 to-skySoft/75 px-4 py-4 shadow-float ring-1 ring-white/60 backdrop-blur-2xl"
+        className="relative mb-4 overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br from-blush/50 via-cream/80 to-lilac/30 px-5 py-5 shadow-soft backdrop-blur-md"
         variants={safeVariants(fadeInScale, reduceMotion)}
         initial="hidden"
         animate="visible"
