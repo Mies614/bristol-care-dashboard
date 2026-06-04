@@ -11,7 +11,7 @@ import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/typ
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { getUnreadCount } from "@/lib/readState";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
@@ -41,7 +41,8 @@ export default function HomePage() {
   const weatherState = useWeatherCare();
   const now = useMemo(() => new Date(), []);
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
-  const { identityId } = useCurrentIdentity(spaceCode);
+  // Fixed identity for partner side — never reads from localStorage
+  const identityId = DEFAULT_NORMAL_IDENTITY_ID;
 
   useEffect(() => {
     const emergencyReset = () => {
@@ -126,7 +127,7 @@ export default function HomePage() {
   const todayLabel = useMemo(safeTodayLabel, []);
   const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
 
-  // ──── Unread notes count for current identity ────
+  // ──── Unread notes count for partner identity ────
   const unreadNotesCount = useMemo(
     () => getUnreadCount(data.loveNotes, spaceCode, identityId),
     [data.loveNotes, spaceCode, identityId]
@@ -295,7 +296,7 @@ export default function HomePage() {
 
         {/* 6. 置顶小纸条 */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} />
         </motion.div>
 
         {/* 7. 最近回忆 */}

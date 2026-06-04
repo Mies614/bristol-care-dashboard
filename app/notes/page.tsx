@@ -6,6 +6,7 @@ import { NoteComposer } from "@/components/NoteComposer";
 import { NoteWall } from "@/components/NoteWall";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export default function NotesPage() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const [message, setMessage] = useState("");
   const [composerOpen, setComposerOpen] = useState(false);
+  const identityId = DEFAULT_NORMAL_IDENTITY_ID;
 
   async function loadNotes() {
     const params = new URLSearchParams({ code: getDefaultSpaceCode(), filter, sort });
@@ -103,7 +105,7 @@ export default function NotesPage() {
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
-              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} />
+              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} />
             </div>
           </div>
         </AppCard>

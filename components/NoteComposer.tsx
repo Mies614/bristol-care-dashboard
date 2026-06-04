@@ -9,7 +9,6 @@ import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUploa
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { classifyUploadError } from "@/lib/uploadError";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 type Draft = {
@@ -20,7 +19,7 @@ type Draft = {
 
 const moods = ["", "开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"];
 
-export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | void }) {
+export function NoteComposer({ onCreated, identityId: propIdentityId }: { onCreated: () => Promise<void> | void; identityId?: string }) {
   const [draft, setDraft] = useState<Draft>({ content: "", displayStyle: "sticky", mood: "" });
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
@@ -31,7 +30,7 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
   const cancelRef = useRef(false);
 
   const code = getDefaultSpaceCode();
-  const { identityId: author } = useCurrentIdentity(code);
+  const author = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -76,14 +75,13 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       setMessage(createUploadStageMessage("save"));
-      const currentAuthor = author || DEFAULT_NORMAL_IDENTITY_ID;
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          author: currentAuthor,
-          identity: currentAuthor,
+          author,
+          identity: author,
           content: draft.content,
           display_style: draft.displayStyle,
           mood: draft.mood || undefined,

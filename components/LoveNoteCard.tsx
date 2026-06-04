@@ -6,14 +6,14 @@ import Link from "next/link";
 import type { LoveNote } from "@/lib/types";
 import { isRead, markAsRead } from "@/lib/readState";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { getNoteMediaDownloadUrl, getNoteMediaDownloadLabel } from "@/lib/notesMedia";
 
-export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; fallback: string; onRefresh?: () => void }) {
+export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId }: { note?: LoveNote; fallback: string; onRefresh?: () => void; identityId?: string }) {
   const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
   const [comments, setComments] = useState<CommentEntryType[]>([]);
@@ -21,7 +21,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
   const [showComments, setShowComments] = useState(false);
 
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
-  const { identityId: identity } = useCurrentIdentity(spaceCode);
+  const identity = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
 
   const content = note?.content || fallback;
 
