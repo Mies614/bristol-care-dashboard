@@ -42,6 +42,7 @@ export default function NotesPage() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const { identityId } = useFixedAppIdentity();
+  void identityId; // identity from /me route prefix
 
   async function loadNotes() {
     const params = new URLSearchParams({ code: getDefaultSpaceCode(), filter, sort });

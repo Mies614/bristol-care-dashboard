@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -42,6 +43,7 @@ export default function MeHomePage() {
   const now = useMemo(() => new Date(), []);
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
   const { identityId } = useFixedAppIdentity();
+  void identityId; // identity from /me route prefix
   const appSideLabel = getAppSideLabel("owner");
 
   useEffect(() => {

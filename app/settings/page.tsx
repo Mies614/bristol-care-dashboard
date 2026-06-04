@@ -183,8 +183,12 @@ export default function SettingsPage() {
 
       <div className="flex w-full min-w-0 flex-col gap-4">
         {/* ──────────────────── 1. Identity ──────────────────── */}
-        <SettingsSection title="身份设置" subtitle="管理当前身份，切换后评论和互动会按这个身份记录">
-          <IdentitySettingsCard />
+        <SettingsSection title="小乖端" subtitle="这里是小乖的小空间">
+          <div className="rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm">
+            <p className="text-sm font-semibold text-cocoa">当前使用：小乖端</p>
+            <p className="mt-1.5 text-xs text-[var(--app-muted)] leading-relaxed">这里是小乖的小空间。小纸条、点赞和评论都会以&ldquo;小乖&rdquo;的身份留下。</p>
+            <p className="mt-2 text-xs text-[var(--app-muted)]">已读状态只保存在这台设备上，换设备后可能需要重新看一遍。</p>
+          </div>
         </SettingsSection>
 
         {/* ──────────────────── 2. Profile - 日常最常用 ──────────────────── */}
