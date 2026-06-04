@@ -11,7 +11,7 @@
  * This module is pure and can be used on both client and server.
  */
 
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { DEFAULT_NORMAL_IDENTITY_ID, getIdentityLabel } from "@/lib/identity";
 
 export type AppSide = "partner" | "owner";
 
@@ -35,4 +35,12 @@ export function getIdentityForSide(side: AppSide): string {
  */
 export function getRoleForSide(side: AppSide): "partner" | "owner" {
   return side === "owner" ? "owner" : "partner";
+}
+
+/**
+ * Get a human-readable label for an app side.
+ */
+export function getAppSideLabel(side: AppSide): string {
+  const identityId = getIdentityForSide(side);
+  return getIdentityLabel(identityId);
 }
