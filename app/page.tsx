@@ -10,6 +10,8 @@ import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
+import { getUnreadCount } from "@/lib/readState";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
@@ -38,6 +40,8 @@ export default function HomePage() {
   const [periodSettings, setPeriodSettings] = useState<PeriodSettings>(DEFAULT_PERIOD_SETTINGS);
   const weatherState = useWeatherCare();
   const now = useMemo(() => new Date(), []);
+  const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
+  const { identityId } = useCurrentIdentity(spaceCode);
 
   useEffect(() => {
     const emergencyReset = () => {
@@ -70,7 +74,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetch(`/api/albums?code=${encodeURIComponent(getDefaultSpaceCode())}&filter=all`)
+    fetch(`/api/albums?code=${encodeURIComponent(spaceCode)}&filter=all`)
       .then((response) => response.json())
       .then((payload) => {
         if (Array.isArray(payload.items)) setAlbumItems(payload.items);
@@ -78,10 +82,10 @@ export default function HomePage() {
       .catch(() => {
         // Albums are optional for first paint.
       });
-  }, []);
+  }, [spaceCode]);
 
   useEffect(() => {
-    fetch(`/api/period?code=${encodeURIComponent(getDefaultSpaceCode())}`)
+    fetch(`/api/period?code=${encodeURIComponent(spaceCode)}`)
       .then((response) => response.json())
       .then((payload) => {
         if (Array.isArray(payload.records)) setPeriodRecords(payload.records);
@@ -90,7 +94,7 @@ export default function HomePage() {
       .catch(() => {
         // Period records are optional for first paint.
       });
-  }, []);
+  }, [spaceCode]);
 
   useEffect(() => {
     if (!isCloudConfigured()) return;
@@ -103,7 +107,7 @@ export default function HomePage() {
         }).catch(() => setSyncMessage("云同步失败，已使用本地缓存。"));
         return;
       }
-      syncLoveNotesIntoLocalData(getDefaultSpaceCode()).then((result) => {
+      syncLoveNotesIntoLocalData(spaceCode).then((result) => {
         if (result.ok && result.data) setData(result.data);
       }).catch(() => {
         // Cloud notes are optional for first paint.
@@ -111,7 +115,7 @@ export default function HomePage() {
     } catch {
       setSyncMessage("云同步暂时不可用，已使用本地缓存。");
     }
-  }, []);
+  }, [spaceCode]);
 
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
   const recentMemories = useMemo(() => {
@@ -122,6 +126,12 @@ export default function HomePage() {
   const todayLabel = useMemo(safeTodayLabel, []);
   const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
 
+  // ──── Unread notes count for current identity ────
+  const unreadNotesCount = useMemo(
+    () => getUnreadCount(data.loveNotes, spaceCode, identityId),
+    [data.loveNotes, spaceCode, identityId]
+  );
+
   async function refreshLoveNote() {
     const connection = getCloudConnection();
     if (!connection) {
@@ -129,7 +139,7 @@ export default function HomePage() {
         setSyncMessage("云同步未配置，本地模式可继续使用。");
         return;
       }
-      const result = await syncLoveNotesIntoLocalData(getDefaultSpaceCode());
+      const result = await syncLoveNotesIntoLocalData(spaceCode);
       if (result.ok && result.data) {
         setData(result.data);
         setSyncMessage("小纸条已刷新。");
@@ -196,7 +206,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const localDate = now.toISOString().slice(0, 10);
-    fetch(`/api/miss-you?code=${encodeURIComponent(getDefaultSpaceCode())}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`)
+    fetch(`/api/miss-you?code=${encodeURIComponent(spaceCode)}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`)
       .then((res) => res.json())
       .then((payload) => {
         if (payload.ok && typeof payload.unreadFromOtherCount === "number") {
@@ -206,7 +216,7 @@ export default function HomePage() {
       .catch(() => {
         // Non-blocking
       });
-  }, [now]);
+  }, [now, spaceCode]);
 
   const reduceMotion = useAccessibleMotion();
 
@@ -234,6 +244,16 @@ export default function HomePage() {
         <p className="mt-2.5 text-sm leading-5 text-cocoa/65">
           打开就能看今天该关心什么，不急不赶。
         </p>
+        {/* Unread notes pill — top position in Hero */}
+        {unreadNotesCount > 0 && (
+          <Link
+            href="/notes"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {unreadNotesCount} 条小纸条还没看
+          </Link>
+        )}
       </motion.header>
 
       <motion.div
