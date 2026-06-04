@@ -596,6 +596,17 @@ export default function AlbumsPage() {
               <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
                 删除
               </AppButton>
+              {getAlbumMediaDownloadUrl(selected) && (
+                <a
+                  href={getAlbumMediaDownloadUrl(selected)!}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/85 active:scale-[var(--tap-scale)]"
+                >
+                  {getAlbumMediaDownloadLabel(selected)}
+                </a>
+              )}
               <div className="flex-1" />
               <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>
                 关闭
