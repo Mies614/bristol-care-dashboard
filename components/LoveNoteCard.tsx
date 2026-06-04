@@ -55,9 +55,9 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
 
   useEffect(() => {
     if (note) {
-      setUnread(!isRead(note.id) && note.author !== identity);
+      setUnread(!isRead(note.id, spaceCode, identity) && note.author !== identity);
     }
-  }, [note, identity]);
+  }, [note, identity, spaceCode]);
 
   useEffect(() => {
     if (showComments && note) {
@@ -67,7 +67,7 @@ export function LoveNoteCard({ note, fallback, onRefresh }: { note?: LoveNote; f
 
   function handleRead() {
     if (note && unread) {
-      markAsRead(note.id);
+      markAsRead(note.id, spaceCode, identity);
       setUnread(false);
     }
   }

@@ -6,6 +6,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { getUnreadCount } from "@/lib/readState";
 import { getPartnerUpdates, getUpdateMessage, clearSeenUpdates } from "@/lib/updateChecker";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import type { LoveNote, AlbumItem } from "@/lib/types";
 
 interface CoupleCareStripProps {
@@ -23,6 +24,7 @@ interface CoupleCareStripProps {
  */
 export function CoupleCareStrip({ notes, albums }: CoupleCareStripProps) {
   const spaceCode = getDefaultSpaceCode();
+  const { identityId } = useCurrentIdentity(spaceCode);
   const [updates, setUpdates] = useState<ReturnType<typeof getPartnerUpdates>>(() =>
     getPartnerUpdates(notes, albums, spaceCode)
   );
@@ -32,7 +34,7 @@ export function CoupleCareStrip({ notes, albums }: CoupleCareStripProps) {
     setUpdates(getPartnerUpdates(notes, albums, spaceCode));
   }, [notes, albums, spaceCode]);
 
-  const unreadCount = useMemo(() => getUnreadCount(notes, spaceCode), [notes, spaceCode]);
+  const unreadCount = useMemo(() => getUnreadCount(notes, spaceCode, identityId), [notes, spaceCode, identityId]);
   const updateMsg = useMemo(() => getUpdateMessage(updates), [updates]);
 
   function handleDismissUpdates() {

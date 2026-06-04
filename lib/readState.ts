@@ -16,31 +16,46 @@ const STORAGE_PREFIX = "bristol_dashboard_read_state";
 
 export type ReadMap = Record<string, string>; // noteId -> ISO timestamp
 
-function getStorageKey(spaceCode: string): string {
-  return `${STORAGE_PREFIX}_${spaceCode || "default"}_${DEFAULT_NORMAL_IDENTITY_ID}`;
+function getStorageKey(spaceCode: string, identity: string): string {
+  return `${STORAGE_PREFIX}_${spaceCode || "default"}_${identity || DEFAULT_NORMAL_IDENTITY_ID}`;
 }
 
 // In-memory cache to avoid repeated localStorage reads within a render cycle
 let _cacheKey: string | null = null;
 let _cacheMap: ReadMap | null = null;
 
-function loadReadMap(spaceCode: string): ReadMap {
-  const key = getStorageKey(spaceCode);
+function loadReadMap(spaceCode: string, identity: string): ReadMap {
+  const key = getStorageKey(spaceCode, identity);
   if (_cacheKey === key && _cacheMap) return _cacheMap;
 
   if (typeof window === "undefined") { _cacheKey = null; _cacheMap = null; return {}; }
   try {
     const raw = window.localStorage.getItem(key);
-    _cacheMap = raw ? (JSON.parse(raw) as ReadMap) : {};
+    let map = raw ? (JSON.parse(raw) as ReadMap) : {};
+    // Migrate from old key format (without identity) if new key is empty
+    if (Object.keys(map).length === 0 && identity !== DEFAULT_NORMAL_IDENTITY_ID) {
+      const oldKey = getStorageKey(spaceCode, DEFAULT_NORMAL_IDENTITY_ID);
+      try {
+        const oldRaw = window.localStorage.getItem(oldKey);
+        if (oldRaw) {
+          map = JSON.parse(oldRaw) as ReadMap;
+          window.localStorage.setItem(key, JSON.stringify(map));
+          window.localStorage.removeItem(oldKey);
+        }
+      } catch {
+        // Non-critical migration
+      }
+    }
+    _cacheMap = map;
     _cacheKey = key;
-    return _cacheMap;
+    return map;
   } catch {
     return {};
   }
 }
 
-function saveReadMap(spaceCode: string, map: ReadMap): void {
-  const key = getStorageKey(spaceCode);
+function saveReadMap(spaceCode: string, identity: string, map: ReadMap): void {
+  const key = getStorageKey(spaceCode, identity);
   _cacheMap = map;
   _cacheKey = key;
   if (typeof window === "undefined") { _cacheKey = null; _cacheMap = null; return; }
@@ -62,17 +77,17 @@ function invalidateCache(): void {
 /**
  * Mark a note as read.
  */
-export function markAsRead(noteId: string, spaceCode = "default"): void {
-  const map = loadReadMap(spaceCode);
+export function markAsRead(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): void {
+  const map = loadReadMap(spaceCode, identity);
   map[noteId] = new Date().toISOString();
-  saveReadMap(spaceCode, map);
+  saveReadMap(spaceCode, identity, map);
 }
 
 /**
  * Check if a note has been read.
  */
-export function isRead(noteId: string, spaceCode = "default"): boolean {
-  const map = loadReadMap(spaceCode);
+export function isRead(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): boolean {
+  const map = loadReadMap(spaceCode, identity);
   return noteId in map;
 }
 
@@ -82,12 +97,13 @@ export function isRead(noteId: string, spaceCode = "default"): boolean {
  */
 export function getUnreadCount(
   notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>,
-  spaceCode = "default"
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
 ): number {
-  const map = loadReadMap(spaceCode);
+  const map = loadReadMap(spaceCode, identity);
   return notes.filter((n) => {
-    // Exclude own notes
-    if (n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
+    // Exclude own notes — either the current identity or DEFAULT_NORMAL_IDENTITY_ID
+    if (n.author === identity || n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
     // Exclude soft-deleted notes
     if (n.deletedAt) return false;
     // Check if unread
@@ -101,12 +117,13 @@ export function getUnreadCount(
  */
 export function getUnreadIds(
   notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>,
-  spaceCode = "default"
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
 ): string[] {
-  const map = loadReadMap(spaceCode);
+  const map = loadReadMap(spaceCode, identity);
   return notes
     .filter((n) => {
-      if (n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
+      if (n.author === identity || n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
       if (n.deletedAt) return false;
       return !(n.id in map);
     })
@@ -118,33 +135,34 @@ export function getUnreadIds(
  */
 export function markAllAsRead(
   notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>,
-  spaceCode = "default"
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
 ): void {
-  const map = loadReadMap(spaceCode);
+  const map = loadReadMap(spaceCode, identity);
   const now = new Date().toISOString();
   for (const n of notes) {
     if (!(n.id in map)) {
       map[n.id] = now;
     }
   }
-  saveReadMap(spaceCode, map);
+  saveReadMap(spaceCode, identity, map);
 }
 
 /**
  * Get the timestamp when a note was read, or null if unread.
  */
-export function getReadAt(noteId: string, spaceCode = "default"): string | null {
-  const map = loadReadMap(spaceCode);
+export function getReadAt(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): string | null {
+  const map = loadReadMap(spaceCode, identity);
   return map[noteId] || null;
 }
 
 /**
  * Reset all read state (for testing or manual reset).
  */
-export function resetReadState(spaceCode = "default"): void {
+export function resetReadState(spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): void {
   if (typeof window === "undefined") { _cacheKey = null; _cacheMap = null; return; }
   try {
-    window.localStorage.removeItem(getStorageKey(spaceCode));
+    window.localStorage.removeItem(getStorageKey(spaceCode, identity));
     invalidateCache();
   } catch {
     // Non-critical
@@ -154,6 +172,6 @@ export function resetReadState(spaceCode = "default"): void {
 /**
  * Export read state as a serializable object for backup (optional).
  */
-export function exportReadState(spaceCode = "default"): ReadMap {
-  return { ...loadReadMap(spaceCode) };
+export function exportReadState(spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): ReadMap {
+  return { ...loadReadMap(spaceCode, identity) };
 }
