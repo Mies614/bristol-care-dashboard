@@ -88,7 +88,7 @@ describe("notes API", () => {
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ content: "updated" }));
   });
 
-  it("POST defaults user notes to xiaoguai", async () => {
+  it("POST respects the provided author field", async () => {
     const { POST } = await import("@/app/api/notes/route");
     const request = new NextRequest("http://localhost/api/notes", {
       method: "POST",
@@ -96,9 +96,25 @@ describe("notes API", () => {
       body: JSON.stringify({ content: "hello", author: "me" })
     });
     const response = await POST(request);
-    const payload = await response.json();
+    void (await response.json());
     expect(response.status).toBe(200);
-    expect(payload.note.author).toBe("xiaoguai");
+    // The mock response is hardcoded, but we verify the insert was called with the correct author
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      author: "me",
+      created_by: "me"
+    }));
+  });
+
+  it("POST defaults to xiaoguai when no author is provided", async () => {
+    const { POST } = await import("@/app/api/notes/route");
+    const request = new NextRequest("http://localhost/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "hello" })
+    });
+    const response = await POST(request);
+    void (await response.json());
+    expect(response.status).toBe(200);
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
       author: "xiaoguai",
       created_by: "xiaoguai"

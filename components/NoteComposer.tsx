@@ -9,6 +9,8 @@ import { uploadNoteMediaDirectly, type UploadedNoteMedia } from "@/lib/noteUploa
 import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } from "@/lib/noteValidation";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { classifyUploadError } from "@/lib/uploadError";
+import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 type Draft = {
   content: string;
@@ -27,6 +29,9 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
   const [submitting, setSubmitting] = useState(false);
   const [uploadCanRetry, setUploadCanRetry] = useState(false);
   const cancelRef = useRef(false);
+
+  const code = getDefaultSpaceCode();
+  const { identityId: author } = useCurrentIdentity(code);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -51,7 +56,6 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
     setSubmitting(true);
     setUploadCanRetry(false);
     cancelRef.current = false;
-    const code = getDefaultSpaceCode();
     let uploadedImage: UploadedNoteMedia | null = null;
     let uploadedVideo: UploadedNoteMedia | null = null;
     let uploadedAudio: UploadedNoteMedia | null = null;
@@ -72,12 +76,14 @@ export function NoteComposer({ onCreated }: { onCreated: () => Promise<void> | v
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       setMessage(createUploadStageMessage("save"));
+      const currentAuthor = author || DEFAULT_NORMAL_IDENTITY_ID;
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          author: "xiaoguai",
+          author: currentAuthor,
+          identity: currentAuthor,
           content: draft.content,
           display_style: draft.displayStyle,
           mood: draft.mood || undefined,

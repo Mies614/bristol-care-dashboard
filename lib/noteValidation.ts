@@ -74,8 +74,8 @@ export function inferNoteType(input: { content?: string; imageUrl?: string; audi
   return "text";
 }
 
-export function normalizeNoteAuthor(value: unknown): NonNullable<LoveNote["author"]> {
-  return NOTE_AUTHORS.includes(value as NonNullable<LoveNote["author"]>) ? value as NonNullable<LoveNote["author"]> : DEFAULT_NORMAL_IDENTITY_ID;
+export function normalizeNoteAuthor(value: unknown): string {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : DEFAULT_NORMAL_IDENTITY_ID;
 }
 
 export function normalizeDisplayStyle(value: unknown): NonNullable<LoveNote["displayStyle"]> {
@@ -86,8 +86,8 @@ export function isValidDisplayStyle(value: unknown): value is NonNullable<LoveNo
   return NOTE_DISPLAY_STYLES.includes(value as NonNullable<LoveNote["displayStyle"]>);
 }
 
-export function isValidAuthor(value: unknown): value is NonNullable<LoveNote["author"]> {
-  return NOTE_AUTHORS.includes(value as NonNullable<LoveNote["author"]>);
+export function isValidAuthor(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 export function hasNoteContent(input: { content?: string; imageUrl?: string; audioUrl?: string; videoUrl?: string }) {

@@ -57,7 +57,7 @@ export type LoveNote = {
   content?: string;
   active: boolean;
   pinned: boolean;
-  author?: "admin" | "user" | "xiaoguai" | "me";
+  author?: string;
   noteType?: "text" | "image" | "audio" | "video" | "mixed";
   displayStyle?: "sticky" | "postcard" | "bubble" | "photo_card" | "timeline" | "minimal" | "romantic";
   mood?: string;

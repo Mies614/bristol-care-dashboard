@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (!space) return fail("小纸条空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     step = "insert_note";
-    const author = "xiaoguai";
+    const author = String(body.author || body.identity || "xiaoguai");
     const note: Omit<LoveNote, "id"> = {
       content,
       active: true,
