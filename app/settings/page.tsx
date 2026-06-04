@@ -7,7 +7,6 @@ import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { SyncStatusCard } from "@/components/SyncStatusCard";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
-import { IdentitySettingsCard } from "@/components/settings/IdentitySettingsCard";
 import { NotificationSettingsCard } from "@/components/settings/NotificationSettingsCard";
 import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
 import { AppButton } from "@/components/ui/AppButton";
