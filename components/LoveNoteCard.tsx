@@ -11,7 +11,7 @@ import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
-import { getNoteMediaDownloadUrl, getNoteMediaDownloadLabel } from "@/lib/notesMedia";
+import { NoteMediaDownload } from "./NoteMediaDownload";
 
 export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId, appSide }: { note?: LoveNote; fallback: string; onRefresh?: () => void; identityId?: string; appSide?: "partner" | "owner" }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -145,49 +145,19 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
             src={note.imageUrl}
             onError={() => setImageFailed(true)}
           />
-          {note ? (
-            <a
-              href={getNoteMediaDownloadUrl(note) ?? undefined}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-            >
-              {getNoteMediaDownloadLabel(note)}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {note?.audioUrl ? (
         <div className="mt-4 space-y-2">
           <audio className="w-full" src={note.audioUrl} controls />
-          {note ? (
-            <a
-              href={getNoteMediaDownloadUrl(note) ?? undefined}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-            >
-              {getNoteMediaDownloadLabel(note)}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {note?.videoUrl ? (
         <div className="mt-4 space-y-2">
           <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls />
-          {note ? (
-            <a
-              href={getNoteMediaDownloadUrl(note) ?? undefined}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-            >
-              {getNoteMediaDownloadLabel(note)}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
 

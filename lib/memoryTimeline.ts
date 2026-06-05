@@ -3,6 +3,12 @@ import type { AlbumItem, LoveNote } from "./types";
 export type TimelineItem = {
   id: string;
   type: "note" | "photo" | "video" | "live_photo" | "audio" | "meeting";
+  /** Where this item originates from */
+  sourceType: "note" | "album" | "meeting";
+  /** Original note id (for read state / deep linking) */
+  noteId?: string;
+  /** Original album id (for read state / deep linking) */
+  albumId?: string;
   title: string;
   content?: string;
   date: string;
@@ -41,6 +47,8 @@ export function buildMemoryTimelineItems(input: {
   const notes = (input.notes || []).filter(visibleNote).map((note): TimelineItem => ({
     id: `note-${note.id}`,
     type: note.audioUrl ? "audio" : note.videoUrl ? "video" : note.imageUrl ? "photo" : "note",
+    sourceType: "note",
+    noteId: note.id,
     title: note.mood || "小纸条",
     content: note.content,
     date: note.createdAt || note.visibleFrom || new Date(0).toISOString(),
@@ -52,6 +60,8 @@ export function buildMemoryTimelineItems(input: {
   const albums = (input.albums || []).filter(visibleAlbum).map((item): TimelineItem => ({
     id: `album-${item.id}`,
     type: item.type,
+    sourceType: "album",
+    albumId: item.id,
     title: item.title || "相册回忆",
     content: item.note,
     date: item.takenAt || item.createdAt || new Date(0).toISOString(),
@@ -62,6 +72,7 @@ export function buildMemoryTimelineItems(input: {
   const meeting = input.nextMeetingDate ? [{
     id: `meeting-${input.nextMeetingDate}`,
     type: "meeting" as const,
+    sourceType: "meeting" as const,
     title: "下次见面",
     content: "又近了一点。",
     date: input.nextMeetingDate,

@@ -60,6 +60,7 @@ const config: Config = {
         soft: "0 4px 24px rgba(95, 75, 68, 0.06), 0 1px 3px rgba(95, 75, 68, 0.04)",
         float: "0 12px 40px rgba(95, 75, 68, 0.08), 0 2px 6px rgba(95, 75, 68, 0.03)",
         glow: "0 0 20px rgba(232, 169, 155, 0.25)",
+        card: "0 2px 12px rgba(95, 75, 68, 0.04), 0 0.5px 2px rgba(95, 75, 68, 0.03)",
       },
       keyframes: {
         "accordion-down": {

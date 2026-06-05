@@ -10,7 +10,7 @@ import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry } from "@/lib/contentInteractions";
-import { getNoteMediaDownloadUrl, getNoteMediaDownloadLabel } from "@/lib/notesMedia";
+import { NoteMediaDownload } from "./NoteMediaDownload";
 
 export interface NoteCardProps {
   note: LoveNote;
@@ -57,9 +57,6 @@ export function NoteCard({
     : "";
   const type = note.noteType || (note.videoUrl ? "video" : note.audioUrl ? "audio" : note.imageUrl ? "image" : "text");
   const bubbleAlign = style === "bubble" ? (note.author === "xiaoguai" || note.author === "user" ? "ml-auto" : "mr-auto") : "";
-
-  const downloadUrl = getNoteMediaDownloadUrl(note);
-  const downloadLabel = getNoteMediaDownloadLabel(note);
 
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentEntry[]>([]);
@@ -157,52 +154,19 @@ export function NoteCard({
       {note.imageUrl ? (
         <div className="mb-3 space-y-2">
           <img className="max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} loading="lazy" />
-          {downloadUrl ? (
-            <a
-              href={downloadUrl}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {downloadLabel}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {note.videoUrl ? (
         <div className="mb-3 space-y-2">
           <video className="max-h-56 w-full rounded-[1.25rem] bg-black" src={note.videoUrl} controls onClick={(event) => event.stopPropagation()} preload="metadata" />
-          {downloadUrl ? (
-            <a
-              href={downloadUrl}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {downloadLabel}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {note.audioUrl ? (
         <div className="mb-3 space-y-2">
           <audio className="w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} />
-          {downloadUrl ? (
-            <a
-              href={downloadUrl}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {downloadLabel}
-            </a>
-          ) : null}
+          <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {note.content ? <p className="whitespace-pre-wrap text-sm leading-7 text-cocoa/78">{note.content}</p> : null}

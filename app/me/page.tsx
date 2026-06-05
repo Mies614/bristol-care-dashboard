@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
@@ -199,24 +199,42 @@ export default function MeHomePage() {
           </div>
         </div>
         <p className="mt-2 text-sm leading-5 text-cocoa/50">天气、提醒和她的小纸条，都帮你收好了。</p>
-        {unreadAlbumsMemoryCount > 0 && (
-          <Link
-            href="/me/memories/unread"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
-          >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-            {unreadAlbumsMemoryCount} 个新回忆等你看
-          </Link>
-        )}
-        {unreadNotesCount > 0 && (
-          <Link
-            href="/me/notes"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
-          >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-            {unreadNotesCount} 条小纸条还没看
-          </Link>
-        )}
+        <AnimatePresence>
+          {unreadAlbumsMemoryCount > 0 && (
+            <motion.div
+              key="memory-pill"
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <Link
+                href="/me/memories/unread"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+                {unreadAlbumsMemoryCount} 个新回忆等你看
+              </Link>
+            </motion.div>
+          )}
+          {unreadNotesCount > 0 && (
+            <motion.div
+              key="note-pill"
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <Link
+                href="/me/notes"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+                {unreadNotesCount} 条小纸条还没看
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.header>
 
       <motion.div className="space-y-3" variants={safeVariants(staggerContainer, reduceMotion)} initial="hidden" animate="visible">

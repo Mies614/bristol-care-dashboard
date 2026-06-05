@@ -91,6 +91,30 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
     contentIds: albumIds,
   });
 
+  // Timeline read states: load ALL note and album ids
+  const timelineNoteIds = useMemo(
+    () => notes.filter((n) => !n.deletedAt && n.author !== identityId).map((n) => n.id),
+    [notes, identityId]
+  );
+  const timelineAlbumIds = useMemo(
+    () => albums.filter((a) => !a.deletedAt).map((a) => a.id),
+    [albums]
+  );
+
+  const { readKeySet: timelineNoteReadKeySet } = useCloudReadStates({
+    spaceCode: code,
+    identity: identityId,
+    contentType: "note",
+    contentIds: timelineNoteIds,
+  });
+
+  const { readKeySet: timelineAlbumReadKeySet } = useCloudReadStates({
+    spaceCode: code,
+    identity: identityId,
+    contentType: "album",
+    contentIds: timelineAlbumIds,
+  });
+
   // Link prefix based on side
   const notesHref = isOwner ? "/me/notes" : "/notes";
   const albumsHref = isOwner ? "/me/albums" : "/albums";
@@ -234,18 +258,35 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
                   <div key={group.month}>
                     <p className="mb-2 text-sm font-semibold text-cocoa/70">{group.month}</p>
                 <div className="space-y-2 border-l-2 border-roseSoft/35 pl-3 sm:pl-4">
-                  {group.items.slice(0, 5).map((item) => (
-                    <Link className="block rounded-[1.2rem] border border-white/70 bg-white/58 p-2.5 sm:p-3 shadow-sm" href={item.href} key={item.id}>
+                  {group.items.slice(0, 5).map((item) => {
+                    // Determine unread state
+                    const isUnread = (
+                      (item.sourceType === "note" && item.noteId && !timelineNoteReadKeySet.has(`note:${item.noteId}`)) ||
+                      (item.sourceType === "album" && item.albumId && !timelineAlbumReadKeySet.has(`album:${item.albumId}`))
+                    );
+                    const sourceLabel = item.sourceType === "note" ? "小纸条" : item.sourceType === "album" ? "相册" : null;
+
+                    return (
+                    <Link className="block rounded-[1.2rem] border border-white/70 bg-white/58 p-2.5 sm:p-3 shadow-sm relative" href={item.href} key={item.id}>
                       <div className="flex gap-2 sm:gap-3">
                         {item.imageUrl ? <img className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-2xl object-cover" src={item.imageUrl} alt={item.title} /> : <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-blush/65 text-xs text-cocoa/65">{item.type}</div>}
-                        <div className="min-w-0">
-                          <p className="text-sm sm:text-base font-medium text-cocoa">{item.title}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm sm:text-base font-medium text-cocoa">{item.title}</p>
+                            {sourceLabel ? (
+                              <span className="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] text-cocoa/50">{sourceLabel}</span>
+                            ) : null}
+                          </div>
                           <p className="mt-0.5 text-xs text-cocoa/50">{new Date(item.date).toLocaleDateString("zh-CN")}</p>
                           {item.content ? <p className="mt-1 line-clamp-2 text-xs sm:text-sm leading-5 text-cocoa/65">{item.content}</p> : null}
                         </div>
                       </div>
+                      {isUnread ? (
+                        <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-rose-400 ring-2 ring-white" />
+                      ) : null}
                     </Link>
-                      ))}
+                    );
+                  })}
                     </div>
                   </div>
                 ))}

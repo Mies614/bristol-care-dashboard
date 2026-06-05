@@ -195,7 +195,7 @@ export default function ContentComments({
 
       {/* Loading state */}
       {loading && (
-        <p className="mt-3 text-xs text-cocoa/40 text-center">加载评论中...</p>
+        <p className="mt-3 text-xs text-cocoa/40 text-center">正在慢慢加载...</p>
       )}
 
       {/* Comments list */}
@@ -257,10 +257,10 @@ export default function ContentComments({
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && comments.length === 0 && expanded && (
+      {/* Empty state — always show when no comments and not loading */}
+      {!loading && comments.length === 0 && (
         <p className="mt-3 text-xs text-cocoa/30 text-center">
-          还没有评论，来说点什么吧
+          还没有评论，先说点什么吧
         </p>
       )}
     </div>
