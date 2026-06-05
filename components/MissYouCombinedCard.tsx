@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { useAccessibleMotion, safeVariants, staggerItem } from "@/lib/design/motion";
 
 interface MissYouData {
@@ -68,39 +69,59 @@ interface PendingItem {
   createdAt: string;
 }
 
-const PENDING_KEY = "bristol_dashboard_pending_miss_you_xiaoguai";
+function getPendingKey(identityId: string): string {
+  return `bristol_dashboard_pending_miss_you_${identityId}`;
+}
 
-function loadPendingQueue(): PendingItem[] {
+function loadPendingQueue(identityId: string): PendingItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(PENDING_KEY);
+    const raw = localStorage.getItem(getPendingKey(identityId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function savePendingQueue(items: PendingItem[]) {
+function savePendingQueue(identityId: string, items: PendingItem[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(items));
+    localStorage.setItem(getPendingKey(identityId), JSON.stringify(items));
   } catch {
     // Storage unavailable
   }
 }
 
-/**
- * MissYouCombinedCard
- *
- * 合并"未读想念"和"想你一下"两个卡片为一个。
- * 同时展示：
- *   - 他想你了 N 次（仅当有未读）
- *   - 你今天想了 N 次
- *   - 最近一次时间
- *   - 想你一下按钮
- *   - 知道啦按钮（仅当有未读）
- */
-export function MissYouCombinedCard() {
+function getRecipientForAuthor(author: string): string {
+  return author === "me" ? "xiaoguai" : "me";
+}
+
+function getOtherIdentityLabel(identityId: string): string {
+  return identityId === "me" ? "小乖" : "他";
+}
+
+function getSelfActionLabel(identityId: string): string {
+  return identityId === "me" ? "想小乖一下" : "想他一下";
+}
+
+function getCardTitle(identityId: string): string {
+  return identityId === "me" ? "想小乖" : "想你";
+}
+
+function getCardSubtitle(identityId: string): string {
+  return identityId === "me" ? "给她发一个轻轻的想念。" : "点一下，就把这一刻收起来。";
+}
+
+export interface MissYouCombinedCardProps {
+  spaceCode?: string;
+  identityId?: string;
+  appSide?: "partner" | "owner";
+}
+
+export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide }: MissYouCombinedCardProps = {}) {
+  const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const spaceCode = propSpaceCode || getDefaultSpaceCode();
+
   const [data, setData] = useState<MissYouData>({
     todayCount: 0,
     todayByAuthor: {},
@@ -119,9 +140,8 @@ export function MissYouCombinedCard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const code = getDefaultSpaceCode();
       const response = await fetch(
-        `/api/miss-you?code=${encodeURIComponent(code)}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`
+        `/api/miss-you?spaceCode=${encodeURIComponent(spaceCode)}&localDate=${localDate}&limit=1&viewer=${encodeURIComponent(identityId)}&includeUnread=true`
       );
       const payload = await response.json();
       if (payload.ok) {
@@ -138,20 +158,19 @@ export function MissYouCombinedCard() {
     } catch {
       // Silent fail
     }
-  }, [localDate]);
+  }, [localDate, spaceCode, identityId]);
 
   const retryPending = useCallback(async () => {
-    const pending = loadPendingQueue();
+    const pending = loadPendingQueue(identityId);
     if (pending.length === 0) return;
     const remaining: PendingItem[] = [];
     for (const item of pending) {
       try {
-        const code = getDefaultSpaceCode();
         const response = await fetch("/api/miss-you", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            code,
+            spaceCode,
             author: item.author,
             recipient: item.recipient,
             message: item.message,
@@ -173,8 +192,8 @@ export function MissYouCombinedCard() {
         remaining.push(item);
       }
     }
-    savePendingQueue(remaining);
-  }, []);
+    savePendingQueue(identityId, remaining);
+  }, [spaceCode, identityId]);
 
   useEffect(() => {
     fetchData();
@@ -188,11 +207,10 @@ export function MissYouCombinedCard() {
     if (markingSeen) return;
     setMarkingSeen(true);
     try {
-      const code = getDefaultSpaceCode();
       const response = await fetch("/api/miss-you", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, viewer: "xiaoguai", action: "mark_seen" })
+        body: JSON.stringify({ spaceCode, viewer: identityId, action: "mark_seen" })
       });
       const payload = await response.json();
       if (payload.ok) {
@@ -217,13 +235,14 @@ export function MissYouCombinedCard() {
       setAnimating(true);
       setHearts((prev) => [...prev, { id: Date.now(), left: 30 + Math.random() * 40 }]);
 
+      const recipient = getRecipientForAuthor(identityId);
       const response = await fetch("/api/miss-you", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: getDefaultSpaceCode(),
-          author: "xiaoguai",
-          recipient: "admin",
+          spaceCode,
+          author: identityId,
+          recipient,
           localDate
         })
       });
@@ -240,31 +259,31 @@ export function MissYouCombinedCard() {
           className: "!rounded-[var(--app-radius)] !border !border-[var(--app-card-border)] !bg-[var(--app-card-bg)] !text-[var(--app-text)]"
         });
       } else {
-        const pending = loadPendingQueue();
+        const pending = loadPendingQueue(identityId);
         pending.push({
           id: crypto.randomUUID?.() || String(Date.now()),
-          author: "xiaoguai",
-          recipient: "admin",
+          author: identityId,
+          recipient,
           message: "想你一下",
           localDate,
           createdAt: new Date().toISOString()
         });
-        savePendingQueue(pending);
-        const offlineMsg = "已经先帮你记在本地，稍后再同步。";
+        savePendingQueue(identityId, pending);
+        const offlineMsg = "网络有点慢，先帮你记在本机了。";
         toast(offlineMsg);
       }
     } catch {
-      const pending = loadPendingQueue();
+      const pending = loadPendingQueue(identityId);
       pending.push({
         id: crypto.randomUUID?.() || String(Date.now()),
-        author: "xiaoguai",
-        recipient: "admin",
+        author: identityId,
+        recipient: getRecipientForAuthor(identityId),
         message: "想你一下",
         localDate,
         createdAt: new Date().toISOString()
       });
-      savePendingQueue(pending);
-      const offlineMsg = "已经先帮你记在本地，稍后再同步。";
+      savePendingQueue(identityId, pending);
+      const offlineMsg = "网络有点慢，先帮你记在本机了。";
       toast(offlineMsg);
     } finally {
       setLoading(false);
@@ -273,7 +292,11 @@ export function MissYouCombinedCard() {
   }
 
   const hasUnread = data.unreadFromOtherCount > 0;
-  const todaysYouCount = data.todayByAuthor["xiaoguai"] || data.todayCount;
+  const todaysYouCount = data.todayByAuthor[identityId] || 0;
+  const otherLabel = getOtherIdentityLabel(identityId);
+  const buttonLabel = getSelfActionLabel(identityId);
+  const cardTitle = getCardTitle(identityId);
+  const cardSubtitle = getCardSubtitle(identityId);
 
   return (
     <motion.section
@@ -295,13 +318,15 @@ export function MissYouCombinedCard() {
       <div className="relative z-10">
         {/* ── 一行标题 + 计数 ── */}
         <p className="text-sm font-semibold text-cocoa/70">
-          想你{todaysYouCount > 0 ? ` · 今天已想你 ${todaysYouCount} 次` : ""}
+          {cardTitle}{todaysYouCount > 0 ? ` · 今天已想了 ${todaysYouCount} 次` : ""}
         </p>
 
-        {/* ── 未读想念（admin 端发来的） ── */}
+        <p className="mt-0.5 text-xs text-cocoa/50">{cardSubtitle}</p>
+
+        {/* ── 未读想念（对方发来的） ── */}
         {hasUnread && (
           <p className="mt-1 text-xs text-cocoa/50">
-            💕 他也在想你 {data.unreadFromOtherCount} 次
+            💕 {otherLabel}也在想你 {data.unreadFromOtherCount} 次
             {data.unreadFromOtherEvents.length > 0 && ` · ${formatTime(data.unreadFromOtherEvents[0].created_at)}`}
           </p>
         )}
@@ -313,7 +338,7 @@ export function MissYouCombinedCard() {
             disabled={loading}
             onClick={handleClick}
           >
-            {loading ? "..." : "想你一下"}
+            {loading ? "..." : buttonLabel}
           </button>
           {hasUnread && (
             <button

@@ -174,7 +174,7 @@ export default function MeHomePage() {
           <TodaySummaryCard summary={todaySummary} />
         </motion.div>
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <MissYouCombinedCard />
+          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="owner" />
         </motion.div>
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <TodayCareStrip items={careStripItems} />

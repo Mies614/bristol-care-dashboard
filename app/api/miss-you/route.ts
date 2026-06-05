@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import {
   sendMissYouPushToRole,
   getOppositeAuthors,
@@ -32,7 +33,7 @@ function getLocalDateKey(): string {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const code = searchParams.get("code") || getDefaultCode();
+    const code = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
     const localDate = searchParams.get("localDate") || getLocalDateKey();
     const limit = Math.min(Number(searchParams.get("limit")) || 10, 50);
     const viewer = searchParams.get("viewer");
@@ -197,10 +198,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
-    const author = (body.author || "xiaoguai") as string;
+    const code = body.spaceCode || body.code || getDefaultCode();
+    const author = (body.author || DEFAULT_NORMAL_IDENTITY_ID) as string;
     const recipient = body.recipient || getRecipientForAuthor(author);
-    const message = body.message || (author === "xiaoguai" ? "想你一下" : "我也想你一下");
+    const message = body.message || "想你一下";
     const localDate = body.localDate || getLocalDateKey();
     const source = body.source || "button";
 
@@ -315,13 +316,13 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.code || getDefaultCode();
+    const code = body.spaceCode || body.code || getDefaultCode();
     const viewer = body.viewer as string;
     const action = body.action as string;
 
-    if (!viewer || (viewer !== "admin" && viewer !== "xiaoguai")) {
+    if (!viewer || (viewer !== "admin" && viewer !== "xiaoguai" && viewer !== "me")) {
       return NextResponse.json(
-        { ok: false, error: "viewer 必须是 admin 或 xiaoguai。", code: "INVALID_VIEWER" },
+        { ok: false, error: "viewer 必须是 admin、xiaoguai 或 me。", code: "INVALID_VIEWER" },
         { status: 400 }
       );
     }

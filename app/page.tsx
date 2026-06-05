@@ -278,7 +278,7 @@ export default function HomePage() {
 
         {/* 4. 想你区域（合并未读想念 + 想你一下） */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <MissYouCombinedCard />
+          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="partner" />
         </motion.div>
 
         {/* 5. 今日照顾摘要条（课程 / DDL / 经期） */}
