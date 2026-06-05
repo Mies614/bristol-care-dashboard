@@ -14,13 +14,14 @@ import { buildRandomMemoryItems, pickRandomMemory, type RandomMemoryItem } from 
 import { buildMemoryTimelineItems, groupTimelineByMonth } from "@/lib/memoryTimeline";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, LoveNote } from "@/lib/types";
+import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 
 export type MemoriesPageContentProps = {
   identityId?: string;
   appSide?: "partner" | "owner";
 };
 
-export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appSide }: MemoriesPageContentProps = {}) {
+export function MemoriesPageContent({ identityId: propIdentityId, appSide = "partner" }: MemoriesPageContentProps = {}) {
   const [notes, setNotes] = useState<LoveNote[]>([]);
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [randomMemory, setRandomMemory] = useState<RandomMemoryItem | null>(null);
@@ -29,6 +30,7 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
   const [nextMeetingDate, setNextMeetingDate] = useState("");
   const code = getDefaultSpaceCode();
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const isOwner = appSide === "owner";
 
   useEffect(() => {
     try {
@@ -51,15 +53,47 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
     const rest = notes.filter((note) => note.id !== featured?.id);
     return [featured, ...rest].filter(Boolean).slice(0, 3) as LoveNote[];
   }, [notes]);
+
   const albumSummary = useMemo(() => {
     const favorites = albums.filter((item) => item.isFavorite);
     return (favorites.length ? favorites : albums).slice(0, 6);
   }, [albums]);
+
   const randomItems = useMemo(() => buildRandomMemoryItems(notes, albums), [notes, albums]);
   const timelineGroups = useMemo(
     () => groupTimelineByMonth(buildMemoryTimelineItems({ notes, albums, nextMeetingDate })).slice(0, 4),
     [notes, albums, nextMeetingDate]
   );
+
+  // Cloud-synced read states for notes in memories
+  const noteIds = useMemo(
+    () => noteSummary.filter((n) => !n.deletedAt && n.author !== identityId).map((n) => n.id),
+    [noteSummary, identityId]
+  );
+
+  const { readKeySet: noteReadKeySet, markAsRead: markNoteRead } = useCloudReadStates({
+    spaceCode: code,
+    identity: identityId,
+    contentType: "note",
+    contentIds: noteIds,
+  });
+
+  // Cloud-synced read states for albums in memories
+  const albumIds = useMemo(
+    () => albumSummary.filter((a) => !a.deletedAt).map((a) => a.id),
+    [albumSummary]
+  );
+
+  const { readKeySet: albumReadKeySet } = useCloudReadStates({
+    spaceCode: code,
+    identity: identityId,
+    contentType: "album",
+    contentIds: albumIds,
+  });
+
+  // Link prefix based on side
+  const notesHref = isOwner ? "/me/notes" : "/notes";
+  const albumsHref = isOwner ? "/me/albums" : "/albums";
 
   useEffect(() => {
     setRandomMemory((current) => {
@@ -86,6 +120,7 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
         <div className="space-y-4">
           {message ? <p className="notice">{message}</p> : null}
 
+          {/* 1. 随机回忆 */}
           <section className="soft-card bg-gradient-to-br from-white/88 via-blush/38 to-lilac/45">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -131,39 +166,43 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
             )}
           </section>
 
+          {/* 2. 最近小纸条 */}
           <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="section-kicker mb-1">💌 最近纸条</p>
                 <h2 className="font-semibold text-cocoa">小纸条</h2>
               </div>
-              <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href="/notes">
+              <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href={notesHref}>
                 全部
               </Link>
             </div>
             {noteSummary.length ? (
               <div className="space-y-2">
-                {noteSummary.map((note) => <NoteCard featured key={note.id} note={note} identityId={identityId} />)}
+                {noteSummary.map((note) => (
+                  <NoteCard featured key={note.id} note={note} identityId={identityId} readKeySet={noteReadKeySet} onNoteRead={(id) => markNoteRead(id)} />
+                ))}
               </div>
             ) : (
               <p className="py-4 text-center text-sm text-cocoa/45">还没有小纸条，从这里开始写下第一张吧。</p>
             )}
           </section>
 
+          {/* 3. 最近相册 */}
           <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="section-kicker mb-1">📷 最近照片</p>
                 <h2 className="font-semibold text-cocoa">相册</h2>
               </div>
-              <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href="/albums">
+              <Link className="btn-secondary btn-small rounded-full px-3 py-1 text-xs" href={albumsHref}>
                 全部
               </Link>
             </div>
             {albumSummary.length ? (
               <div className="grid grid-cols-2 gap-2">
                 {albumSummary.map((item) => (
-                  <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
+                  <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href={albumsHref} key={item.id}>
                     {item.imageUrl ? (
                       <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" />
                     ) : (
@@ -171,6 +210,9 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
                     )}
                     {item.type === "video" ? (
                       <span className="absolute right-1 top-1 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] text-white">VIDEO</span>
+                    ) : null}
+                    {!item.deletedAt && !albumReadKeySet.has(`album:${item.id}`) ? (
+                      <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-rose-400 ring-2 ring-white" />
                     ) : null}
                   </Link>
                 ))}
@@ -180,6 +222,7 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide: _appS
             )}
           </section>
 
+          {/* 4. 时间线 */}
           <section className="soft-card">
             <div className="mb-3">
               <p className="section-kicker mb-1">时间线</p>
