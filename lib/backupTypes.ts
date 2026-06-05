@@ -9,6 +9,13 @@ export const BACKUP_SCHEMA_VERSION = "1.0.0";
 
 export type StorageModeHint = "supabase" | "localStorage" | "mixed";
 
+export interface BackupContentRead {
+  contentType: string;
+  contentId: string;
+  identity: string;
+  readAt: string;
+}
+
 export interface BackupPayload {
   /** Schema version for validation */
   schemaVersion: string;
@@ -31,6 +38,7 @@ export interface BackupPayload {
     periodSettings?: PeriodSettings;
     interactions?: BackupInteraction[];
     comments?: BackupComment[];
+    contentReads?: BackupContentRead[];
     appSettings?: {
       nickname: string;
       nextMeetDate: string;
@@ -152,6 +160,7 @@ export interface BackupImportSummary {
   periodRecords: number;
   interactions: number;
   comments: number;
+  contentReads: number;
 }
 
 export interface BackupValidateResult {
@@ -172,7 +181,6 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
 
   const obj = raw as Record<string, unknown>;
 
-  // Check schemaVersion
   if (typeof obj.schemaVersion !== "string" || !obj.schemaVersion) {
     return {
       valid: false,
@@ -180,8 +188,6 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
     };
   }
 
-  // Support current and future compatible versions
-  // For now only 1.x.x is supported
   if (!obj.schemaVersion.startsWith("1.")) {
     return {
       valid: false,
@@ -189,14 +195,12 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
     };
   }
 
-  // Check data section exists
   if (!obj.data || typeof obj.data !== "object") {
     return { valid: false, error: "备份文件缺少 data 字段，文件可能不完整。" };
   }
 
   const data = obj.data as Record<string, unknown>;
 
-  // Validate arrays (they can be empty, that's fine)
   const notes = Array.isArray(data.notes) ? data.notes : [];
   const albums = Array.isArray(data.albums) ? data.albums : [];
   const deadlines = Array.isArray(data.deadlines) ? data.deadlines : [];
@@ -204,6 +208,7 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
   const periodRecords = Array.isArray(data.periodRecords) ? data.periodRecords : [];
   const interactions = Array.isArray(data.interactions) ? data.interactions : [];
   const comments = Array.isArray(data.comments) ? data.comments : [];
+  const contentReads = Array.isArray(data.contentReads) ? data.contentReads : [];
 
   const summary: BackupImportSummary = {
     notes: notes.length,
@@ -213,6 +218,7 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
     periodRecords: periodRecords.length,
     interactions: interactions.length,
     comments: comments.length,
+    contentReads: contentReads.length,
   };
 
   return {
@@ -233,6 +239,7 @@ export function validateBackupPayload(raw: unknown): BackupValidateResult {
         periodSettings: data.periodSettings as PeriodSettings | undefined,
         interactions: interactions as BackupInteraction[],
         comments: comments as BackupComment[],
+        contentReads: contentReads as BackupContentRead[],
         appSettings: data.appSettings as BackupPayload["data"]["appSettings"] | undefined,
       },
     },
@@ -251,6 +258,7 @@ export function computeMergeResults(
     courses: Course[];
     interactions?: { id: string }[];
     comments?: { id: string }[];
+    contentReads?: string[];
   },
   incoming: BackupPayload
 ): {
@@ -260,6 +268,7 @@ export function computeMergeResults(
   courses: { toInsert: number; skipped: number };
   interactions: { toInsert: number; skipped: number };
   comments: { toInsert: number; skipped: number };
+  contentReads: { toInsert: number; skipped: number };
 } {
   const existingNoteIds = new Set(existing.notes.map((n) => n.id));
   const existingAlbumIds = new Set(existing.albums.map((a) => a.id));
@@ -286,6 +295,12 @@ export function computeMergeResults(
   const commentsSkipped = (incoming.data.comments || []).filter((c) => existingCommentIds.has(c.id)).length;
   const commentsToInsert = (incoming.data.comments || []).length - commentsSkipped;
 
+  // Content reads: dedup by composite key contentType:contentId:identity
+  const existingReadKeys = new Set(existing.contentReads || []);
+  const incomingReads = incoming.data.contentReads || [];
+  const readsSkipped = incomingReads.filter((r) => existingReadKeys.has(`${r.contentType}:${r.contentId}:${r.identity}`)).length;
+  const readsToInsert = incomingReads.length - readsSkipped;
+
   return {
     notes: { toInsert: notesToInsert, skipped: notesSkipped },
     albums: { toInsert: albumsToInsert, skipped: albumsSkipped },
@@ -293,6 +308,7 @@ export function computeMergeResults(
     courses: { toInsert: coursesToInsert, skipped: coursesSkipped },
     interactions: { toInsert: interactionsToInsert, skipped: interactionsSkipped },
     comments: { toInsert: commentsToInsert, skipped: commentsSkipped },
+    contentReads: { toInsert: readsToInsert, skipped: readsSkipped },
   };
 }
 
@@ -368,6 +384,7 @@ export function buildBackupFromLocalData(data: AppData, spaceCode: string): Back
       periodSettings: data.periodSettings,
       interactions: [],
       comments: [],
+      contentReads: [],
       appSettings: {
         nickname: data.nickname,
         nextMeetDate: data.nextMeetDate,

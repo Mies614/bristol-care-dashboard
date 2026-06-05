@@ -91,6 +91,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
             periodRecords: getArrayLength(d.periodRecords),
             interactions: getArrayLength(d.interactions),
             comments: getArrayLength(d.comments),
+            contentReads: getArrayLength(d.contentReads),
           };
           setBackupCounts(counts);
           setBackupJson(JSON.stringify(payload, null, 2));

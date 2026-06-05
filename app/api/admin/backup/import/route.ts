@@ -146,7 +146,8 @@ export async function POST(request: NextRequest) {
       mergeResults.deadlines.toInsert +
       mergeResults.courses.toInsert +
       mergeResults.interactions.toInsert +
-      mergeResults.comments.toInsert;
+      mergeResults.comments.toInsert +
+      mergeResults.contentReads.toInsert;
 
     // If dry-run mode, just return the merge summary
     const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
@@ -163,7 +164,8 @@ export async function POST(request: NextRequest) {
           mergeResults.deadlines.skipped +
           mergeResults.courses.skipped +
           mergeResults.interactions.skipped +
-          mergeResults.comments.skipped,
+          mergeResults.comments.skipped +
+          mergeResults.contentReads.skipped,
       });
     }
 
