@@ -3,9 +3,13 @@
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 /**
- * Read/unread state for love notes.
+ * Read/unread state for all content types (notes, albums, memories).
  *
- * Stores a map of note IDs to read timestamps in localStorage.
+ * Uses composite keys in localStorage:
+ *   note:{noteId}   → ISO timestamp
+ *   album:{albumId} → ISO timestamp
+ *   memory:{memoryId} → ISO timestamp
+ *
  * Each identity + spaceCode combination has independent read state.
  *
  * This is device-local state — NOT synced to Supabase.
@@ -14,7 +18,12 @@ import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 const STORAGE_PREFIX = "bristol_dashboard_read_state";
 
-export type ReadMap = Record<string, string>; // noteId -> ISO timestamp
+/** Event dispatched when read state changes, so BottomNav / homepage can update. */
+export const READ_STATE_CHANGED_EVENT = "bristol-read-state-changed";
+
+export type ReadContentType = "note" | "album" | "memory";
+
+export type ReadMap = Record<string, string>; // compositeKey -> ISO timestamp
 
 function getStorageKey(spaceCode: string, identity: string): string {
   return `${STORAGE_PREFIX}_${spaceCode || "default"}_${identity || DEFAULT_NORMAL_IDENTITY_ID}`;
@@ -61,6 +70,10 @@ function saveReadMap(spaceCode: string, identity: string, map: ReadMap): void {
   if (typeof window === "undefined") { _cacheKey = null; _cacheMap = null; return; }
   try {
     window.localStorage.setItem(key, JSON.stringify(map));
+    // Notify listeners (BottomNav, homepage, etc.)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(READ_STATE_CHANGED_EVENT));
+    }
   } catch {
     // Non-critical
   }
@@ -74,21 +87,53 @@ function invalidateCache(): void {
   _cacheMap = null;
 }
 
+function compositeKey(contentType: ReadContentType, contentId: string): string {
+  return `${contentType}:${contentId}`;
+}
+
+// ─── Generic content read state ───
+
 /**
- * Mark a note as read.
+ * Mark any content type as read.
+ */
+export function markContentAsRead(
+  contentType: ReadContentType,
+  contentId: string,
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): void {
+  const map = loadReadMap(spaceCode, identity);
+  map[compositeKey(contentType, contentId)] = new Date().toISOString();
+  saveReadMap(spaceCode, identity, map);
+}
+
+/**
+ * Check if any content type has been read.
+ */
+export function isContentRead(
+  contentType: ReadContentType,
+  contentId: string,
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): boolean {
+  const map = loadReadMap(spaceCode, identity);
+  return compositeKey(contentType, contentId) in map;
+}
+
+// ─── Note read state (backward-compatible wrappers) ───
+
+/**
+ * Mark a note as read. Uses composite key "note:{id}" internally.
  */
 export function markAsRead(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): void {
-  const map = loadReadMap(spaceCode, identity);
-  map[noteId] = new Date().toISOString();
-  saveReadMap(spaceCode, identity, map);
+  markContentAsRead("note", noteId, spaceCode, identity);
 }
 
 /**
  * Check if a note has been read.
  */
 export function isRead(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): boolean {
-  const map = loadReadMap(spaceCode, identity);
-  return noteId in map;
+  return isContentRead("note", noteId, spaceCode, identity);
 }
 
 /**
@@ -102,18 +147,14 @@ export function getUnreadCount(
 ): number {
   const map = loadReadMap(spaceCode, identity);
   return notes.filter((n) => {
-    // Exclude own notes — either the current identity or DEFAULT_NORMAL_IDENTITY_ID
     if (n.author === identity || n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
-    // Exclude soft-deleted notes
     if (n.deletedAt) return false;
-    // Check if unread
-    return !(n.id in map);
+    return !(compositeKey("note", n.id) in map);
   }).length;
 }
 
 /**
  * Get unread note IDs from a list.
- * Excludes: own notes, soft-deleted notes.
  */
 export function getUnreadIds(
   notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>,
@@ -125,7 +166,7 @@ export function getUnreadIds(
     .filter((n) => {
       if (n.author === identity || n.author === DEFAULT_NORMAL_IDENTITY_ID) return false;
       if (n.deletedAt) return false;
-      return !(n.id in map);
+      return !(compositeKey("note", n.id) in map);
     })
     .map((n) => n.id);
 }
@@ -141,8 +182,9 @@ export function markAllAsRead(
   const map = loadReadMap(spaceCode, identity);
   const now = new Date().toISOString();
   for (const n of notes) {
-    if (!(n.id in map)) {
-      map[n.id] = now;
+    const key = compositeKey("note", n.id);
+    if (!(key in map)) {
+      map[key] = now;
     }
   }
   saveReadMap(spaceCode, identity, map);
@@ -153,8 +195,99 @@ export function markAllAsRead(
  */
 export function getReadAt(noteId: string, spaceCode = "default", identity = DEFAULT_NORMAL_IDENTITY_ID): string | null {
   const map = loadReadMap(spaceCode, identity);
-  return map[noteId] || null;
+  return map[compositeKey("note", noteId)] || null;
 }
+
+// ─── Album read state ───
+
+/**
+ * Get unread album count.
+ * Excludes albums uploaded by the current identity.
+ */
+export function getUnreadAlbumCount(
+  albums: Array<{ id: string; deletedAt?: string | null; createdBy?: string | null; author?: string | null }>,
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): number {
+  const map = loadReadMap(spaceCode, identity);
+  return albums.filter((a) => {
+    if (a.deletedAt) return false;
+    // Exclude own uploads
+    const uploader = a.createdBy || a.author;
+    if (uploader && (uploader === identity || uploader === DEFAULT_NORMAL_IDENTITY_ID)) return false;
+    return !(compositeKey("album", a.id) in map);
+  }).length;
+}
+
+/**
+ * Get unread album IDs.
+ */
+export function getUnreadAlbumIds(
+  albums: Array<{ id: string; deletedAt?: string | null; createdBy?: string | null; author?: string | null }>,
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): string[] {
+  const map = loadReadMap(spaceCode, identity);
+  return albums
+    .filter((a) => {
+      if (a.deletedAt) return false;
+      const uploader = a.createdBy || a.author;
+      if (uploader && (uploader === identity || uploader === DEFAULT_NORMAL_IDENTITY_ID)) return false;
+      return !(compositeKey("album", a.id) in map);
+    })
+    .map((a) => a.id);
+}
+
+// ─── Memory read state ───
+
+/**
+ * Get unread memory count from a list of general items.
+ * Items with a source type (note/album) use the source composite key to avoid double-counting.
+ */
+export function getUnreadMemoryCount(
+  memories: Array<{
+    id: string;
+    deletedAt?: string | null;
+    source?: "note" | "album";
+    sourceId?: string;
+  }>,
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): number {
+  const map = loadReadMap(spaceCode, identity);
+  return memories.filter((m) => {
+    if (m.deletedAt) return false;
+    // If the memory has a source, check whether the source content was read
+    if (m.source && m.sourceId) {
+      return !(compositeKey(m.source, m.sourceId) in map);
+    }
+    // Fallback: use the memory's own composite key
+    return !(compositeKey("memory", m.id) in map);
+  }).length;
+}
+
+// ─── Combined summary ───
+
+/**
+ * Build a combined unread summary for homepage rendering.
+ */
+export function getUnreadHomeSummary(
+  data: {
+    notes: Array<{ id: string; author?: string | null; deletedAt?: string | null }>;
+    albums: Array<{ id: string; deletedAt?: string | null; createdBy?: string | null; author?: string | null }>;
+    memories?: Array<{ id: string; deletedAt?: string | null; source?: "note" | "album"; sourceId?: string }>;
+  },
+  spaceCode = "default",
+  identity = DEFAULT_NORMAL_IDENTITY_ID
+): { noteCount: number; albumCount: number; memoryCount: number; total: number; hasAny: boolean } {
+  const noteCount = getUnreadCount(data.notes, spaceCode, identity);
+  const albumCount = getUnreadAlbumCount(data.albums, spaceCode, identity);
+  const memoryCount = data.memories ? getUnreadMemoryCount(data.memories, spaceCode, identity) : 0;
+  const total = noteCount + albumCount + memoryCount;
+  return { noteCount, albumCount, memoryCount, total, hasAny: total > 0 };
+}
+
+// ─── Reset ───
 
 /**
  * Reset all read state (for testing or manual reset).
@@ -164,6 +297,10 @@ export function resetReadState(spaceCode = "default", identity = DEFAULT_NORMAL_
   try {
     window.localStorage.removeItem(getStorageKey(spaceCode, identity));
     invalidateCache();
+    // Notify listeners
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(READ_STATE_CHANGED_EVENT));
+    }
   } catch {
     // Non-critical
   }
