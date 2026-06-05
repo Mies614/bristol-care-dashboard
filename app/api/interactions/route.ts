@@ -15,7 +15,7 @@ function getDefaultCode(): string {
  */
 async function buildFullSummaryResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
-  spaceCode: string,
+  spaceId: string,
   contentType: string,
   contentId: string,
   identity: string,
@@ -24,7 +24,7 @@ async function buildFullSummaryResponse(
   const { data: allInteractions, error: countError } = await supabase
     .from("content_interactions")
     .select("identity, interaction_type, reaction")
-    .eq("space_code", spaceCode)
+    .eq("space_id", spaceId)
     .eq("content_type", contentType)
     .eq("content_id", contentId);
 
@@ -41,7 +41,7 @@ async function buildFullSummaryResponse(
   const likeCount = likeItems.length;
   const liked = likeItems.some((i) => i.identity === identity);
 
-  // Reactions (fire, hug, moon etc.)
+  // Reactions
   const reactionItems = items.filter((i) => i.interaction_type === "reaction" && i.reaction);
   const reactionCounts: Record<string, number> = {};
   const reactionActive: Record<string, boolean> = {};
@@ -57,12 +57,12 @@ async function buildFullSummaryResponse(
     reactions[key] = { count, active: reactionActive[key] || false };
   }
 
-  // Comment count (non-deleted only)
+  // Comment count
   let commentCount = 0;
   const { count: ccCount, error: ccError } = await supabase
     .from("content_comments")
     .select("*", { count: "exact", head: true })
-    .eq("space_code", spaceCode)
+    .eq("space_id", spaceId)
     .eq("content_type", contentType)
     .eq("content_id", contentId)
     .is("deleted_at", null);
@@ -79,14 +79,10 @@ async function buildFullSummaryResponse(
   });
 }
 
-// Supported content types and interaction types
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
 
 // ─── GET /api/interactions ───
-// Query params:
-//   spaceCode (or legacy: code), contentType, contentIds (comma-separated), identity
-// Returns a summary of interactions for the requested content items.
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -95,7 +91,6 @@ export async function GET(request: NextRequest) {
     const contentIdsRaw = searchParams.get("contentIds");
     const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
-    // ── Required param validation ──
     const missing: string[] = [];
     if (!spaceCode) missing.push("spaceCode");
     if (!contentType) missing.push("contentType");
@@ -122,7 +117,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Safe: contentIdsRaw was checked above
     const contentIds = (contentIdsRaw as string).split(",").map((s) => s.trim()).filter(Boolean);
     if (contentIds.length === 0 || contentIds.length > 100) {
       return NextResponse.json(
@@ -140,11 +134,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch interactions for the requested content items
+    // Fetch interactions — use space_id (UUID), not space_code (text)
     const { data: interactions, error: interactionsError } = await supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .eq("content_type", contentType)
       .in("content_id", contentIds);
 
@@ -153,11 +147,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    // Build per-content summaries — include commentCount
+    // Comment counts
     const { data: commentCounts, error: commentCountError } = await supabase
       .from("content_comments")
       .select("content_id")
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .eq("content_type", contentType)
       .in("content_id", contentIds)
       .is("deleted_at", null);
@@ -184,49 +178,31 @@ export async function GET(request: NextRequest) {
         (i: Record<string, unknown>) => i.content_id === contentId
       );
 
-      const readCount = itemInteractions.filter(
-        (i: Record<string, unknown>) => i.interaction_type === "read"
-      ).length;
-      const hasRead = itemInteractions.some(
-        (i: Record<string, unknown>) => i.interaction_type === "read" && i.identity === identity
-      );
-      const likeCount = itemInteractions.filter(
-        (i: Record<string, unknown>) => i.interaction_type === "like"
-      ).length;
-      const hasLiked = itemInteractions.some(
-        (i: Record<string, unknown>) => i.interaction_type === "like" && i.identity === identity
-      );
+      const readCount = itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "read").length;
+      const hasRead = itemInteractions.some((i: Record<string, unknown>) => i.interaction_type === "read" && i.identity === identity);
+      const likeCount = itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "like").length;
+      const hasLiked = itemInteractions.some((i: Record<string, unknown>) => i.interaction_type === "like" && i.identity === identity);
 
-      // Reactions
       const reactionCounts: Record<string, number> = {};
       const reactionActive: Record<string, boolean> = {};
-
-      const reactionsForItem = itemInteractions.filter(
-        (i: Record<string, unknown>) => i.interaction_type === "reaction"
-      );
-      for (const r of reactionsForItem) {
+      for (const r of itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "reaction")) {
         const reactionVal: string = (r.reaction as string) || "";
         if (!reactionVal) continue;
         reactionCounts[reactionVal] = (reactionCounts[reactionVal] || 0) + 1;
-        if (r.identity === identity) {
-          reactionActive[reactionVal] = true;
-        }
+        if (r.identity === identity) reactionActive[reactionVal] = true;
       }
 
-      // Build reaction entries
       const reactions: Record<string, { count: number; active: boolean }> = {};
       for (const [key, count] of Object.entries(reactionCounts)) {
         reactions[key] = { count, active: reactionActive[key] || false };
       }
 
-      const commentCount = commentCountMap[contentId] || 0;
-      summaries[contentId] = { readCount, hasRead, likeCount, hasLiked, commentCount, reactions };
+      summaries[contentId] = { readCount, hasRead, likeCount, hasLiked, commentCount: commentCountMap[contentId] || 0, reactions };
     }
 
     return NextResponse.json({
       ok: true,
       summaries,
-      // Return raw interactions for the client to merge with local data
       interactions: (interactions || []).map((i: Record<string, unknown>) => ({
         id: i.id,
         spaceId: i.space_id,
@@ -246,9 +222,6 @@ export async function GET(request: NextRequest) {
 }
 
 // ─── POST /api/interactions ───
-// Body:
-//   spaceCode (or legacy: code), contentType, contentId, interactionType, reaction?, identity?
-// Creates or toggles an interaction.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -259,7 +232,6 @@ export async function POST(request: NextRequest) {
     const reaction = body.reaction as string | undefined;
     const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
-    // ── Required param validation ──
     const missing: string[] = [];
     if (!spaceCode) missing.push("spaceCode");
     if (!contentType) missing.push("contentType");
@@ -310,12 +282,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the check query — use .is("reaction", null) when reaction is null,
-    // NOT .eq("reaction", "") because "" ≠ NULL in Postgres.
     let checkQuery = supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
@@ -324,12 +294,9 @@ export async function POST(request: NextRequest) {
     if (reaction) {
       checkQuery = checkQuery.eq("reaction", reaction);
     } else {
-      // reaction is null/undefined — query for rows where reaction IS NULL
       checkQuery = checkQuery.is("reaction", null);
     }
 
-    // Use .select("*") without .single() or .maybeSingle() — it returns an array.
-    // Empty array = no existing interaction, which is NOT an error.
     const { data: existing, error: checkError } = await checkQuery;
 
     if (checkError) {
@@ -339,14 +306,9 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // If already exists and it's a "read" or "like" toggle — remove it (toggle off)
-    // For "read": always keep (idempotent)
-    // For "like": toggle on/off
-    // For "reaction": if already exists with same reaction, remove (toggle off); otherwise add
     if (existing && existing.length > 0) {
       if (interactionType === "read") {
-        // Read is idempotent — just return success with full summary
-        return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
+        return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
           ok: true,
           action: "kept",
           interaction: {
@@ -362,7 +324,6 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Toggle off: remove existing
       const { error: deleteError } = await supabase
         .from("content_interactions")
         .delete()
@@ -373,24 +334,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(safeError, { status: 500 });
       }
 
-      return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
+      return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
         ok: true,
         action: "removed",
-        interaction: {
-          contentType,
-          contentId,
-          identity,
-          interactionType,
-          reaction: reaction || undefined,
-        },
+        interaction: { contentType, contentId, identity, interactionType, reaction: reaction || undefined },
         liked: false,
-        likeCount: undefined, // will be filled by buildFullSummaryResponse
+        likeCount: undefined,
       });
     }
 
-    // Insert new interaction
+    // Insert new
     const insertPayload: Record<string, unknown> = {
-      space_code: spaceCode,
+      space_id: space.id,
       content_type: contentType,
       content_id: contentId,
       identity,
@@ -413,9 +368,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
-        ok: true,
-        action: "created",
+    return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
+      ok: true,
+      action: "created",
       interaction: {
         id: newInteraction.id,
         contentType: newInteraction.content_type,
@@ -427,7 +382,7 @@ export async function POST(request: NextRequest) {
         updatedAt: newInteraction.updated_at,
       },
       liked: true,
-      likeCount: undefined, // will be filled by buildFullSummaryResponse
+      likeCount: undefined,
     });
   } catch (err) {
     const safeError = toSafeApiError(err, "INTERACTIONS_CREATE_FAILED");
@@ -436,9 +391,6 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── DELETE /api/interactions ───
-// Body:
-//   spaceCode (or legacy: code), contentType, contentId, interactionType, reaction?, identity?
-// Removes a specific interaction.
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
@@ -475,7 +427,7 @@ export async function DELETE(request: NextRequest) {
     const query = supabase
       .from("content_interactions")
       .delete()
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
