@@ -33,15 +33,15 @@ export function BottomNav({ status }: { status?: NavStatus }) {
   const pathname = usePathname();
   const [settings, setSettings] = useState(() => getThemeSettings());
 
-  useEffect(() => {
-    const handler = () => setSettings(getThemeSettings());
-    window.addEventListener("theme-settings-changed", handler);
-    return () => window.removeEventListener("theme-settings-changed", handler);
-  }, []);
+  // All hooks must be called before any conditional returns
+  const shouldShow = shouldShowBottomNav(pathname);
+  const navItems = getNavItemsForPath(pathname);
+  const activeHref = getActiveNavHref(pathname);
+  const navStyle: ThemeNavStyle = normalizeNavStyle(settings.navStyle);
+  const themeStyle: AppThemeStyle = normalizeThemeStyle(settings.style);
+  const decoration: ThemeDecoration = settings.decoration;
 
-  if (!shouldShowBottomNav(pathname)) return null;
-
-  // Listen for read-state changes to refresh memories dot
+  // Memories dot state
   const [memoriesDot, setMemoriesDot] = useState<boolean>(Boolean(status?.memories));
 
   useEffect(() => {
@@ -49,8 +49,6 @@ export function BottomNav({ status }: { status?: NavStatus }) {
   }, [status?.memories]);
 
   const handleReadStateChanged = useCallback(() => {
-    // When any content is marked read, clear the dot — the parent page will recalculate and pass updated status
-    // If the parent doesn't update, the dot will stay cleared until the next navigation refresh
     setMemoriesDot(false);
   }, []);
 
@@ -59,10 +57,13 @@ export function BottomNav({ status }: { status?: NavStatus }) {
     return () => window.removeEventListener(READ_STATE_CHANGED_EVENT, handleReadStateChanged);
   }, [handleReadStateChanged]);
 
-  const activeHref = getActiveNavHref(pathname);
-  const navStyle: ThemeNavStyle = normalizeNavStyle(settings.navStyle);
-  const themeStyle: AppThemeStyle = normalizeThemeStyle(settings.style);
-  const decoration: ThemeDecoration = settings.decoration;
+  useEffect(() => {
+    const handler = () => setSettings(getThemeSettings());
+    window.addEventListener("theme-settings-changed", handler);
+    return () => window.removeEventListener("theme-settings-changed", handler);
+  }, []);
+
+  if (!shouldShow) return null;
 
   return (
     <div
@@ -76,11 +77,10 @@ export function BottomNav({ status }: { status?: NavStatus }) {
         className={cn(getNavContainerClass(navStyle, themeStyle), "overflow-visible")}
       >
         <ul className="flex items-center justify-around gap-0 overflow-visible">
-          {getNavItemsForPath(pathname).map((item) => {
+          {navItems.map((item) => {
             const isActive = activeHref === item.href;
             const icon = ICON_MAP[item.icon];
 
-            // Show dot on settings if there's a status, or on memories if unread
             const hasStatusDot = item.group === "settings" ? Boolean(status?.settings) : item.group === "memories" ? memoriesDot : false;
 
             return (
