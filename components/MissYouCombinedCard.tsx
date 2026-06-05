@@ -118,7 +118,7 @@ export interface MissYouCombinedCardProps {
   appSide?: "partner" | "owner";
 }
 
-export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide }: MissYouCombinedCardProps = {}) {
+export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide: _appSide }: MissYouCombinedCardProps = {}) {
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
   const spaceCode = propSpaceCode || getDefaultSpaceCode();
 
