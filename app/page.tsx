@@ -329,15 +329,6 @@ export default function HomePage() {
 
         {/* 5. 今日照顾摘要条（课程 / DDL / 经期） */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-        {/* 4.5 情侣关怀条 */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <CoupleCareStrip
-            notes={data.loveNotes}
-            albums={albumItems}
-          identityId={identityId}
-          />
-        </motion.div>
-
           <TodayCareStrip items={careStripItems} />
         </motion.div>
 

@@ -118,8 +118,17 @@ export async function GET(request: NextRequest) {
       .in("content_id", contentIds);
 
     if (interactionsError) {
-      const safeError = toSafeApiError(interactionsError, "INTERACTIONS_FETCH_FAILED");
-      return NextResponse.json(safeError, { status: 500 });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "INTERACTIONS_FETCH_FAILED",
+          reason: "supabase_error",
+          supabaseCode: interactionsError.code ?? null,
+          supabaseMessage: interactionsError.message ?? String(interactionsError),
+          supabaseHint: interactionsError.hint ?? null,
+        },
+        { status: 500 }
+      );
     }
 
     const { data: commentCounts, error: commentCountError } = await supabase
@@ -176,8 +185,15 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (err) {
-    const safeError = toSafeApiError(err, "INTERACTIONS_FETCH_FAILED");
-    return NextResponse.json(safeError, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "INTERACTIONS_FETCH_FAILED",
+        reason: "server_error",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -319,8 +335,15 @@ export async function POST(request: NextRequest) {
       liked: true, likeCount: undefined,
     });
   } catch (err) {
-    const safeError = toSafeApiError(err, "INTERACTIONS_CREATE_FAILED");
-    return NextResponse.json(safeError, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "INTERACTIONS_CREATE_FAILED",
+        reason: "server_error",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -374,7 +397,14 @@ export async function DELETE(request: NextRequest) {
       reaction: reaction || undefined,
     });
   } catch (err) {
-    const safeError = toSafeApiError(err, "INTERACTIONS_DELETE_FAILED");
-    return NextResponse.json(safeError, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "INTERACTIONS_DELETE_FAILED",
+        reason: "server_error",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
   }
 }
