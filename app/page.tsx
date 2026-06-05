@@ -304,7 +304,7 @@ export default function HomePage() {
       </motion.header>
 
       <motion.div
-        className="space-y-3.5"
+        className="space-y-3"
         variants={safeVariants(staggerContainer, reduceMotion)}
         initial="hidden"
         animate="visible"

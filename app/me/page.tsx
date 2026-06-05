@@ -219,7 +219,7 @@ export default function MeHomePage() {
         )}
       </motion.header>
 
-      <motion.div className="space-y-3.5" variants={safeVariants(staggerContainer, reduceMotion)} initial="hidden" animate="visible">
+      <motion.div className="space-y-3" variants={safeVariants(staggerContainer, reduceMotion)} initial="hidden" animate="visible">
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
