@@ -85,7 +85,7 @@ export default function NotesPage() {
       <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Note Wall</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">小纸条墙</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">像便签和明信片一样，把想说的轻轻贴在这里。</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">像便签和明信片一样，把想说的轻轻留在这里。</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {["✎ 写文字", "🎤 录语音", "📷 发照片", "🎬 发视频"].map((item) => (
             <span className="rounded-full bg-white/60 px-3 py-1.5 text-xs text-[var(--app-muted)]" key={item}>{item}</span>
