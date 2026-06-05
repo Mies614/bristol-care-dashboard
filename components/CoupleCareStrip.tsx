@@ -13,6 +13,7 @@ interface CoupleCareStripProps {
   notes: LoveNote[];
   albums: AlbumItem[];
   identityId?: string;
+  appSide?: "partner" | "owner";
 }
 
 /**
@@ -20,9 +21,11 @@ interface CoupleCareStripProps {
  * - Unread notes count
  * - Partner update hint (new notes/albums from the other side)
  */
-export function CoupleCareStrip({ notes, albums, identityId: propIdentityId }: CoupleCareStripProps) {
+export function CoupleCareStrip({ notes, albums, identityId: propIdentityId, appSide }: CoupleCareStripProps) {
   const spaceCode = getDefaultSpaceCode();
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const isOwner = appSide === "owner";
+  const notesHref = isOwner ? "/me/notes" : "/notes";
   const [updates, setUpdates] = useState<ReturnType<typeof getPartnerUpdates>>(() =>
     getPartnerUpdates(notes, albums, spaceCode)
   );
@@ -54,7 +57,7 @@ export function CoupleCareStrip({ notes, albums, identityId: propIdentityId }: C
         {/* Unread notes */}
         {unreadCount > 0 && (
           <Link
-            href="/notes"
+            href={notesHref}
             className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 hover:bg-white/85 transition"
           >
             <span className="text-cocoa/70">

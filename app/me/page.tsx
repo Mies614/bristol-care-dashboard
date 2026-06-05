@@ -180,10 +180,10 @@ export default function MeHomePage() {
           <TodayCareStrip items={careStripItems} />
         </motion.div>
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} />
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} appSide="owner" />
         </motion.div>
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <CoupleCareStrip notes={data.loveNotes} albums={albumItems} />
+          <CoupleCareStrip notes={data.loveNotes} albums={albumItems} identityId={identityId} appSide="owner" />
         </motion.div>
         {recentMemories.length > 0 && (
           <motion.section className="soft-card mb-2" variants={safeVariants(staggerItem, reduceMotion)}>

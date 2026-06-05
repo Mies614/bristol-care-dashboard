@@ -13,7 +13,7 @@ import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { getNoteMediaDownloadUrl, getNoteMediaDownloadLabel } from "@/lib/notesMedia";
 
-export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId }: { note?: LoveNote; fallback: string; onRefresh?: () => void; identityId?: string }) {
+export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId, appSide }: { note?: LoveNote; fallback: string; onRefresh?: () => void; identityId?: string; appSide?: "partner" | "owner" }) {
   const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
   const [comments, setComments] = useState<CommentEntryType[]>([]);
@@ -22,6 +22,8 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
 
   const spaceCode = useMemo(() => getDefaultSpaceCode(), []);
   const identity = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const isOwner = appSide === "owner";
+  const notesHref = isOwner ? "/me/notes" : "/notes";
 
   const content = note?.content || fallback;
 
@@ -129,7 +131,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         </div>
         {onRefresh ? (
           <div className="flex flex-wrap justify-end gap-2">
-            <Link className="btn-secondary btn-small" href="/notes">小纸条墙</Link>
+            <Link className="btn-secondary btn-small" href={notesHref}>小纸条墙</Link>
             <button className="btn-secondary btn-small" onClick={onRefresh}>刷新</button>
           </div>
         ) : null}
