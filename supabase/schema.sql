@@ -427,7 +427,7 @@ alter table public.user_identities enable row level security;
 
 create table if not exists public.content_interactions (
   id uuid primary key default gen_random_uuid(),
-  space_id uuid references public.couple_spaces(id) on delete cascade,
+  space_code text not null,
   content_type text not null check (content_type in ('note', 'album', 'memory')),
   content_id text not null,
   identity text not null default 'default',
@@ -435,18 +435,18 @@ create table if not exists public.content_interactions (
   reaction text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(space_id, content_type, content_id, identity, interaction_type, coalesce(reaction, ''))
+  unique(space_code, content_type, content_id, identity, interaction_type, coalesce(reaction, ''))
 );
 
 create index if not exists content_interactions_space_content_idx
-on public.content_interactions(space_id, content_type, content_id);
+on public.content_interactions(space_code, content_type, content_id);
 
 create index if not exists content_interactions_identity_idx
-on public.content_interactions(space_id, identity);
+on public.content_interactions(space_code, identity);
 
 create table if not exists public.content_comments (
   id uuid primary key default gen_random_uuid(),
-  space_id uuid references public.couple_spaces(id) on delete cascade,
+  space_code text not null,
   content_type text not null check (content_type in ('note', 'album', 'memory')),
   content_id text not null,
   identity text not null default 'default',
@@ -457,7 +457,7 @@ create table if not exists public.content_comments (
 );
 
 create index if not exists content_comments_space_content_idx
-on public.content_comments(space_id, content_type, content_id);
+on public.content_comments(space_code, content_type, content_id);
 
 alter table public.content_interactions enable row level security;
 alter table public.content_comments enable row level security;

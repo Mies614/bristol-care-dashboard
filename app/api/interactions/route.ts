@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { toSafeApiError } from "@/lib/apiError";
@@ -9,13 +8,9 @@ function getDefaultCode(): string {
   return getDefaultSpaceCodeServer();
 }
 
-/**
- * Helper: after creating/removing an interaction, count all interactions
- * for this content item and return a full summary (likes + reactions).
- */
 async function buildFullSummaryResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
-  spaceId: string,
+  spaceCode: string,
   contentType: string,
   contentId: string,
   identity: string,
@@ -24,7 +19,7 @@ async function buildFullSummaryResponse(
   const { data: allInteractions, error: countError } = await supabase
     .from("content_interactions")
     .select("identity, interaction_type, reaction")
-    .eq("space_id", spaceId)
+    .eq("space_code", spaceCode)
     .eq("content_type", contentType)
     .eq("content_id", contentId);
 
@@ -36,33 +31,28 @@ async function buildFullSummaryResponse(
   type InteractionRow = { identity: string; interaction_type: string; reaction: string | null };
   const items = (allInteractions || []) as InteractionRow[];
 
-  // Likes
   const likeItems = items.filter((i) => i.interaction_type === "like");
   const likeCount = likeItems.length;
   const liked = likeItems.some((i) => i.identity === identity);
 
-  // Reactions
   const reactionItems = items.filter((i) => i.interaction_type === "reaction" && i.reaction);
   const reactionCounts: Record<string, number> = {};
   const reactionActive: Record<string, boolean> = {};
   for (const r of reactionItems) {
     const key = r.reaction!;
     reactionCounts[key] = (reactionCounts[key] || 0) + 1;
-    if (r.identity === identity) {
-      reactionActive[key] = true;
-    }
+    if (r.identity === identity) reactionActive[key] = true;
   }
   const reactions: Record<string, { count: number; active: boolean }> = {};
   for (const [key, count] of Object.entries(reactionCounts)) {
     reactions[key] = { count, active: reactionActive[key] || false };
   }
 
-  // Comment count
   let commentCount = 0;
   const { count: ccCount, error: ccError } = await supabase
     .from("content_comments")
     .select("*", { count: "exact", head: true })
-    .eq("space_id", spaceId)
+    .eq("space_code", spaceCode)
     .eq("content_type", contentType)
     .eq("content_id", contentId)
     .is("deleted_at", null);
@@ -70,19 +60,12 @@ async function buildFullSummaryResponse(
     commentCount = ccCount;
   }
 
-  return NextResponse.json({
-    ...base,
-    liked,
-    likeCount,
-    commentCount,
-    reactions,
-  });
+  return NextResponse.json({ ...base, liked, likeCount, commentCount, reactions });
 }
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
 
-// ─── GET /api/interactions ───
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -126,19 +109,11 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, spaceCode);
-    if (!space) {
-      return NextResponse.json(
-        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
-        { status: 404 }
-      );
-    }
 
-    // Fetch interactions — use space_id (UUID), not space_code (text)
     const { data: interactions, error: interactionsError } = await supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .in("content_id", contentIds);
 
@@ -147,11 +122,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    // Comment counts
     const { data: commentCounts, error: commentCountError } = await supabase
       .from("content_comments")
       .select("content_id")
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .in("content_id", contentIds)
       .is("deleted_at", null);
@@ -159,40 +133,32 @@ export async function GET(request: NextRequest) {
     const commentCountMap: Record<string, number> = {};
     if (!commentCountError && commentCounts) {
       for (const row of commentCounts) {
-        const cid = row.content_id as string;
-        commentCountMap[cid] = (commentCountMap[cid] || 0) + 1;
+        commentCountMap[row.content_id as string] = (commentCountMap[row.content_id as string] || 0) + 1;
       }
     }
 
     const summaries: Record<string, {
-      readCount: number;
-      hasRead: boolean;
-      likeCount: number;
-      hasLiked: boolean;
-      commentCount: number;
-      reactions: Record<string, { count: number; active: boolean }>;
+      readCount: number; hasRead: boolean; likeCount: number; hasLiked: boolean;
+      commentCount: number; reactions: Record<string, { count: number; active: boolean }>;
     }> = {};
 
     for (const contentId of contentIds) {
-      const itemInteractions = (interactions || []).filter(
-        (i: Record<string, unknown>) => i.content_id === contentId
-      );
+      const itemInteractions = (interactions || []).filter((i: Record<string, unknown>) => i.content_id === contentId);
 
       const readCount = itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "read").length;
       const hasRead = itemInteractions.some((i: Record<string, unknown>) => i.interaction_type === "read" && i.identity === identity);
       const likeCount = itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "like").length;
       const hasLiked = itemInteractions.some((i: Record<string, unknown>) => i.interaction_type === "like" && i.identity === identity);
 
+      const reactions: Record<string, { count: number; active: boolean }> = {};
       const reactionCounts: Record<string, number> = {};
       const reactionActive: Record<string, boolean> = {};
       for (const r of itemInteractions.filter((i: Record<string, unknown>) => i.interaction_type === "reaction")) {
-        const reactionVal: string = (r.reaction as string) || "";
-        if (!reactionVal) continue;
-        reactionCounts[reactionVal] = (reactionCounts[reactionVal] || 0) + 1;
-        if (r.identity === identity) reactionActive[reactionVal] = true;
+        const val = (r.reaction as string) || "";
+        if (!val) continue;
+        reactionCounts[val] = (reactionCounts[val] || 0) + 1;
+        if (r.identity === identity) reactionActive[val] = true;
       }
-
-      const reactions: Record<string, { count: number; active: boolean }> = {};
       for (const [key, count] of Object.entries(reactionCounts)) {
         reactions[key] = { count, active: reactionActive[key] || false };
       }
@@ -204,15 +170,9 @@ export async function GET(request: NextRequest) {
       ok: true,
       summaries,
       interactions: (interactions || []).map((i: Record<string, unknown>) => ({
-        id: i.id,
-        spaceId: i.space_id,
-        contentType: i.content_type,
-        contentId: i.content_id,
-        identity: i.identity,
-        interactionType: i.interaction_type,
-        reaction: i.reaction || undefined,
-        createdAt: i.created_at,
-        updatedAt: i.updated_at,
+        id: i.id, spaceId: i.space_id, contentType: i.content_type, contentId: i.content_id,
+        identity: i.identity, interactionType: i.interaction_type, reaction: i.reaction || undefined,
+        createdAt: i.created_at, updatedAt: i.updated_at,
       })),
     });
   } catch (err) {
@@ -221,7 +181,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ─── POST /api/interactions ───
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -274,18 +233,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, spaceCode);
-    if (!space) {
-      return NextResponse.json(
-        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
-        { status: 404 }
-      );
-    }
 
     let checkQuery = supabase
       .from("content_interactions")
       .select("*")
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
@@ -308,18 +260,12 @@ export async function POST(request: NextRequest) {
 
     if (existing && existing.length > 0) {
       if (interactionType === "read") {
-        return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
-          ok: true,
-          action: "kept",
+        return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
+          ok: true, action: "kept",
           interaction: {
-            id: existing[0].id,
-            contentType: existing[0].content_type,
-            contentId: existing[0].content_id,
-            identity: existing[0].identity,
-            interactionType: existing[0].interaction_type,
-            reaction: existing[0].reaction,
-            createdAt: existing[0].created_at,
-            updatedAt: existing[0].updated_at,
+            id: existing[0].id, contentType: existing[0].content_type, contentId: existing[0].content_id,
+            identity: existing[0].identity, interactionType: existing[0].interaction_type,
+            reaction: existing[0].reaction, createdAt: existing[0].created_at, updatedAt: existing[0].updated_at,
           },
         });
       }
@@ -334,18 +280,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(safeError, { status: 500 });
       }
 
-      return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
-        ok: true,
-        action: "removed",
+      return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
+        ok: true, action: "removed",
         interaction: { contentType, contentId, identity, interactionType, reaction: reaction || undefined },
-        liked: false,
-        likeCount: undefined,
+        liked: false, likeCount: undefined,
       });
     }
 
-    // Insert new
     const insertPayload: Record<string, unknown> = {
-      space_id: space.id,
+      space_code: spaceCode,
       content_type: contentType,
       content_id: contentId,
       identity,
@@ -353,9 +296,7 @@ export async function POST(request: NextRequest) {
       created_at: now,
       updated_at: now,
     };
-    if (reaction) {
-      insertPayload.reaction = reaction;
-    }
+    if (reaction) insertPayload.reaction = reaction;
 
     const { data: newInteraction, error: insertError } = await supabase
       .from("content_interactions")
@@ -368,21 +309,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(safeError, { status: 500 });
     }
 
-    return await buildFullSummaryResponse(supabase, space.id, contentType, contentId, identity, {
-      ok: true,
-      action: "created",
+    return await buildFullSummaryResponse(supabase, spaceCode, contentType, contentId, identity, {
+      ok: true, action: "created",
       interaction: {
-        id: newInteraction.id,
-        contentType: newInteraction.content_type,
-        contentId: newInteraction.content_id,
-        identity: newInteraction.identity,
-        interactionType: newInteraction.interaction_type,
-        reaction: newInteraction.reaction || undefined,
-        createdAt: newInteraction.created_at,
-        updatedAt: newInteraction.updated_at,
+        id: newInteraction.id, contentType: newInteraction.content_type, contentId: newInteraction.content_id,
+        identity: newInteraction.identity, interactionType: newInteraction.interaction_type,
+        reaction: newInteraction.reaction || undefined, createdAt: newInteraction.created_at, updatedAt: newInteraction.updated_at,
       },
-      liked: true,
-      likeCount: undefined,
+      liked: true, likeCount: undefined,
     });
   } catch (err) {
     const safeError = toSafeApiError(err, "INTERACTIONS_CREATE_FAILED");
@@ -390,7 +324,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── DELETE /api/interactions ───
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
@@ -416,26 +349,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    const space = await getSpaceByCode(supabase, spaceCode);
-    if (!space) {
-      return NextResponse.json(
-        { ok: false, error: "空间未找到。", code: "SPACE_NOT_FOUND" },
-        { status: 404 }
-      );
-    }
 
     const query = supabase
       .from("content_interactions")
       .delete()
-      .eq("space_id", space.id)
+      .eq("space_code", spaceCode)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .eq("identity", identity)
       .eq("interaction_type", interactionType);
 
-    if (reaction) {
-      query.eq("reaction", reaction);
-    }
+    if (reaction) query.eq("reaction", reaction);
 
     const { error: deleteError } = await query;
 
@@ -445,12 +369,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({
-      ok: true,
-      action: "deleted",
-      contentType,
-      contentId,
-      identity,
-      interactionType,
+      ok: true, action: "deleted",
+      contentType, contentId, identity, interactionType,
       reaction: reaction || undefined,
     });
   } catch (err) {
