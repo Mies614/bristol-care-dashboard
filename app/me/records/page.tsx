@@ -3,10 +3,10 @@
 import RecordsPage from "@/app/records/page";
 
 /**
- * Owner-side records page.
- * Reuses the partner side RecordsPage component.
- * The records page is a data hub (schedule, deadlines, period) and doesn't
- * need identity-specific rendering — identity is only relevant for notes.
+ * Owner-side records page (schedule, deadlines, period hub).
+ * All sub-links within should point to /me/courses, /me/deadlines, /me/period.
+ * For now, reuses the partner-side RecordsPage since it's a data hub
+ * and identity is only relevant for notes/interactions.
  */
 export default function MeRecordsPage() {
   return <RecordsPage />;

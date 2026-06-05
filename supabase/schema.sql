@@ -461,3 +461,22 @@ on public.content_comments(space_id, content_type, content_id);
 
 alter table public.content_interactions enable row level security;
 alter table public.content_comments enable row level security;
+
+-- ─── Cloud read state ──────────────────────────────────────────────────
+create table if not exists public.content_reads (
+  id uuid primary key default gen_random_uuid(),
+  space_code text not null,
+  content_type text not null check (content_type in ('note', 'album', 'memory', 'timeline')),
+  content_id text not null,
+  identity text not null default 'xiaoguai',
+  read_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (space_code, content_type, content_id, identity)
+);
+
+create index if not exists content_reads_space_identity_idx
+on public.content_reads(space_code, identity);
+
+create index if not exists content_reads_content_idx
+on public.content_reads(space_code, content_type, content_id);
