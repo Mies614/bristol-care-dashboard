@@ -1,19 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NoteCard } from "./NoteCard";
 import { NoteEditorModal } from "./NoteEditorModal";
 import { staggerContainer, staggerItem, useAccessibleMotion, safeVariants } from "@/lib/design/motion";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { LoveNote } from "@/lib/types";
+import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 
 export function NoteWall({ notes, onPatch, identityId: propIdentityId }: { notes: LoveNote[]; onPatch?: (body: Record<string, unknown>) => Promise<void>; identityId?: string }) {
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const spaceCode = getDefaultSpaceCode();
   const [selected, setSelected] = useState<LoveNote | null>(null);
   const [editing, setEditing] = useState<LoveNote | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const reduceMotion = useAccessibleMotion();
+
+  // Cloud-synced read states for the visible notes
+  const noteIds = useMemo(
+    () => notes.filter((n) => !n.deletedAt && n.author !== identityId).map((n) => n.id),
+    [notes, identityId]
+  );
+
+  const { readKeySet, markAsRead } = useCloudReadStates({
+    spaceCode,
+    identity: identityId,
+    contentType: "note",
+    contentIds: noteIds,
+  });
 
   async function patch(body: Record<string, unknown>) {
     if (!onPatch) return;
@@ -43,6 +59,8 @@ export function NoteWall({ notes, onPatch, identityId: propIdentityId }: { notes
                 onPatch={onPatch ? patch : undefined}
                 busy={busyId === note.id}
                 identityId={identityId}
+                readKeySet={readKeySet}
+                onNoteRead={(noteId) => markAsRead(noteId)}
               />
             </motion.div>
           ))}
@@ -66,7 +84,7 @@ export function NoteWall({ notes, onPatch, identityId: propIdentityId }: { notes
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <NoteCard note={selected} featured identityId={identityId} />
+              <NoteCard note={selected} featured identityId={identityId} readKeySet={readKeySet} onNoteRead={(noteId) => markAsRead(noteId)} />
               <button className="btn-secondary mt-3 w-full" onClick={() => setSelected(null)}>关闭</button>
             </motion.div>
           </motion.div>

@@ -27,7 +27,7 @@ import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
 import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
-import { isContentRead, markContentAsRead } from "@/lib/readState";
+import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 
 const filters = [
   ["all", "全部"],
@@ -79,11 +79,18 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
 
   const identity = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
 
-  // Unread album tracking
-  const unreadAlbumIds = useMemo(
-    () => new Set(items.filter((item) => !isContentRead("album", item.id, code, identity) && !item.deletedAt).map((item) => item.id)),
-    [items, code, identity]
+  // Cloud-synced read states for album grid
+  const albumIds = useMemo(
+    () => items.filter((a) => !a.deletedAt && a.createdBy !== identity).map((a) => a.id),
+    [items, identity]
   );
+
+  const { readKeySet, markAsRead } = useCloudReadStates({
+    spaceCode: code,
+    identity,
+    contentType: "album",
+    contentIds: albumIds,
+  });
 
   const [selectedComments, setSelectedComments] = useState<CommentEntry[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -446,8 +453,8 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
                       onClick={() => {
                         setSelected(item);
                         setPlaying(false);
-                        if (unreadAlbumIds.has(item.id)) {
-                          markContentAsRead("album", item.id, code, identity);
+                        if (item.createdBy !== identity && !item.deletedAt && !readKeySet.has(`album:${item.id}`)) {
+                          markAsRead(item.id);
                         }
                       }}
                       type="button"
@@ -480,7 +487,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
                       {item.isFavorite ? (
                         <span className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium text-cocoa shadow-sm">★</span>
                       ) : null}
-                      {unreadAlbumIds.has(item.id) ? (
+                      {item.createdBy !== identity && !item.deletedAt && !readKeySet.has(`album:${item.id}`) ? (
                         <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-rose-400 ring-2 ring-white" />
                       ) : null}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-2.5 text-left text-white">

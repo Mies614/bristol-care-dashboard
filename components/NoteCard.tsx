@@ -21,6 +21,10 @@ export interface NoteCardProps {
   busy?: boolean;
   /** Current active identity id for interactions */
   identityId?: string;
+  /** Cloud-synced read state key set (from useCloudReadStates) */
+  readKeySet?: Set<string>;
+  /** Called when the note should be marked as read */
+  onNoteRead?: (noteId: string) => void;
 }
 
 export function NoteCard({
@@ -31,6 +35,8 @@ export function NoteCard({
   onPatch,
   busy,
   identityId,
+  readKeySet,
+  onNoteRead,
 }: NoteCardProps) {
   const spaceCode = getDefaultSpaceCode();
   const identity = identityId || DEFAULT_NORMAL_IDENTITY_ID;
@@ -125,11 +131,27 @@ export function NoteCard({
   }
 
   const isHidden = note.active === false;
+  const isUnread = note.author !== identity && !note.deletedAt && readKeySet && !readKeySet.has(`note:${note.id}`);
+
+  const handleCardClick = () => {
+    if (onNoteRead && isUnread) {
+      onNoteRead(note.id);
+    }
+    onClick?.();
+  };
 
   return (
-    <article className={`${base} ${styleClass} ${pinnedClass} ${bubbleAlign} ${onClick ? "cursor-pointer" : ""} ${featured ? "w-full" : ""}`} onClick={onClick}>
+    <article className={`${base} ${styleClass} ${pinnedClass} ${bubbleAlign} ${onClick ? "cursor-pointer" : ""} ${featured ? "w-full" : ""}`} onClick={handleCardClick}>
       <div className="mb-2 flex items-center justify-between gap-2 text-xs text-cocoa/55">
-        <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
+          {isUnread ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose/15 px-2 py-0.5 text-[10px] font-medium text-rose">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose" />
+              未读
+            </span>
+          ) : null}
+        </div>
         <span>{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚"}</span>
       </div>
       {note.imageUrl ? (
