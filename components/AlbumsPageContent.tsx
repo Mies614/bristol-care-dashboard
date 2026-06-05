@@ -532,7 +532,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
             transition={safeTransition({ duration: 0.2 }, reduceMotion)}
           >
             <motion.div
-              className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float"
+              className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float pb-[calc(1rem+env(safe-area-inset-bottom,0px)+64px)]"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               onAnimationComplete={(definition) => {

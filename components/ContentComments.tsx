@@ -161,7 +161,7 @@ export default function ContentComments({
   return (
     <div className="mt-4 pt-3 border-t border-white/10">
       {/* Comment input area — stacked layout for mobile readability */}
-      <div className="flex flex-col gap-2">
+      <div className="relative">
         <textarea
           value={inputValue}
           onChange={(e) => {
@@ -173,21 +173,19 @@ export default function ContentComments({
           disabled={disabled || submitting}
           rows={2}
           maxLength={maxLength + 50}
-          className="w-full px-3 py-2 rounded-lg bg-white/80 border border-cocoa/10 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/40"
+          className="w-full px-3 py-2 pr-16 rounded-lg bg-white/80 border border-cocoa/10 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/40"
         />
-        <div className="flex justify-end">
-          <button
-            onClick={handleSubmit}
-            disabled={!isInputReady}
-            className={
-              isInputReady
-                ? "bg-rose-400 text-white px-5 py-2 rounded-full font-semibold shadow-sm transition hover:bg-rose-500 active:scale-95"
-                : "bg-rose-100 text-cocoa/40 px-5 py-2 rounded-full font-medium cursor-not-allowed"
-            }
-          >
-            {submitting ? "..." : submitLabel}
-          </button>
-        </div>
+        <button
+          onClick={handleSubmit}
+          disabled={!isInputReady}
+          className={
+            isInputReady
+              ? "absolute right-2 bottom-2 bg-rose-400 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm transition hover:bg-rose-500 active:scale-95"
+              : "absolute right-2 bottom-2 bg-rose-100 text-cocoa/40 px-4 py-1.5 rounded-full text-sm font-medium cursor-not-allowed"
+          }
+        >
+          {submitting ? "..." : submitLabel}
+        </button>
       </div>
 
       {/* Error message */}
