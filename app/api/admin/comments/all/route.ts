@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("content_comments")
       .select("*")
-      .eq("space_code", space.code)
+      .eq("space_id", space.id)
       .order("created_at", { ascending: false });
 
     if (!includeDeleted) {

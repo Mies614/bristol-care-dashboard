@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("content_comments")
       .select("*")
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .eq("content_type", contentType)
       .eq("content_id", contentId)
       .order("created_at", { ascending: false });
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     const { data: comment, error: insertError } = await supabase
       .from("content_comments")
       .insert({
-        space_code: spaceCode,
+        space_id: space.id,
         content_type: contentType,
         content_id: contentId,
         identity,
@@ -244,7 +244,7 @@ export async function DELETE(request: NextRequest) {
       .from("content_comments")
       .select("*")
       .eq("id", commentId)
-      .eq("space_code", spaceCode)
+      .eq("space_id", space.id)
       .maybeSingle();
 
     if (fetchError) {
