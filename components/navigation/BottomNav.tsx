@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Home, CalendarDays, Heart, CreditCard, Settings } from "lucide-react";
-import { appNavItems, getActiveNavHref, shouldShowBottomNav } from "@/lib/navigation";
+import { getNavItemsForPath, getActiveNavHref, shouldShowBottomNav } from "@/lib/navigation";
 import {
   getNavContainerClass,
   normalizeNavStyle,
@@ -57,7 +57,7 @@ export function BottomNav({ status }: { status?: NavStatus }) {
         className={cn(getNavContainerClass(navStyle, themeStyle), "overflow-visible")}
       >
         <ul className="flex items-center justify-around gap-0 overflow-visible">
-          {appNavItems.map((item) => {
+          {getNavItemsForPath(pathname).map((item) => {
             const isActive = activeHref === item.href;
             const icon = ICON_MAP[item.icon];
 
