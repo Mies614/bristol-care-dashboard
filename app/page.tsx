@@ -275,8 +275,8 @@ export default function HomePage() {
             <div>{todayLabel}</div>
           </div>
         </div>
-        <p className="mt-2.5 text-sm leading-5 text-cocoa/65">
-          打开就能看今天该关心什么，不急不赶。
+        <p className="mt-2 text-sm leading-5 text-cocoa/50">
+          天气、提醒和今天的小纸条，都收在这里了。
         </p>
         {/* Unread notes/memories pill — top position in Hero */}
         {unreadSummary.hasAny ? (

@@ -198,7 +198,7 @@ export default function MeHomePage() {
             <div>{todayLabel}</div>
           </div>
         </div>
-        <p className="mt-2.5 text-sm leading-5 text-cocoa/65">打开就能看今天该关心什么，不急不赶。</p>
+        <p className="mt-2 text-sm leading-5 text-cocoa/50">天气、提醒和她的小纸条，都帮你收好了。</p>
         {unreadAlbumsMemoryCount > 0 && (
           <Link
             href="/me/memories/unread"

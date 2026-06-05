@@ -131,7 +131,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         </div>
         {onRefresh ? (
           <div className="flex flex-wrap justify-end gap-2">
-            <Link className="btn-secondary btn-small" href={notesHref}>小纸条墙</Link>
+            <Link className="btn-secondary btn-small" href={notesHref}>全部</Link>
             <button className="btn-secondary btn-small" onClick={onRefresh}>刷新</button>
           </div>
         ) : null}
