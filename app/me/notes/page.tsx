@@ -102,7 +102,7 @@ export default function NotesPage() {
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
-              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} />
+              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} />
             </div>
           </div>
         </AppCard>

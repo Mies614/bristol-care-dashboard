@@ -4,6 +4,7 @@ import { loveNoteFromRow, loveNoteToRow } from "@/lib/mappers";
 import { getNotePatchUpdate } from "@/lib/noteActions";
 import { hasNoteContent, inferNoteType, isValidAuthor, isValidDisplayStyle, normalizeDisplayStyle } from "@/lib/noteValidation";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import type { LoveNote } from "@/lib/types";
 
 type ApiError = {
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     if (!space) return fail("小纸条空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     step = "insert_note";
-    const author = String(body.author || body.identity || "xiaoguai");
+    const author = String(body.author || body.identity || DEFAULT_NORMAL_IDENTITY_ID);
     const note: Omit<LoveNote, "id"> = {
       content,
       active: true,
