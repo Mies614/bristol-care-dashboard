@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         content: n.content || "",
         active: n.active,
         pinned: n.pinned,
-        author: n.author || "admin",
+        author: n.author || "me",
         note_type: n.noteType || "text",
         display_style: n.displayStyle || "sticky",
         mood: n.mood || null,
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
         height: a.height || null,
         file_size: a.fileSize || null,
         is_favorite: a.isFavorite || false,
-        created_by: a.createdBy || "import",
+        created_by: a.createdBy || "me",
         created_at: a.createdAt || new Date().toISOString(),
         deleted_at: a.deletedAt || null,
       }));

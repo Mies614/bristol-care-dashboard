@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
+import { READ_STATE_CHANGED_EVENT } from "@/lib/readState";
 import { Home, CalendarDays, Heart, CreditCard, Settings } from "lucide-react";
 import { getNavItemsForPath, getActiveNavHref, shouldShowBottomNav } from "@/lib/navigation";
 import {
@@ -40,6 +41,24 @@ export function BottomNav({ status }: { status?: NavStatus }) {
 
   if (!shouldShowBottomNav(pathname)) return null;
 
+  // Listen for read-state changes to refresh memories dot
+  const [memoriesDot, setMemoriesDot] = useState<boolean>(Boolean(status?.memories));
+
+  useEffect(() => {
+    setMemoriesDot(Boolean(status?.memories));
+  }, [status?.memories]);
+
+  const handleReadStateChanged = useCallback(() => {
+    // When any content is marked read, clear the dot — the parent page will recalculate and pass updated status
+    // If the parent doesn't update, the dot will stay cleared until the next navigation refresh
+    setMemoriesDot(false);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(READ_STATE_CHANGED_EVENT, handleReadStateChanged);
+    return () => window.removeEventListener(READ_STATE_CHANGED_EVENT, handleReadStateChanged);
+  }, [handleReadStateChanged]);
+
   const activeHref = getActiveNavHref(pathname);
   const navStyle: ThemeNavStyle = normalizeNavStyle(settings.navStyle);
   const themeStyle: AppThemeStyle = normalizeThemeStyle(settings.style);
@@ -62,7 +81,7 @@ export function BottomNav({ status }: { status?: NavStatus }) {
             const icon = ICON_MAP[item.icon];
 
             // Show dot on settings if there's a status, or on memories if unread
-            const hasStatusDot = item.group === "settings" ? Boolean(status?.settings) : item.group === "memories" ? Boolean(status?.memories) : false;
+            const hasStatusDot = item.group === "settings" ? Boolean(status?.settings) : item.group === "memories" ? memoriesDot : false;
 
             return (
               <BottomNavItem
