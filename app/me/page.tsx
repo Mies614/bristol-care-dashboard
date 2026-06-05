@@ -14,6 +14,8 @@ import { pickFeaturedLoveNote } from "@/lib/loveNotes";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
+import { getUnreadHomeSummary } from "@/lib/readState";
+import { fetchCloudReadStates, buildReadKeySet } from "@/lib/readStateClient";
 import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
@@ -104,6 +106,41 @@ export default function MeHomePage() {
   const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
   const todayLabel = useMemo(safeTodayLabel, []);
 
+  // ──── Cloud unread summary for owner identity ────
+  const [unreadSummary, setUnreadSummary] = useState<{ noteCount: number; albumCount: number; memoryCount: number; total: number; hasAny: boolean }>({
+    noteCount: 0, albumCount: 0, memoryCount: 0, total: 0, hasAny: false,
+  });
+
+  useEffect(() => {
+    const noteIds = data.loveNotes.filter((n) => !n.deletedAt && n.author !== identityId).map((n) => n.id);
+    const albumIds = albumItems.filter((a) => !a.deletedAt && a.createdBy !== identityId).map((a) => a.id);
+
+    if (noteIds.length === 0 && albumIds.length === 0) {
+      setUnreadSummary({ noteCount: 0, albumCount: 0, memoryCount: 0, total: 0, hasAny: false });
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all([
+      noteIds.length > 0 ? fetchCloudReadStates({ spaceCode, identity: identityId, contentType: "note", contentIds: noteIds }) : Promise.resolve([]),
+      albumIds.length > 0 ? fetchCloudReadStates({ spaceCode, identity: identityId, contentType: "album", contentIds: albumIds }) : Promise.resolve([]),
+    ]).then(([noteReads, albumReads]) => {
+      if (cancelled) return;
+      const noteReadSet = buildReadKeySet(noteReads);
+      const albumReadSet = buildReadKeySet(albumReads);
+      const noteCount = noteIds.filter((id) => !noteReadSet.has(`note:${id}`)).length;
+      const albumCount = albumIds.filter((id) => !albumReadSet.has(`album:${id}`)).length;
+      setUnreadSummary({ noteCount, albumCount, memoryCount: 0, total: noteCount + albumCount, hasAny: noteCount + albumCount > 0 });
+    }).catch(() => {
+      setUnreadSummary(getUnreadHomeSummary({ notes: data.loveNotes, albums: albumItems }, spaceCode, identityId));
+    });
+
+    return () => { cancelled = true; };
+  }, [data.loveNotes, albumItems, spaceCode, identityId]);
+
+  const unreadNotesCount = unreadSummary.noteCount;
+  const unreadAlbumsMemoryCount = unreadSummary.albumCount + unreadSummary.memoryCount;
+
   const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
     courses: data.courses,
     deadlines: data.deadlines,
@@ -162,6 +199,24 @@ export default function MeHomePage() {
           </div>
         </div>
         <p className="mt-2.5 text-sm leading-5 text-cocoa/65">打开就能看今天该关心什么，不急不赶。</p>
+        {unreadAlbumsMemoryCount > 0 && (
+          <Link
+            href="/me/memories/unread"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {unreadAlbumsMemoryCount} 个新回忆等你看
+          </Link>
+        )}
+        {unreadNotesCount > 0 && (
+          <Link
+            href="/me/notes"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {unreadNotesCount} 条小纸条还没看
+          </Link>
+        )}
       </motion.header>
 
       <motion.div className="space-y-3.5" variants={safeVariants(staggerContainer, reduceMotion)} initial="hidden" animate="visible">

@@ -292,7 +292,7 @@ export default function HomePage() {
             )}
             {unreadAlbumsMemoryCount > 0 && (
               <Link
-                href="/memories"
+                href="/memories/unread"
                 className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />

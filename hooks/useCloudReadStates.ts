@@ -8,6 +8,7 @@ import {
   type ReadContentType,
   type ReadStateEntry,
 } from "@/lib/readStateClient";
+import { READ_STATE_CHANGED_EVENT } from "@/lib/readState";
 
 export type { ReadContentType, ReadStateEntry };
 
@@ -93,6 +94,10 @@ export function useCloudReadStates(params: {
           },
         ];
       });
+      // Notify listeners (BottomNav, homepage)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(READ_STATE_CHANGED_EVENT));
+      }
     },
     [spaceCode, identity, contentType]
   );
