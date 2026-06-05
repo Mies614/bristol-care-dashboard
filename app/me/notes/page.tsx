@@ -152,7 +152,7 @@ export default function NotesPage() {
           ) : null}
         </AppCard>
 
-        <NoteWall notes={notes} onPatch={patchNote} />
+        <NoteWall notes={notes} onPatch={patchNote} identityId={identityId} />
       </div>
     </AppShell>
     </SharedAccessGate>

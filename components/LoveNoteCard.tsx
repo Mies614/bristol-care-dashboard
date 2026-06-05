@@ -31,7 +31,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
     try {
       const code = spaceCode || getDefaultSpaceCode();
       const res = await fetch(
-        `/api/comments?code=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
+        `/api/comments?spaceCode=${encodeURIComponent(code)}&contentType=note&contentId=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
       );
       const payload = await res.json();
       if (payload.ok && Array.isArray(payload.comments)) {
@@ -66,12 +66,12 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
     }
   }, [showComments, note, loadComments]);
 
-  function handleRead() {
+  const handleMarkRead = useCallback(() => {
     if (note && unread) {
       markAsRead(note.id, spaceCode, identity);
       setUnread(false);
     }
-  }
+  }, [note, unread, spaceCode, identity]);
 
   async function handleAddComment(body: string, _identity: string) {
     if (!note) throw new Error("No note");
@@ -80,7 +80,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        code,
+        spaceCode: code,
         contentType: "note",
         contentId: note.id,
         identity,
@@ -103,7 +103,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
     const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, commentId, identity }),
+      body: JSON.stringify({ spaceCode: code, commentId, identity }),
     });
     const payload = await res.json();
     if (!payload.ok) {
@@ -116,7 +116,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
   }
 
   return (
-    <section className="soft-card relative overflow-hidden bg-white/55" onClick={handleRead}>
+    <section className="soft-card relative overflow-hidden bg-white/55" onClick={handleMarkRead}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {unread ? (
@@ -200,6 +200,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
             compact
             showComments
             onOpenComments={() => setShowComments(!showComments)}
+            onInteract={handleMarkRead}
           />
         </div>
       )}

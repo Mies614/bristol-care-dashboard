@@ -4,24 +4,33 @@ import { normalizeThemeSettings } from "@/lib/theme";
 import { normalizeThemeStyle, normalizeNavStyle, getNavContainerClass, getNavItemContainerClass, getNavLabelClass, getStatusDotClass, getDecorationClass, getActiveIndicatorClass, getItemOffsetClass } from "@/components/navigation/navVariants";
 
 describe("bottom nav", () => {
-  it("keeps the five user-facing entries", () => {
-    expect(appNavItems.map((item) => item.href)).toEqual(["/", "/records", "/memories", "/cards", "/settings"]);
+  it("keeps the five user-facing entries for partner side", () => {
+    expect(appNavItems.map((item) => item.href)).toEqual(["/", "/notes", "/albums", "/memories", "/settings"]);
   });
 
-  it("highlights grouped record and memory routes", () => {
-    expect(getActiveNavHref("/records")).toBe("/records");
-    expect(getActiveNavHref("/schedule")).toBe("/records");
-    expect(getActiveNavHref("/deadlines")).toBe("/records");
-    expect(getActiveNavHref("/period")).toBe("/records");
+  it("highlights grouped record and note routes", () => {
+    expect(getActiveNavHref("/records")).toBe("/notes");
+    expect(getActiveNavHref("/schedule")).toBe("/notes");
+    expect(getActiveNavHref("/deadlines")).toBe("/notes");
+    expect(getActiveNavHref("/period")).toBe("/notes");
+    expect(getActiveNavHref("/notes")).toBe("/notes");
+  });
+
+  it("highlights album, memories, settings, and debug routes", () => {
+    expect(getActiveNavHref("/albums")).toBe("/albums");
     expect(getActiveNavHref("/memories")).toBe("/memories");
-    expect(getActiveNavHref("/notes")).toBe("/memories");
-    expect(getActiveNavHref("/albums")).toBe("/memories");
-  });
-
-  it("highlights cards and settings routes", () => {
-    expect(getActiveNavHref("/cards")).toBe("/cards");
+    expect(getActiveNavHref("/cards")).toBe("/");
     expect(getActiveNavHref("/settings")).toBe("/settings");
     expect(getActiveNavHref("/debug")).toBe("/settings");
+  });
+
+  it("highlights owner side me/* routes correctly", () => {
+    expect(getActiveNavHref("/me")).toBe("/me");
+    expect(getActiveNavHref("/me/notes")).toBe("/me/notes");
+    expect(getActiveNavHref("/me/albums")).toBe("/me/albums");
+    expect(getActiveNavHref("/me/memories")).toBe("/me/memories");
+    expect(getActiveNavHref("/me/settings")).toBe("/me/settings");
+    expect(getActiveNavHref("/me/admin")).toBe("/me");
   });
 
   it("returns empty href for unknown routes", () => {
@@ -32,10 +41,12 @@ describe("bottom nav", () => {
     expect(shouldShowBottomNav("/admin")).toBe(false);
     expect(shouldShowBottomNav("/admin/login")).toBe(false);
     expect(shouldShowBottomNav("/admin/settings")).toBe(false);
+    expect(shouldShowBottomNav("/me/admin")).toBe(false);
   });
 
   it("hides bottom nav on scan page", () => {
     expect(shouldShowBottomNav("/cards/scan")).toBe(false);
+    expect(shouldShowBottomNav("/me/cards/scan")).toBe(false);
   });
 
   it("shows bottom nav on all user-facing pages", () => {

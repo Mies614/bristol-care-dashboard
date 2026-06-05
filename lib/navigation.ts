@@ -8,22 +8,22 @@ export interface NavItem {
   href: string;
   label: string;
   icon: string;
-  group: "home" | "records" | "memories" | "cards" | "settings";
+  group: "home" | "notes" | "albums" | "memories" | "settings";
 }
 
 const PARTNER_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "首页", icon: "Home", group: "home" },
-  { href: "/records", label: "记录", icon: "CalendarDays", group: "records" },
-  { href: "/memories", label: "回忆", icon: "Heart", group: "memories" },
-  { href: "/cards", label: "卡夹", icon: "CreditCard", group: "cards" },
+  { href: "/notes", label: "小纸条", icon: "CalendarDays", group: "notes" },
+  { href: "/albums", label: "相册", icon: "Heart", group: "albums" },
+  { href: "/memories", label: "回忆", icon: "CreditCard", group: "memories" },
   { href: "/settings", label: "设置", icon: "Settings", group: "settings" },
 ];
 
 const OWNER_NAV_ITEMS: NavItem[] = [
   { href: "/me", label: "首页", icon: "Home", group: "home" },
-  { href: "/me/records", label: "记录", icon: "CalendarDays", group: "records" },
-  { href: "/me/memories", label: "回忆", icon: "Heart", group: "memories" },
-  { href: "/me/cards", label: "卡夹", icon: "CreditCard", group: "cards" },
+  { href: "/me/notes", label: "小纸条", icon: "CalendarDays", group: "notes" },
+  { href: "/me/albums", label: "相册", icon: "Heart", group: "albums" },
+  { href: "/me/memories", label: "回忆", icon: "CreditCard", group: "memories" },
   { href: "/me/settings", label: "设置", icon: "Settings", group: "settings" },
 ];
 
@@ -49,21 +49,34 @@ export const appNavItems: NavItem[] = PARTNER_NAV_ITEMS;
 
 /**
  * Get the active nav href given the current pathname.
- * For owner side, /me/albums and /me/notes map to /me/memories.
- * For partner side, /albums and /notes map to /memories.
+ *
+ * Rules:
+ * - /me → /me
+ * - /me/notes → /me/notes
+ * - /me/albums → /me/albums
+ * - /me/memories → /me/memories
+ * - /me/settings → /me/settings
+ * - /me/admin → hidden (shouldShowBottomNav returns false)
+ *
+ * - / → /
+ * - /notes → /notes
+ * - /albums → /albums
+ * - /memories → /memories
+ * - /settings → /settings
+ * - //schedule, /deadlines, /period → /notes
  */
 export function getActiveNavHref(pathname: string): string {
   const isOwner = isOwnerPath(pathname);
   const stripMe = isOwner ? pathname.replace(/^\/me/, "") : pathname;
 
   if (stripMe === "/" || stripMe === "") return isOwner ? "/me" : "/";
+  if (stripMe.startsWith("/notes")) return isOwner ? "/me/notes" : "/notes";
+  if (stripMe.startsWith("/albums")) return isOwner ? "/me/albums" : "/albums";
+  if (stripMe.startsWith("/memories")) return isOwner ? "/me/memories" : "/memories";
   if (stripMe.startsWith("/schedule") || stripMe.startsWith("/deadlines") || stripMe.startsWith("/period") || stripMe.startsWith("/records")) {
-    return isOwner ? "/me/records" : "/records";
+    return isOwner ? "/me/notes" : "/notes";
   }
-  if (stripMe.startsWith("/notes") || stripMe.startsWith("/albums") || stripMe.startsWith("/memories")) {
-    return isOwner ? "/me/memories" : "/memories";
-  }
-  if (stripMe.startsWith("/cards")) return isOwner ? "/me/cards" : "/cards";
+  if (stripMe.startsWith("/cards")) return isOwner ? "/me" : "/";
   if (stripMe.startsWith("/settings") || stripMe.startsWith("/debug")) {
     return isOwner ? "/me/settings" : "/settings";
   }

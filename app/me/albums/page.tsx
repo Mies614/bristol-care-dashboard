@@ -1,7 +1,7 @@
 "use client";
 
-import AlbumsPage from "@/app/albums/page";
+import { AlbumsPageContent } from "@/components/AlbumsPageContent";
 
 export default function MeAlbumsPage() {
-  return <AlbumsPage />;
+  return <AlbumsPageContent identityId="me" appSide="owner" />;
 }

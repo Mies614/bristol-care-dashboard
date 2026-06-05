@@ -76,11 +76,10 @@ describe("priority reminders", () => {
   });
 
   it("maps detail routes to grouped nav entries", () => {
-    expect(getActiveNavHref("/schedule")).toBe("/records");
-    expect(getActiveNavHref("/deadlines")).toBe("/records");
-    expect(getActiveNavHref("/period")).toBe("/records");
-    expect(getActiveNavHref("/notes")).toBe("/memories");
-    expect(getActiveNavHref("/albums")).toBe("/memories");
-    expect(getActiveNavHref("/cards")).toBe("/cards");
+    expect(getActiveNavHref("/schedule")).toBe("/notes");
+    expect(getActiveNavHref("/deadlines")).toBe("/notes");
+    expect(getActiveNavHref("/period")).toBe("/notes");
+    expect(getActiveNavHref("/notes")).toBe("/notes");
+    expect(getActiveNavHref("/albums")).toBe("/albums");
   });
 });

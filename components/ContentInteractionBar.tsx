@@ -29,6 +29,8 @@ export interface ContentInteractionBarProps {
   initialSummary?: InteractionSummary;
   /** Callback when user clicks the comment button */
   onOpenComments?: () => void;
+  /** Callback when any interaction occurs (like, reaction, or comment open) — useful for mark-as-read */
+  onInteract?: () => void;
   /** Compact mode: smaller icons, no comment count label */
   compact?: boolean;
   /** Whether to show the comment button */
@@ -58,6 +60,7 @@ export default function ContentInteractionBar({
   identityId,
   initialSummary,
   onOpenComments,
+  onInteract,
   compact = false,
   showComments = true,
   showReactions = true,
@@ -472,6 +475,7 @@ export default function ContentInteractionBar({
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
+          onInteract?.();
           toggleLike();
         }}
         disabled={disabled || busyLike}
@@ -496,6 +500,7 @@ export default function ContentInteractionBar({
               } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
+                onInteract?.();
                 toggleReaction(r.id);
               }}
               disabled={disabled || isBusy}
@@ -517,6 +522,7 @@ export default function ContentInteractionBar({
           }`}
           onClick={(e) => {
             e.stopPropagation();
+            onInteract?.();
             onOpenComments?.();
           }}
           disabled={disabled}

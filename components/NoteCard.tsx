@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { LoveNote } from "@/lib/types";
 import { getUserFacingAuthorLabel, DEFAULT_NORMAL_IDENTITY_ID, isSameIdentity } from "@/lib/identity";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
@@ -58,28 +58,6 @@ export function NoteCard({
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentEntry[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-
-  // Fetch interaction summary on mount
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const res = await fetch(
-          `/api/interactions?spaceCode=${encodeURIComponent(spaceCode)}&contentType=note&contentIds=${encodeURIComponent(note.id)}&identity=${encodeURIComponent(identity)}`
-        );
-        const payload = await res.json();
-        if (payload.ok && payload.summaries?.[note.id]) {
-          const s = payload.summaries[note.id];
-          setLikeCount(s.likeCount || 0);
-          setLiked(s.hasLiked || false);
-        }
-      } catch {
-        // Non-critical
-      }
-    };
-    fetchSummary();
-  }, [note.id, spaceCode, identity]);
 
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
@@ -100,7 +78,6 @@ export function NoteCard({
           isMine: isSameIdentity(c.identity as string, identity),
         }));
         setComments(entries);
-        // Comment count is set by the interaction bar via summary, no need to set here
       }
     } catch {
       // Non-critical
@@ -108,12 +85,6 @@ export function NoteCard({
       setCommentsLoading(false);
     }
   }, [note.id, spaceCode, identity]);
-
-  useEffect(() => {
-    if (showComments) {
-      loadComments();
-    }
-  }, [showComments, loadComments]);
 
   async function handleAddComment(body: string, _identity: string) {
     const res = await fetch("/api/comments", {
@@ -161,7 +132,23 @@ export function NoteCard({
         <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
         <span>{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚"}</span>
       </div>
-      {note.imageUrl ? <img className="mb-3 max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} loading="lazy" /> : null}
+      {note.imageUrl ? (
+        <div className="mb-3 space-y-2">
+          <img className="max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]" src={note.imageUrl} alt={note.imageAlt || "小纸条图片"} loading="lazy" />
+          {downloadUrl ? (
+            <a
+              href={downloadUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {downloadLabel}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       {note.videoUrl ? (
         <div className="mb-3 space-y-2">
           <video className="max-h-56 w-full rounded-[1.25rem] bg-black" src={note.videoUrl} controls onClick={(event) => event.stopPropagation()} preload="metadata" />
@@ -179,7 +166,23 @@ export function NoteCard({
           ) : null}
         </div>
       ) : null}
-      {note.audioUrl ? <audio className="mb-3 w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} /> : null}
+      {note.audioUrl ? (
+        <div className="mb-3 space-y-2">
+          <audio className="w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} />
+          {downloadUrl ? (
+            <a
+              href={downloadUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {downloadLabel}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       {note.content ? <p className="whitespace-pre-wrap text-sm leading-7 text-cocoa/78">{note.content}</p> : null}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {note.mood ? <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs text-cocoa/62">{note.mood}</span> : null}
@@ -191,13 +194,12 @@ export function NoteCard({
             contentType="note"
             contentId={note.id}
             identityId={identity}
-            likeCountOverride={likeCount}
-            hasLikedOverride={liked}
             compact
-            onOpenComments={() => setShowComments(!showComments)}
-            onLikeChanged={({ liked: newLiked, count: newCount }) => {
-              setLiked(newLiked);
-              setLikeCount(newCount);
+            onOpenComments={() => {
+              if (!showComments) {
+                loadComments();
+              }
+              setShowComments(!showComments);
             }}
           />
         ) : null}

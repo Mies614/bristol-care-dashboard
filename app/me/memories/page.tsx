@@ -1,7 +1,7 @@
 "use client";
 
-import MemoriesPage from "@/app/memories/page";
+import { MemoriesPageContent } from "@/components/MemoriesPageContent";
 
 export default function MeMemoriesPage() {
-  return <MemoriesPage />;
+  return <MemoriesPageContent identityId="me" appSide="owner" />;
 }

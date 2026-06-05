@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { NoteCard } from "./NoteCard";
 import { NoteEditorModal } from "./NoteEditorModal";
 import { staggerContainer, staggerItem, useAccessibleMotion, safeVariants } from "@/lib/design/motion";
-import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import type { LoveNote } from "@/lib/types";
 
-export function NoteWall({ notes, onPatch }: { notes: LoveNote[]; onPatch?: (body: Record<string, unknown>) => Promise<void> }) {
-  const { identityId } = useCurrentIdentity();
+export function NoteWall({ notes, onPatch, identityId: propIdentityId }: { notes: LoveNote[]; onPatch?: (body: Record<string, unknown>) => Promise<void>; identityId?: string }) {
+  const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
   const [selected, setSelected] = useState<LoveNote | null>(null);
   const [editing, setEditing] = useState<LoveNote | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
