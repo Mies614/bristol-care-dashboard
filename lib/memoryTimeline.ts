@@ -35,7 +35,9 @@ export function buildMemoryTimelineItems(input: {
   notes?: LoveNote[];
   albums?: AlbumItem[];
   nextMeetingDate?: string;
+  basePath?: string;
 }): TimelineItem[] {
+  const basePath = input.basePath || "";
   const notes = (input.notes || []).filter(visibleNote).map((note): TimelineItem => ({
     id: `note-${note.id}`,
     type: note.audioUrl ? "audio" : note.videoUrl ? "video" : note.imageUrl ? "photo" : "note",
@@ -45,7 +47,7 @@ export function buildMemoryTimelineItems(input: {
     imageUrl: note.imageUrl,
     videoUrl: note.videoUrl,
     audioUrl: note.audioUrl,
-    href: "/notes"
+    href: `${basePath}/notes`
   }));
   const albums = (input.albums || []).filter(visibleAlbum).map((item): TimelineItem => ({
     id: `album-${item.id}`,
@@ -55,7 +57,7 @@ export function buildMemoryTimelineItems(input: {
     date: item.takenAt || item.createdAt || new Date(0).toISOString(),
     imageUrl: item.imageUrl,
     videoUrl: item.videoUrl,
-    href: "/albums"
+    href: `${basePath}/albums`
   }));
   const meeting = input.nextMeetingDate ? [{
     id: `meeting-${input.nextMeetingDate}`,
@@ -63,7 +65,7 @@ export function buildMemoryTimelineItems(input: {
     title: "下次见面",
     content: "又近了一点。",
     date: input.nextMeetingDate,
-    href: "/settings"
+    href: `${basePath}/settings`
   }] : [];
   return [...notes, ...albums, ...meeting].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

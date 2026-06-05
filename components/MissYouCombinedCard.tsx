@@ -297,6 +297,12 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
   const buttonLabel = getSelfActionLabel(identityId);
   const cardTitle = getCardTitle(identityId);
   const cardSubtitle = getCardSubtitle(identityId);
+  const partnerIdentity = identityId === "me" ? DEFAULT_NORMAL_IDENTITY_ID : "me";
+  const partnerTodayCount = data.todayByAuthor[partnerIdentity] || 0;
+  const partnerLatestEvent = data.unreadFromOtherEvents?.[0] ?? data.lastEvent;
+  const partnerLatestTime: string | null = partnerLatestEvent && partnerLatestEvent.author === partnerIdentity
+    ? formatTime(partnerLatestEvent.created_at)
+    : null;
 
   return (
     <motion.section
@@ -323,11 +329,15 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
 
         <p className="mt-0.5 text-xs text-cocoa/50">{cardSubtitle}</p>
 
-        {/* ── 未读想念（对方发来的） ── */}
-        {hasUnread && (
+        {/* ── 收到统计 ── */}
+        {partnerTodayCount > 0 ? (
           <p className="mt-1 text-xs text-cocoa/50">
-            💕 {otherLabel}也在想你 {data.unreadFromOtherCount} 次
-            {data.unreadFromOtherEvents.length > 0 && ` · ${formatTime(data.unreadFromOtherEvents[0].created_at)}`}
+            💕 {otherLabel}今天想你 {partnerTodayCount} 次
+            {partnerLatestTime ? ` · 上次 ${partnerLatestTime}` : ""}
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-cocoa/40">
+            还没收到{otherLabel}今天的想念
           </p>
         )}
 

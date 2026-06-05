@@ -61,8 +61,8 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
 
   const randomItems = useMemo(() => buildRandomMemoryItems(notes, albums), [notes, albums]);
   const timelineGroups = useMemo(
-    () => groupTimelineByMonth(buildMemoryTimelineItems({ notes, albums, nextMeetingDate })).slice(0, 4),
-    [notes, albums, nextMeetingDate]
+    () => groupTimelineByMonth(buildMemoryTimelineItems({ notes, albums, nextMeetingDate, basePath: isOwner ? "/me" : "" })).slice(0, 4),
+    [notes, albums, nextMeetingDate, isOwner]
   );
 
   // Cloud-synced read states for notes in memories
