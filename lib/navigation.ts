@@ -3,27 +3,30 @@
  * Single source of truth for BottomNav and routing tests.
  *
  * Supports both partner side (/) and owner side (/me) navigation.
+ *
+ * Primary nav entries: 首页, 记录, 回忆, 卡夹, 设置
+ * /notes and /albums are secondary pages accessible via /records, /cards, /memories, or homepage cards.
  */
 export interface NavItem {
   href: string;
   label: string;
   icon: string;
-  group: "home" | "notes" | "albums" | "memories" | "settings";
+  group: "home" | "records" | "memories" | "cards" | "settings";
 }
 
 const PARTNER_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "首页", icon: "Home", group: "home" },
-  { href: "/notes", label: "小纸条", icon: "CalendarDays", group: "notes" },
-  { href: "/albums", label: "相册", icon: "Heart", group: "albums" },
-  { href: "/memories", label: "回忆", icon: "CreditCard", group: "memories" },
+  { href: "/records", label: "记录", icon: "CalendarDays", group: "records" },
+  { href: "/memories", label: "回忆", icon: "Heart", group: "memories" },
+  { href: "/cards", label: "卡夹", icon: "CreditCard", group: "cards" },
   { href: "/settings", label: "设置", icon: "Settings", group: "settings" },
 ];
 
 const OWNER_NAV_ITEMS: NavItem[] = [
   { href: "/me", label: "首页", icon: "Home", group: "home" },
-  { href: "/me/notes", label: "小纸条", icon: "CalendarDays", group: "notes" },
-  { href: "/me/albums", label: "相册", icon: "Heart", group: "albums" },
-  { href: "/me/memories", label: "回忆", icon: "CreditCard", group: "memories" },
+  { href: "/me/records", label: "记录", icon: "CalendarDays", group: "records" },
+  { href: "/me/memories", label: "回忆", icon: "Heart", group: "memories" },
+  { href: "/me/cards", label: "卡夹", icon: "CreditCard", group: "cards" },
   { href: "/me/settings", label: "设置", icon: "Settings", group: "settings" },
 ];
 
@@ -52,31 +55,37 @@ export const appNavItems: NavItem[] = PARTNER_NAV_ITEMS;
  *
  * Rules:
  * - /me → /me
- * - /me/notes → /me/notes
- * - /me/albums → /me/albums
+ * - /me/records → /me/records
  * - /me/memories → /me/memories
+ * - /me/cards → /me/cards
  * - /me/settings → /me/settings
  * - /me/admin → hidden (shouldShowBottomNav returns false)
+ * - /me/notes → /me/records (sub-page)
+ * - /me/albums → /me/memories (sub-page)
  *
  * - / → /
- * - /notes → /notes
- * - /albums → /albums
+ * - /records → /records
  * - /memories → /memories
+ * - /cards → /cards
  * - /settings → /settings
- * - //schedule, /deadlines, /period → /notes
+ * - //schedule, /deadlines, /period → /records
+ * - /notes → /records (sub-page)
+ * - /albums → /memories (sub-page)
  */
 export function getActiveNavHref(pathname: string): string {
   const isOwner = isOwnerPath(pathname);
   const stripMe = isOwner ? pathname.replace(/^\/me/, "") : pathname;
 
   if (stripMe === "/" || stripMe === "") return isOwner ? "/me" : "/";
-  if (stripMe.startsWith("/notes")) return isOwner ? "/me/notes" : "/notes";
-  if (stripMe.startsWith("/albums")) return isOwner ? "/me/albums" : "/albums";
+  if (stripMe.startsWith("/records")) return isOwner ? "/me/records" : "/records";
   if (stripMe.startsWith("/memories")) return isOwner ? "/me/memories" : "/memories";
-  if (stripMe.startsWith("/schedule") || stripMe.startsWith("/deadlines") || stripMe.startsWith("/period") || stripMe.startsWith("/records")) {
-    return isOwner ? "/me/notes" : "/notes";
+  if (stripMe.startsWith("/cards")) return isOwner ? "/me/cards" : "/cards";
+  // Sub-pages: notes → records, albums → memories
+  if (stripMe.startsWith("/notes")) return isOwner ? "/me/records" : "/records";
+  if (stripMe.startsWith("/albums")) return isOwner ? "/me/memories" : "/memories";
+  if (stripMe.startsWith("/schedule") || stripMe.startsWith("/deadlines") || stripMe.startsWith("/period")) {
+    return isOwner ? "/me/records" : "/records";
   }
-  if (stripMe.startsWith("/cards")) return isOwner ? "/me" : "/";
   if (stripMe.startsWith("/settings") || stripMe.startsWith("/debug")) {
     return isOwner ? "/me/settings" : "/settings";
   }
