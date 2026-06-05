@@ -10,7 +10,8 @@ import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
-import { getUnreadCount } from "@/lib/readState";
+import { getUnreadHomeSummary } from "@/lib/readState";
+import { fetchCloudReadStates, buildReadKeySet } from "@/lib/readStateClient";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
@@ -127,11 +128,43 @@ export default function HomePage() {
   const todayLabel = useMemo(safeTodayLabel, []);
   const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
 
-  // ──── Unread notes count for partner identity ────
-  const unreadNotesCount = useMemo(
-    () => getUnreadCount(data.loveNotes, spaceCode, identityId),
-    [data.loveNotes, spaceCode, identityId]
-  );
+  // ──── Cloud-synced unread summary for partner identity ────
+  const [unreadSummary, setUnreadSummary] = useState<{ noteCount: number; albumCount: number; memoryCount: number; total: number; hasAny: boolean }>({
+    noteCount: 0, albumCount: 0, memoryCount: 0, total: 0, hasAny: false,
+  });
+
+  useEffect(() => {
+    const noteIds = data.loveNotes.filter((n) => !n.deletedAt && n.author !== identityId).map((n) => n.id);
+    const albumIds = albumItems.filter((a) => !a.deletedAt && a.createdBy !== identityId).map((a) => a.id);
+
+    if (noteIds.length === 0 && albumIds.length === 0) {
+      setUnreadSummary({ noteCount: 0, albumCount: 0, memoryCount: 0, total: 0, hasAny: false });
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all([
+      noteIds.length > 0 ? fetchCloudReadStates({ spaceCode, identity: identityId, contentType: "note", contentIds: noteIds }) : Promise.resolve([]),
+      albumIds.length > 0 ? fetchCloudReadStates({ spaceCode, identity: identityId, contentType: "album", contentIds: albumIds }) : Promise.resolve([]),
+    ]).then(([noteReads, albumReads]) => {
+      if (cancelled) return;
+      const noteReadSet = buildReadKeySet(noteReads);
+      const albumReadSet = buildReadKeySet(albumReads);
+      const noteCount = noteIds.filter((id) => !noteReadSet.has(`note:${id}`)).length;
+      const albumCount = albumIds.filter((id) => !albumReadSet.has(`album:${id}`)).length;
+      setUnreadSummary({ noteCount, albumCount, memoryCount: 0, total: noteCount + albumCount, hasAny: noteCount + albumCount > 0 });
+    }).catch(() => {
+      // Fallback to local read state
+      const summary = getUnreadHomeSummary({ notes: data.loveNotes, albums: albumItems }, spaceCode, identityId);
+      setUnreadSummary(summary);
+    });
+
+    return () => { cancelled = true; };
+  }, [data.loveNotes, albumItems, spaceCode, identityId]);
+
+  const unreadNotesCount = unreadSummary.noteCount;
+  const unreadAlbumsMemoryCount = unreadSummary.albumCount + unreadSummary.memoryCount;
 
   async function refreshLoveNote() {
     const connection = getCloudConnection();
@@ -245,16 +278,29 @@ export default function HomePage() {
         <p className="mt-2.5 text-sm leading-5 text-cocoa/65">
           打开就能看今天该关心什么，不急不赶。
         </p>
-        {/* Unread notes pill — top position in Hero */}
-        {unreadNotesCount > 0 && (
-          <Link
-            href="/notes"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
-          >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-            {unreadNotesCount} 条小纸条还没看
-          </Link>
-        )}
+        {/* Unread notes/memories pill — top position in Hero */}
+        {unreadSummary.hasAny ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {unreadNotesCount > 0 && (
+              <Link
+                href="/notes"
+                className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+                {unreadNotesCount} 条小纸条还没看
+              </Link>
+            )}
+            {unreadAlbumsMemoryCount > 0 && (
+              <Link
+                href="/memories"
+                className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+                {unreadAlbumsMemoryCount} 个新回忆等你看
+              </Link>
+            )}
+          </div>
+        ) : null}
       </motion.header>
 
       <motion.div
