@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppData } from "./types";
+import { flushSyncQueue } from "./syncQueue";
 
 export type AutoSyncStatus = "idle" | "local_saved" | "syncing" | "synced" | "failed" | "queued" | "disabled";
 
@@ -209,6 +210,9 @@ export async function runAutoSyncNow(reason = "manual"): Promise<void> {
 
   syncInProgress = true;
   setStatus("syncing");
+
+  // Process any queued mutations before full data sync
+  await flushSyncQueue();
 
   try {
     const [{ getDefaultSpaceCode, uploadLocalDataToCloud }, { loadAppData }] = await Promise.all([
