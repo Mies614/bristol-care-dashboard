@@ -5,10 +5,11 @@ import { AppShell } from "@/components/AppShell";
 import { AutoSyncStatusBadge } from "@/components/AutoSyncStatusBadge";
 import { downloadJson, readJsonFile } from "@/components/JsonImportExport";
 import { SyncStatusCard } from "@/components/SyncStatusCard";
+import { SyncStatusPanel } from "@/components/settings/SyncStatusPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { NotificationSettingsCard } from "@/components/settings/NotificationSettingsCard";
-import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
+import { ThemeGallery } from "@/components/settings/ThemeGallery";
 import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -212,10 +213,7 @@ export default function SettingsPage() {
 
         {/* ──────────────────── 3. Appearance / Theme ──────────────────── */}
         <SettingsSection title="外观风格" subtitle="主题和卡片样式">
-          <ThemeStylePicker
-            currentStyle={data.themeSettings.style}
-            onSelect={(style) => updateTheme(getThemeDefaultsForStyle(style))}
-          />
+          <ThemeGallery currentStyle={data.themeSettings.style} onSelect={(style) => updateTheme(getThemeDefaultsForStyle(style))} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm text-[var(--app-muted)]">
               卡片样式
@@ -532,6 +530,7 @@ export default function SettingsPage() {
           <div className="space-y-1">
             <AutoSyncStatusBadge />
           <SyncStatusCard />
+          <SyncStatusPanel />
           </div>
           {lastSync ? (
             <p className="text-xs text-[var(--app-muted)]">最近同步：{new Date(lastSync).toLocaleString("zh-CN")}</p>

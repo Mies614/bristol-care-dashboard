@@ -8,12 +8,21 @@ import { StatusPill } from "@/components/ui/StatusPill";
 import { AppCard } from "@/components/ui/AppCard";
 import { AppSection } from "@/components/ui/AppSection";
 import { SyncStatusCard } from "@/components/SyncStatusCard";
+import { SyncStatusPanel } from "@/components/settings/SyncStatusPanel";
 import { NotificationSettingsCard } from "@/components/settings/NotificationSettingsCard";
-import { ThemeStylePicker } from "@/components/settings/ThemeStylePicker";
+import { ThemeGallery } from "@/components/settings/ThemeGallery";
 import { useAccessibleMotion, safeVariants, fadeInScale, safeTransition } from "@/lib/design/motion";
+import { getThemeSettings, saveThemeSettings } from "@/lib/theme";
+import { useState } from "react";
 
 export default function MeSettingsPage() {
   const reduceMotion = useAccessibleMotion();
+  const [currentThemeStyle, setCurrentThemeStyle] = useState(getThemeSettings("me").style);
+  const handleThemeSelect = (style: typeof currentThemeStyle) => {
+    const settings = getThemeSettings("me");
+    saveThemeSettings({ ...settings, style }, "me");
+    setCurrentThemeStyle(style);
+  };
 
   return (
     <AppShell>
@@ -63,6 +72,7 @@ export default function MeSettingsPage() {
         {/* Sync status */}
         <AppSection title="同步状态" variant="card">
           <SyncStatusCard />
+          <SyncStatusPanel showAdvanced />
         </AppSection>
 
         {/* Notification settings */}
@@ -72,7 +82,7 @@ export default function MeSettingsPage() {
 
         {/* Theme picker */}
         <AppSection title="主题" variant="card">
-          <ThemeStylePicker currentStyle="soft" onSelect={() => {}} />
+          <ThemeGallery currentStyle={currentThemeStyle} onSelect={handleThemeSelect} showLabels />
         </AppSection>
 
         {/* Data storage note */}

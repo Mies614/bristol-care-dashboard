@@ -1,26 +1,34 @@
 import type { CSSProperties } from "react";
 import type { AppThemeStyle, ThemeSettings } from "./types";
 
-export const THEME_SETTINGS_KEY = "bristol_dashboard_theme_settings";
+const THEME_SETTINGS_BASE_KEY = "bristol_dashboard_theme_settings";
+const IDENTITY_THEME_PREFIX = "bristol_theme_";
 export const THEME_SETTINGS_CHANGED_EVENT = "theme-settings-changed";
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  style: "soft",
+  style: "warm-letter",
   cardStyle: "glass",
   navStyle: "glass",
   radius: "extra",
   decoration: "stars"
 };
 
+/** Owner-side default theme. */
+export const OWNER_DEFAULT_THEME_SETTINGS: ThemeSettings = {
+  style: "clean-dashboard",
+  cardStyle: "flat",
+  navStyle: "minimal",
+  radius: "large",
+  decoration: "none"
+};
+
 const styleDefaults: Record<AppThemeStyle, Pick<ThemeSettings, "cardStyle" | "navStyle" | "radius" | "decoration">> = {
-  soft:       { cardStyle: "glass",   navStyle: "glass",    radius: "extra",  decoration: "stars" },
-  romantic:   { cardStyle: "glass",   navStyle: "pill",     radius: "extra",  decoration: "hearts" },
-  minimal:    { cardStyle: "flat",    navStyle: "minimal",  radius: "medium", decoration: "none" },
-  study:      { cardStyle: "solid",   navStyle: "glass",    radius: "large",  decoration: "dots" },
-  night:      { cardStyle: "glass",   navStyle: "glass",    radius: "large",  decoration: "moon" },
-  photo:      { cardStyle: "solid",   navStyle: "paper",    radius: "extra",  decoration: "none" },
-  playful:    { cardStyle: "paper",   navStyle: "pill",     radius: "large",  decoration: "tape" },
-  elegant:    { cardStyle: "outline", navStyle: "floating", radius: "extra",  decoration: "dots" }
+  "warm-letter":     { cardStyle: "glass",   navStyle: "glass",    radius: "extra",  decoration: "stars" },
+  "memory-film":     { cardStyle: "paper",   navStyle: "paper",    radius: "large",  decoration: "tape" },
+  "soft-aurora":     { cardStyle: "glass",   navStyle: "floating", radius: "extra",  decoration: "stars" },
+  "clean-dashboard": { cardStyle: "flat",    navStyle: "minimal",  radius: "large",  decoration: "none" },
+  "night-lamp":      { cardStyle: "glass",   navStyle: "glass",    radius: "large",  decoration: "moon" },
+  "garden":          { cardStyle: "solid",   navStyle: "paper",    radius: "large",  decoration: "dots" }
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -33,7 +41,7 @@ export function getThemeDefaultsForStyle(style: AppThemeStyle): ThemeSettings {
 
 export function normalizeThemeSettings(value: unknown): ThemeSettings {
   if (!isRecord(value)) return { ...DEFAULT_THEME_SETTINGS };
-  const validStyles: AppThemeStyle[] = ["soft","romantic","minimal","study","night","photo","playful","elegant"];
+  const validStyles: AppThemeStyle[] = ["warm-letter","memory-film","soft-aurora","clean-dashboard","night-lamp","garden"];
   const style = validStyles.includes(value.style as AppThemeStyle)
     ? value.style as AppThemeStyle
     : DEFAULT_THEME_SETTINGS.style;
@@ -55,16 +63,39 @@ export function normalizeThemeSettings(value: unknown): ThemeSettings {
   };
 }
 
-export function getThemeSettings(): ThemeSettings {
-  if (typeof window === "undefined") return { ...DEFAULT_THEME_SETTINGS };
+/** Resolve the localStorage key for a given identity ("me" or partner id). */
+function getIdentityThemeKey(identity: string): string {
+  return IDENTITY_THEME_PREFIX + identity;
+}
+
+/** Detect current identity from URL pathname. */
+function getCurrentIdentity(): string {
+  if (typeof window === "undefined") return "";
   try {
-    const raw = window.localStorage.getItem(THEME_SETTINGS_KEY);
+    if (window.location.pathname.startsWith("/me")) return "me";
+  } catch {}
+  return process.env.NEXT_PUBLIC_DEFAULT_NORMAL_IDENTITY_ID || "";
+}
+
+export function getThemeSettings(identity?: string): ThemeSettings {
+  if (typeof window === "undefined") return { ...DEFAULT_THEME_SETTINGS };
+  const id = identity || getCurrentIdentity();
+  try {
+    // Check identity-specific key first
+    if (id) {
+      const rawId = window.localStorage.getItem(getIdentityThemeKey(id));
+      if (rawId) return normalizeThemeSettings(JSON.parse(rawId));
+    }
+    // Fall back to legacy key
+    const raw = window.localStorage.getItem(THEME_SETTINGS_BASE_KEY);
     if (raw) return normalizeThemeSettings(JSON.parse(raw));
   } catch {
     try {
-      window.localStorage.removeItem(THEME_SETTINGS_KEY);
+      window.localStorage.removeItem(THEME_SETTINGS_BASE_KEY);
     } catch {}
   }
+  // Return appropriate default based on identity
+  if (id === "me") return { ...OWNER_DEFAULT_THEME_SETTINGS };
   return { ...DEFAULT_THEME_SETTINGS };
 }
 
@@ -77,19 +108,25 @@ function dispatchThemeChanged(settings: ThemeSettings) {
   }
 }
 
-export function saveThemeSettings(settings: ThemeSettings): ThemeSettings {
+export function saveThemeSettings(settings: ThemeSettings, identity?: string): ThemeSettings {
   const normalized = normalizeThemeSettings(settings);
   if (typeof window !== "undefined") {
+    const id = identity || getCurrentIdentity();
     try {
-      window.localStorage.setItem(THEME_SETTINGS_KEY, JSON.stringify(normalized));
+      // Save to identity-specific key
+      if (id) {
+        window.localStorage.setItem(getIdentityThemeKey(id), JSON.stringify(normalized));
+      }
+      // Also save to legacy key for backward compatibility
+      window.localStorage.setItem(THEME_SETTINGS_BASE_KEY, JSON.stringify(normalized));
     } catch {}
     dispatchThemeChanged(normalized);
   }
   return normalized;
 }
 
-export function mergeThemeSettings(partial: Partial<ThemeSettings>): ThemeSettings {
-  return saveThemeSettings({ ...getThemeSettings(), ...partial });
+export function mergeThemeSettings(partial: Partial<ThemeSettings>, identity?: string): ThemeSettings {
+  return saveThemeSettings({ ...getThemeSettings(identity), ...partial }, identity);
 }
 
 /** Get full CSS variable map for a theme */
@@ -97,69 +134,63 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
   const theme = normalizeThemeSettings(settings);
   const r = theme.radius === "medium" ? "1.1rem" : theme.radius === "large" ? "1.45rem" : "1.75rem";
 
-  // 8 palette definitions
+  // 6 distinct visual themes
+    // 6 distinct visual themes
   const palettes: Record<AppThemeStyle, Record<string, string>> = {
-    soft: {
-      accent: "#8c6a60", soft: "rgba(255,226,219,0.72)", card: "rgba(255,255,255,0.76)",
-      nav: "rgba(255,255,255,0.74)", border: "rgba(255,255,255,0.78)", text: "#5f4b44",
-      muted: "rgba(95,75,68,0.66)", danger: "#c45a4e", warning: "#b8933a", success: "#5d8a6a",
-      bg: "#fff8f0", "bg-soft": "#f5eee7"
+    // 1. warm-letter — warm cream/blush/rose, paper-like (小乖端默认)
+    "warm-letter": {
+      accent: "#b87060", soft: "rgba(240,210,200,0.72)", card: "rgba(255,255,255,0.80)",
+      nav: "rgba(255,255,255,0.78)", border: "rgba(255,240,235,0.82)", text: "#5a3e35",
+      muted: "rgba(90,62,53,0.64)", danger: "#c45a4e", warning: "#b8933a", success: "#5d8a6a",
+      bg: "#fff8f0", "bg-soft": "#f5ece3"
     },
-    romantic: {
-      accent: "#b85f8a", soft: "rgba(247,205,232,0.78)", card: "rgba(255,246,251,0.8)",
-      nav: "rgba(255,238,249,0.84)", border: "rgba(255,214,238,0.82)", text: "#654053",
-      muted: "rgba(101,64,83,0.66)", danger: "#c44a6a", warning: "#c49a3a", success: "#7a5d8a",
-      bg: "#fef5fa", "bg-soft": "#f8ecf3"
+    // 2. memory-film — warm amber/sepia, nostalgic photo feel
+    "memory-film": {
+      accent: "#a07850", soft: "rgba(220,200,180,0.70)", card: "rgba(255,252,248,0.85)",
+      nav: "rgba(255,250,245,0.84)", border: "rgba(230,215,200,0.78)", text: "#4a3a2e",
+      muted: "rgba(74,58,46,0.64)", danger: "#b05a4a", warning: "#a08030", success: "#6a8a5a",
+      bg: "#f5ede0", "bg-soft": "#ebe0d2"
     },
-    minimal: {
-      accent: "#53606a", soft: "rgba(244,246,248,0.86)", card: "rgba(255,255,255,0.9)",
-      nav: "rgba(255,255,255,0.94)", border: "rgba(222,226,230,0.9)", text: "#334155",
-      muted: "rgba(51,65,85,0.6)", danger: "#dc2626", warning: "#ca8a04", success: "#16a34a",
+    // 3. soft-aurora — cool lavender/sky/lilac, dreamy
+    "soft-aurora": {
+      accent: "#8b7fc0", soft: "rgba(220,210,245,0.74)", card: "rgba(255,255,255,0.80)",
+      nav: "rgba(250,248,255,0.80)", border: "rgba(235,225,250,0.82)", text: "#4a3e6a",
+      muted: "rgba(74,62,106,0.62)", danger: "#c45a6e", warning: "#b8934a", success: "#6a8a6a",
+      bg: "#f8f5ff", "bg-soft": "#eee8f8"
+    },
+    // 4. clean-dashboard — crisp white/sage/indigo (我端默认)
+    "clean-dashboard": {
+      accent: "#5b7d8a", soft: "rgba(220,235,240,0.70)", card: "rgba(255,255,255,0.92)",
+      nav: "rgba(255,255,255,0.94)", border: "rgba(220,228,232,0.85)", text: "#334155",
+      muted: "rgba(51,65,85,0.60)", danger: "#dc2626", warning: "#ca8a04", success: "#16a34a",
       bg: "#f8fafc", "bg-soft": "#eef2f6"
     },
-    study: {
-      accent: "#4f7f75", soft: "rgba(219,241,235,0.78)", card: "rgba(250,255,253,0.84)",
-      nav: "rgba(241,250,247,0.84)", border: "rgba(192,222,213,0.8)", text: "#39564f",
-      muted: "rgba(57,86,79,0.66)", danger: "#c45a4e", warning: "#b8933a", success: "#3d8a5a",
-      bg: "#f0f9f4", "bg-soft": "#e4f0eb"
+    // 5. night-lamp — deep navy/warm amber, cozy dark mode
+    "night-lamp": {
+      accent: "#e8c84a", soft: "rgba(60,55,75,0.70)", card: "rgba(30,28,42,0.80)",
+      nav: "rgba(26,24,36,0.86)", border: "rgba(255,255,255,0.10)", text: "#f0ecff",
+      muted: "rgba(240,236,255,0.55)", danger: "#ff8a7a", warning: "#e8c84a", success: "#7ac4a0",
+      bg: "#1a1c2e", "bg-soft": "#252638"
     },
-    night: {
-      accent: "#d9c2ff", soft: "rgba(72,61,92,0.7)", card: "rgba(35,31,45,0.76)",
-      nav: "rgba(31,28,40,0.82)", border: "rgba(226,214,255,0.18)", text: "#f7f1ff",
-      muted: "rgba(247,241,255,0.6)", danger: "#ff8a7a", warning: "#e8c84a", success: "#7ac4a0",
-      bg: "#1f1c28", "bg-soft": "#2a2634"
-    },
-    photo: {
-      accent: "#765f55", soft: "rgba(255,250,246,0.88)", card: "rgba(255,255,255,0.88)",
-      nav: "rgba(255,255,255,0.9)", border: "rgba(255,255,255,0.9)", text: "#4f3f39",
-      muted: "rgba(79,63,57,0.66)", danger: "#c45a4e", warning: "#b8933a", success: "#5d8a6a",
-      bg: "#fdf6f0", "bg-soft": "#f5ebe3"
-    },
-    playful: {
-      accent: "#e8856e", soft: "rgba(255,226,215,0.82)", card: "rgba(255,252,250,0.84)",
-      nav: "rgba(255,248,244,0.86)", border: "rgba(255,219,206,0.84)", text: "#5a3e35",
-      muted: "rgba(90,62,53,0.66)", danger: "#e06050", warning: "#d4a030", success: "#70a080",
-      bg: "#fff6f0", "bg-soft": "#f8ece5"
-    },
-    elegant: {
-      accent: "#8a7a6a", soft: "rgba(235,227,218,0.78)", card: "rgba(252,249,245,0.85)",
-      nav: "rgba(248,244,238,0.88)", border: "rgba(215,205,192,0.82)", text: "#4a3e35",
-      muted: "rgba(74,62,53,0.64)", danger: "#b05a4a", warning: "#a08030", success: "#6a8a6a",
-      bg: "#f7f2eb", "bg-soft": "#ede6dd"
+    // 6. garden — sage/mint/cream, natural botanical
+    "garden": {
+      accent: "#6b8a6a", soft: "rgba(210,230,210,0.72)", card: "rgba(252,255,250,0.84)",
+      nav: "rgba(248,252,246,0.84)", border: "rgba(210,225,210,0.80)", text: "#3a503a",
+      muted: "rgba(58,80,58,0.64)", danger: "#c45a4e", warning: "#b8933a", success: "#4a8a5a",
+      bg: "#f2f7f0", "bg-soft": "#e4ede2"
     }
   };
-
   const p = palettes[theme.style];
   const cardStyle = theme.cardStyle;
 
   // Card bg varies by cardStyle
   let cardBg: string;
   switch (cardStyle) {
-    case "glass":   cardBg = theme.style === "night" ? "rgba(35,31,45,0.76)" : "rgba(255,255,255,0.76)"; break;
-    case "solid":   cardBg = theme.style === "night" ? "rgba(40,35,50,0.85)" : "rgba(255,255,255,0.9)"; break;
-    case "paper":   cardBg = theme.style === "night" ? "rgba(45,40,55,0.82)" : "rgba(252,249,245,0.88)"; break;
-    case "flat":    cardBg = theme.style === "night" ? "rgba(50,45,60,0.8)"  : "rgba(255,255,255,0.95)"; break;
-    case "outline": cardBg = theme.style === "night" ? "transparent"         : "rgba(255,255,255,0.6)"; break;
+    case "glass":   cardBg = theme.style === "night-lamp" ? "rgba(35,31,45,0.76)" : "rgba(255,255,255,0.76)"; break;
+    case "solid":   cardBg = theme.style === "night-lamp" ? "rgba(40,35,50,0.85)" : "rgba(255,255,255,0.9)"; break;
+    case "paper":   cardBg = theme.style === "night-lamp" ? "rgba(45,40,55,0.82)" : "rgba(252,249,245,0.88)"; break;
+    case "flat":    cardBg = theme.style === "night-lamp" ? "rgba(50,45,60,0.8)"  : "rgba(255,255,255,0.95)"; break;
+    case "outline": cardBg = theme.style === "night-lamp" ? "transparent"         : "rgba(255,255,255,0.6)"; break;
     default:        cardBg = p.card;
   }
 
@@ -171,17 +202,14 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
     outline: "0 2px 8px rgba(60,45,40,0.04)"
   };
 
-  const btnMap = {
-    soft:      "linear-gradient(135deg,rgba(140,106,96,0.9),rgba(140,106,96,0.75))",
-    romantic:  "linear-gradient(135deg,#b85f8a,#c47a9e)",
-    minimal:   "#53606a",
-    study:     "linear-gradient(135deg,#4f7f75,#6a9a8a)",
-    night:     "linear-gradient(135deg,rgba(217,194,255,0.8),rgba(180,150,230,0.7))",
-    photo:     "#765f55",
-    playful:   "linear-gradient(135deg,#e8856e,#f0a08a)",
-    elegant:   "linear-gradient(135deg,#8a7a6a,#a09080)"
+  const btnMap: Record<string, string> = {
+    "warm-letter":     "linear-gradient(135deg,rgba(184,112,96,0.9),rgba(184,112,96,0.75))",
+    "memory-film":     "linear-gradient(135deg,#a07850,#b89060)",
+    "soft-aurora":     "linear-gradient(135deg,#8b7fc0,#a090d0)",
+    "clean-dashboard": "#5b7d8a",
+    "night-lamp":      "linear-gradient(135deg,rgba(232,200,74,0.85),rgba(200,170,60,0.75))",
+    "garden":          "linear-gradient(135deg,#6b8a6a,#80a080)"
   };
-
   return {
     "--app-bg": p.bg,
     "--app-bg-soft": p["bg-soft"],
@@ -192,13 +220,13 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
     "--app-card-shadow": shadowMap[cardStyle] || shadowMap.glass,
     "--app-accent": p.accent,
     "--app-accent-soft": p.soft,
-    "--app-accent-foreground": theme.style === "night" ? "#2a2634" : "#fff",
+    "--app-accent-foreground": theme.style === "night-lamp" ? "#2a2634" : "#fff",
     "--app-danger": p.danger,
     "--app-warning": p.warning,
     "--app-success": p.success,
     "--app-radius": r,
     "--app-nav-bg": p.nav,
-    "--app-nav-border": theme.style === "night" ? "rgba(226,214,255,0.12)" : "rgba(255,255,255,0.7)",
+    "--app-nav-border": theme.style === "night-lamp" ? "rgba(226,214,255,0.12)" : "rgba(255,255,255,0.7)",
     "--app-nav-active": p.soft,
     "--app-overlay": "rgba(255,250,246,0.34)",
     "--app-photo-dim": "0",

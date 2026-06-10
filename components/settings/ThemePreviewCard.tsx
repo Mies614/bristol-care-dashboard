@@ -101,7 +101,7 @@ function BadgeShape({ bg, text, shape }: { bg: string; text: string; shape: Them
 
 export function ThemePreviewCard({ config, selected, onClick }: Props) {
   const reduceMotion = useAccessibleMotion();
-  const isDark = config.style === "night";
+  const isDark = config.style === "night-lamp";
 
   return (
     <motion.button
