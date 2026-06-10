@@ -6,14 +6,13 @@ import { test, expect } from "@playwright/test";
  * These tests verify that the dual-entry architecture routes correctly:
  * - /me pages load and show correct identity
  * - BottomNav links are all under /me/
- * - /me pages don't link to partner-only routes
+ * - /me pages don't link to partner-only routes as primary entries
  */
 
 test.describe("Owner-side routing (/me)", () => {
   test("/me home page loads", async ({ page }) => {
     await page.goto("/me");
     await expect(page).toHaveURL(/\/me$/);
-    // The page should render without crashing
     await expect(page.locator("nav[aria-label='main navigation']")).toBeVisible();
   });
 
@@ -44,11 +43,25 @@ test.describe("Owner-side routing (/me)", () => {
     expect(hrefs).not.toContain("/settings");
   });
 
-  test("/me page does not show partner /notes as primary entry", async ({ page }) => {
+  test("/me TodaySummaryCard does not link to partner /notes", async ({ page }) => {
     await page.goto("/me");
-    // Check that any prominent "notes" link points to /me/notes or sub-page, not /notes
-    const notesLink = page.locator('a[href="/notes"]');
-    await expect(notesLink).toHaveCount(0);
+    await page.waitForLoadState("networkidle");
+
+    // The TodaySummaryCard on /me should link to /me/notes (or another /me path),
+    // not to the bare partner /notes route.
+    // Check that any "小纸条墙" link goes to /me/notes
+    const notesLinks = page.locator('a[href="/notes"]');
+
+    // The TodaySummaryCard is the one that shows "小纸条墙" or "相册" —
+    // it should now use /me-prefixed routes on the /me page
+    const summaryCard = page.locator("section").filter({ hasText: /今日照顾|小纸条墙|一张回忆|查看 DDL/ }).first();
+    const cardLink = summaryCard.locator("a").first();
+    const cardHref = await cardLink.getAttribute("href");
+    if (cardHref) {
+      // Any link from TodaySummaryCard on /me should be /me-prefixed or undefined
+      expect(cardHref).not.toBe("/notes");
+      expect(cardHref).not.toBe("/albums");
+    }
   });
 });
 

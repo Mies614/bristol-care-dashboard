@@ -7,6 +7,9 @@
  * Primary nav entries: 首页, 记录, 回忆, 卡夹, 设置
  * /notes and /albums are secondary pages accessible via /records, /cards, /memories, or homepage cards.
  */
+
+import type { AppSide } from "@/lib/appIdentity";
+
 export interface NavItem {
   href: string;
   label: string;
@@ -49,6 +52,33 @@ export function getNavItemsForPath(pathname: string): NavItem[] {
  * Kept for backward compatibility with existing tests.
  */
 export const appNavItems: NavItem[] = PARTNER_NAV_ITEMS;
+
+/**
+ * Get the base path prefix for a given app side.
+ * - owner → "/me"
+ * - partner → ""
+ */
+export function getSideBasePath(appSide: AppSide): string {
+  return appSide === "owner" ? "/me" : "";
+}
+
+/**
+ * Build a href that respects the app side prefix.
+ *
+ * Examples:
+ * - getSideHref("owner", "/notes") → "/me/notes"
+ * - getSideHref("partner", "/notes") → "/notes"
+ * - getSideHref("owner", "notes") → "/me/notes"
+ * - getSideHref("owner", "/") → "/me"
+ *
+ * Does NOT produce "/me/me/..." — the path is always normalized first.
+ */
+export function getSideHref(appSide: AppSide, path: string): string {
+  const basePath = getSideBasePath(appSide);
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (normalizedPath === "/") return basePath || "/";
+  return `${basePath}${normalizedPath}`;
+}
 
 /**
  * Get the active nav href given the current pathname.

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getIdentityDisplayName } from "@/lib/identity";
+import { getIdentityDisplayName, DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
+import type { AppSide } from "@/lib/appIdentity";
 import { addLocalComment, softDeleteLocalComment } from "@/lib/interactionsLocal";
 
 export type { CommentEntryType };
@@ -15,8 +16,10 @@ export interface ContentCommentsProps {
   contentId: string;
   /** Space code for localStorage fallback */
   spaceCode: string;
-  /** Current user's identity (optional — falls back to identityStorage) */
+  /** Current user's identity (explicit prop — preferred over appSide inference) */
   identity?: string;
+  /** App side: "owner" (me) or "partner" (xiaoguai). Used as fallback identity source. */
+  appSide?: AppSide;
   /** Existing comment entries to display */
   comments: CommentEntryType[];
   /** Called when user submits a new comment. Throw to trigger local fallback. */
@@ -39,11 +42,43 @@ export interface ContentCommentsProps {
   onIdentityChanged?: () => void;
 }
 
+/**
+ * Resolve the current identity from explicit prop, appSide, or last-resort hook.
+ *
+ * Priority:
+ * 1. Explicit `identity` prop
+ * 2. `appSide` → owner="me", partner=DEFAULT_NORMAL_IDENTITY_ID
+ * 3. `useCurrentIdentity` hook (legacy fallback, emits dev warning)
+ */
+function resolveIdentity(
+  identityProp: string | undefined,
+  appSide: AppSide | undefined,
+  hookIdentity: string
+): string {
+  // 1. Explicit prop always wins
+  if (identityProp) return identityProp;
+
+  // 2. appSide-based inference
+  if (appSide === "owner") return "me";
+  if (appSide === "partner") return DEFAULT_NORMAL_IDENTITY_ID;
+
+  // 3. Legacy hook fallback (dev warning only)
+  if (typeof window !== "undefined") {
+    console.warn(
+      "[ContentComments] identity and appSide are both missing. " +
+      "Falling back to localStorage useCurrentIdentity hook. " +
+      "Please pass `identity` or `appSide` prop explicitly."
+    );
+  }
+  return hookIdentity;
+}
+
 export default function ContentComments({
   contentType,
   contentId,
   spaceCode,
   identity: identityProp,
+  appSide,
   comments,
   onAddComment,
   onDeleteComment,
@@ -60,19 +95,19 @@ export default function ContentComments({
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Resolve identity: prefer prop, fall back to useCurrentIdentity hook
+  // Resolve identity: prefer prop, then appSide, then useCurrentIdentity (with dev warning)
   const { identityId: hookIdentity } = useCurrentIdentity(spaceCode);
 
-  const activeIdentity = identityProp || hookIdentity;
+  const activeIdentity = resolveIdentity(identityProp, appSide, hookIdentity);
 
   // Track previous hook identity to detect changes and notify parent
   const prevHookIdentityRef = useRef(hookIdentity);
   useEffect(() => {
-    if (!identityProp && prevHookIdentityRef.current !== hookIdentity) {
+    if (!identityProp && !appSide && prevHookIdentityRef.current !== hookIdentity) {
       prevHookIdentityRef.current = hookIdentity;
       onIdentityChanged?.();
     }
-  }, [hookIdentity, identityProp, onIdentityChanged]);
+  }, [hookIdentity, identityProp, appSide, onIdentityChanged]);
 
   /** Save comment to localStorage when API is unavailable */
   const fallbackSaveCommentLocally = useCallback(async (body: string): Promise<boolean> => {
@@ -149,31 +184,30 @@ export default function ContentComments({
     [handleSubmit]
   );
 
+  const isInputReady = inputValue.trim().length > 0 && !submitting;
+
+  // Pagination: show last 5 comments by default, expand to show all
+  const PAGE_SIZE = 5;
+  const visibleComments = expanded ? comments : comments.slice(-PAGE_SIZE);
+  const hasMore = comments.length > PAGE_SIZE;
+
   const toggleExpanded = useCallback(() => {
     setExpanded((prev) => !prev);
   }, []);
 
-  const visibleComments = expanded ? comments : comments.slice(0, 3);
-  const hasMore = comments.length > 3;
-
-  const isInputReady = !disabled && !submitting && inputValue.trim().length > 0;
-
   return (
-    <div className="mt-4 pt-3 border-t border-white/10">
-      {/* Comment input area — stacked layout for mobile readability */}
+    <div className="space-y-2">
+      {/* Comment input */}
       <div className="relative">
         <textarea
           value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            if (error) setError(null);
-          }}
+          onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          maxLength={maxLength}
           disabled={disabled || submitting}
+          placeholder={placeholder}
           rows={2}
-          maxLength={maxLength + 50}
-          className="w-full px-3 py-2 pr-16 rounded-lg bg-white/80 border border-cocoa/10 text-cocoa text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50 placeholder:text-cocoa/40"
+          className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 pr-16 text-sm text-cocoa placeholder:text-cocoa/40 resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}

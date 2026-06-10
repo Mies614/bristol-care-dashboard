@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       summaries,
       interactions: (interactions || []).map((i: Record<string, unknown>) => ({
-        id: i.id, spaceId: i.space_id, contentType: i.content_type, contentId: i.content_id,
+        id: i.id, spaceCode: i.space_code, contentType: i.content_type, contentId: i.content_id,
         identity: i.identity, interactionType: i.interaction_type, reaction: i.reaction || undefined,
         createdAt: i.created_at, updatedAt: i.updated_at,
       })),

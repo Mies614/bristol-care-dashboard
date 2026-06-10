@@ -185,6 +185,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
             contentId={note.id}
             spaceCode={spaceCode}
             identity={identity}
+            appSide={appSide}
             comments={comments}
             loading={commentsLoading}
             onAddComment={handleAddComment}

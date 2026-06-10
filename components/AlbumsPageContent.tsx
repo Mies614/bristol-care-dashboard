@@ -597,6 +597,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
               contentId={selected.id}
               spaceCode={code}
               identity={identity}
+              appSide={_appSide}
               comments={selectedComments}
               loading={commentsLoading}
               onAddComment={handleAddAlbumComment}

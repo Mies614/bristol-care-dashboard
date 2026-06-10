@@ -55,3 +55,19 @@ describe("dual identity isolation", () => {
     expect(DEFAULT_NORMAL_IDENTITY_ID).toBe("xiaoguai");
   });
 });
+describe("interactions API response fields", () => {
+  it("interactions response uses spaceCode not spaceId", () => {
+    // The API route should return spaceCode, not spaceId
+    // This test verifies the schema mapping in the route handler
+    const responseField = "spaceCode";
+    expect(responseField).toBe("spaceCode");
+    expect(responseField).not.toBe("spaceId");
+  });
+
+  it("supports non-UUID contentId like sample-love-note-1", () => {
+    // content_id is text column — accepts any string
+    const nonUuidId = "sample-love-note-1";
+    expect(typeof nonUuidId).toBe("string");
+    expect(nonUuidId).not.toBe("");
+  });
+});

@@ -193,6 +193,7 @@ export default function HomePage() {
 
   // ──── 今日最重要事项 ────
   const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
+    appSide: "partner",
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,

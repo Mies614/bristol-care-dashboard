@@ -142,6 +142,7 @@ export default function MeHomePage() {
   const unreadAlbumsMemoryCount = unreadSummary.albumCount + unreadSummary.memoryCount;
 
   const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
+    appSide: "owner",
     courses: data.courses,
     deadlines: data.deadlines,
     periodRecords,

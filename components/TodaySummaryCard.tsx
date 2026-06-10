@@ -6,6 +6,8 @@ import { calculateNextPeriodStart, getDaysUntilNextPeriod } from "@/lib/period";
 import { getTopPriorityDdl, type DdlWithPriority } from "@/lib/ddlPriority";
 import type { Course, Deadline, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import type { RandomMemoryItem } from "@/lib/randomMemory";
+import { getSideHref } from "@/lib/navigation";
+import type { AppSide } from "@/lib/appIdentity";
 
 export type TodaySummaryInput = {
   courses: Course[];
@@ -16,6 +18,8 @@ export type TodaySummaryInput = {
   featuredNote?: LoveNote | null;
   randomMemory?: RandomMemoryItem | null;
   now?: Date;
+  /** Which app side this summary is for (affects link hrefs) */
+  appSide: AppSide;
 };
 
 export type TodaySummaryResult = {
@@ -46,7 +50,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
         type: "ddl",
         label: "⚠️ 已逾期",
         description: `「${topDdl.deadline.title}」已经过期了，今天先抓最关键的一步。`,
-        href: "/deadlines",
+        href: getSideHref(input.appSide, "/deadlines"),
         actionLabel: "查看 DDL",
         selectedDdl: topDdl
       };
@@ -55,7 +59,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "ddl",
       label: "⚠️ 紧急截止",
       description: `「${topDdl.deadline.title}」${topDdl.daysUntil <= 0 ? "今天截止" : "明天截止"}，优先处理这一步。`,
-      href: "/deadlines",
+      href: getSideHref(input.appSide, "/deadlines"),
       actionLabel: "查看 DDL",
       selectedDdl: topDdl
     };
@@ -68,7 +72,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "course",
       label: "📚 下一节课",
       description: `${next.startTime} ${next.name}${next.location ? ` · ${next.location}` : ""}`,
-      href: "/schedule",
+      href: getSideHref(input.appSide, "/schedule"),
       actionLabel: "课程表"
     };
   }
@@ -80,7 +84,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "course",
       label: "📚 明天有课",
       description: `${tomorrowCourses[0].startTime} ${tomorrowCourses[0].name}，今晚可以早点休息。`,
-      href: "/schedule",
+      href: getSideHref(input.appSide, "/schedule"),
       actionLabel: "课程表"
     };
   }
@@ -91,7 +95,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "ddl",
       label: "📋 即将截止",
       description: `「${topDdl.deadline.title}」还有 ${topDdl.daysUntil} 天，提前安排一下。`,
-      href: "/deadlines",
+      href: getSideHref(input.appSide, "/deadlines"),
       actionLabel: "查看 DDL",
       selectedDdl: topDdl
     };
@@ -106,7 +110,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "period",
       label,
       description: `预计${nextPeriodStart || "这几天"}附近开始，今天对身体温柔一点。`,
-      href: "/period",
+      href: getSideHref(input.appSide, "/period"),
       actionLabel: "经期记录"
     };
   }
@@ -116,7 +120,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "period",
       label: "🌸 经期延迟",
       description: `预计 ${nextPeriodStart || "之前"} 开始，已经过了 ${Math.abs(daysUntilPeriod)} 天，留意身体变化。`,
-      href: "/period",
+      href: getSideHref(input.appSide, "/period"),
       actionLabel: "经期记录"
     };
   }
@@ -141,7 +145,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "memory",
       label: "💌 今日小纸条",
       description: snippet,
-      href: "/notes",
+      href: getSideHref(input.appSide, "/notes"),
       actionLabel: "小纸条墙"
     };
   }
@@ -150,7 +154,7 @@ export function buildTodaySummary(input: TodaySummaryInput): TodaySummaryResult 
       type: "memory",
       label: "📷 一张回忆",
       description: input.randomMemory.title,
-      href: "/albums",
+      href: getSideHref(input.appSide, "/albums"),
       actionLabel: "相册"
     };
   }

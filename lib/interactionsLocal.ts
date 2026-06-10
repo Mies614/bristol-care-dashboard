@@ -9,6 +9,7 @@
  */
 
 import type { ContentInteraction, ContentComment } from "./contentInteractions";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "./identity";
 
 const LS_INTERACTIONS_KEY = (spaceCode: string, identity: string, contentType: string) =>
   `bristol_int_${spaceCode}_${identity}_${contentType}`;
@@ -100,7 +101,7 @@ export function getLocalComments(
   if (typeof window === "undefined") return [];
   const all: ContentComment[] = [];
   // Local comments are stored per identity; iterate known identities
-  const knownIdentities = ["xiaoguai", "me", "admin"];
+  const knownIdentities = [DEFAULT_NORMAL_IDENTITY_ID, "me", "admin"];
   try {
     for (const identity of knownIdentities) {
       const raw = window.localStorage.getItem(LS_COMMENTS_KEY(spaceCode, identity, contentType));
@@ -159,7 +160,7 @@ export function softDeleteLocalComment(
   // Reorganize: save back per identity
   const byIdentity: Record<string, ContentComment[]> = {};
   for (const c of updated) {
-    const key = c.identity || "xiaoguai";
+    const key = c.identity || DEFAULT_NORMAL_IDENTITY_ID;
     if (!byIdentity[key]) byIdentity[key] = [];
     byIdentity[key].push(c);
   }
@@ -183,7 +184,7 @@ export function restoreLocalComment(
   });
   const byIdentity: Record<string, ContentComment[]> = {};
   for (const c of updated) {
-    const key = c.identity || "xiaoguai";
+    const key = c.identity || DEFAULT_NORMAL_IDENTITY_ID;
     if (!byIdentity[key]) byIdentity[key] = [];
     byIdentity[key].push(c);
   }
@@ -202,7 +203,7 @@ export function hardDeleteLocalComment(
   const filtered = all.filter((c) => c.id !== commentId);
   const byIdentity: Record<string, ContentComment[]> = {};
   for (const c of filtered) {
-    const key = c.identity || "xiaoguai";
+    const key = c.identity || DEFAULT_NORMAL_IDENTITY_ID;
     if (!byIdentity[key]) byIdentity[key] = [];
     byIdentity[key].push(c);
   }

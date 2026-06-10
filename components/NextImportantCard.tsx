@@ -7,6 +7,8 @@ import { getTopPriorityDdl } from "@/lib/ddlPriority";
 import type { Course, Deadline, LoveNote, PeriodRecord, PeriodSettings } from "@/lib/types";
 import type { RandomMemoryItem } from "@/lib/randomMemory";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
+import { getSideHref } from "@/lib/navigation";
+import type { AppSide } from "@/lib/appIdentity";
 
 export type NextImportantInput = {
   courses: Course[];
@@ -21,6 +23,8 @@ export type NextImportantInput = {
   /** 已在 TodaySummaryCard 排除的 DDL ID set */
   excludedDdlIds: Set<string>;
   now?: Date;
+  /** Which app side this card is for (affects link hrefs) */
+  appSide: AppSide;
 };
 
 export type NextImportantResult = {
@@ -56,7 +60,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "course",
         label: "📚 下一节课",
         description: `${next.startTime} ${next.name}${next.location ? ` · ${next.location}` : ""}`,
-        href: "/schedule",
+        href: getSideHref(input.appSide, "/schedule"),
         actionLabel: "课程表",
         isEmpty: false
       };
@@ -70,7 +74,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "course",
         label: "📚 明天有课",
         description: `${tomorrowCourses[0].startTime} ${tomorrowCourses[0].name}，今晚可以早点休息。`,
-        href: "/schedule",
+        href: getSideHref(input.appSide, "/schedule"),
         actionLabel: "课程表",
         isEmpty: false
       };
@@ -89,7 +93,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "ddl",
         label: topDdl.priority === "overdue" ? "⚠️ 还有 DDL 过期" : "📋 下一个 DDL",
         description: `「${topDdl.deadline.title}」${daysText}，别忘了。`,
-        href: "/deadlines",
+        href: getSideHref(input.appSide, "/deadlines"),
         actionLabel: "查看 DDL",
         isEmpty: false,
         selectedDdlId: topDdl.deadline.id
@@ -105,7 +109,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "period",
         label: daysUntilPeriod === 0 ? "🌸 经期预计今天" : `🌸 经期临近（约 ${daysUntilPeriod} 天）`,
         description: "今天对身体温柔一点，不要吃冰的。",
-        href: "/period",
+        href: getSideHref(input.appSide, "/period"),
         actionLabel: "经期记录",
         isEmpty: false
       };
@@ -115,7 +119,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "period",
         label: "🌸 经期延迟",
         description: `已经过了 ${Math.abs(daysUntilPeriod)} 天，留意身体变化。`,
-        href: "/period",
+        href: getSideHref(input.appSide, "/period"),
         actionLabel: "经期记录",
         isEmpty: false
       };
@@ -132,7 +136,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "memory",
         label: "💌 今日小纸条",
         description: snippet,
-        href: "/notes",
+        href: getSideHref(input.appSide, "/notes"),
         actionLabel: "小纸条墙",
         isEmpty: false
       };
@@ -142,7 +146,7 @@ export function buildNextImportant(input: NextImportantInput): NextImportantResu
         type: "memory",
         label: "📷 一张回忆",
         description: input.randomMemory.title,
-        href: "/albums",
+        href: getSideHref(input.appSide, "/albums"),
         actionLabel: "相册",
         isEmpty: false
       };
