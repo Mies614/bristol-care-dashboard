@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
-import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
+import { useWeatherCare } from "@/components/WeatherCareCard";
+import { WeatherCareHint } from "@/components/WeatherCareHint";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
@@ -21,7 +22,6 @@ import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
-import { CoupleCareStrip as _CoupleCareStrip } from "@/components/CoupleCareStrip";
 import { getCurrentDayName } from "@/lib/schedule";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
 
@@ -112,24 +112,75 @@ export default function HomePage() {
       }
       syncLoveNotesIntoLocalData(spaceCode).then((result) => {
         if (result.ok && result.data) setData(result.data);
-      }).catch(() => {
-        // Cloud notes are optional for first paint.
-      });
+        if (!result.ok) setSyncMessage(result.error || "云同步失败，已使用本地缓存。");
+      }).catch(() => setSyncMessage("云同步失败，已使用本地缓存。"));
     } catch {
-      setSyncMessage("云同步暂时不可用，已使用本地缓存。");
+      // Cloud sync is optional for first paint.
     }
   }, [spaceCode]);
 
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
   const recentMemories = useMemo(() => {
     const favorites = albumItems.filter((item) => item.isFavorite);
-    return (favorites.length ? favorites : albumItems).slice(0, 4);
+    return (favorites.length ? favorites : albumItems).slice(0, 2);
   }, [albumItems]);
   const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
-  const todayLabel = useMemo(safeTodayLabel, []);
-  const [unreadMissYouCount, setUnreadMissYouCount] = useState(0);
+  const todaySummary: TodaySummaryResult = useMemo(() => buildTodaySummary({
+    courses: data.courses,
+    deadlines: data.deadlines,
+    periodRecords,
+    periodSettings,
+    unreadMissYouCount: 0,
+    featuredNote: featuredLoveNote,
+    randomMemory,
+    now,
+    appSide: "partner"
+  }), [data.courses, data.deadlines, periodRecords, periodSettings, featuredLoveNote, randomMemory, now]);
 
-  // ──── Cloud-synced unread summary for partner identity ────
+  const periodDaysUntil = useMemo(() => getDaysUntilNextPeriod(periodRecords, periodSettings), [periodRecords, periodSettings]);
+  const cycleDay = useMemo(() => getCurrentCycleDay(periodRecords), [periodRecords]);
+
+  const careStripItems: CareStripItem[] = useMemo(() => {
+    const todayDay = getCurrentDayName();
+    const todayCourseCount = data.courses.filter((c) => c.day === todayDay).length;
+    const incompleteDdlCount = data.deadlines.filter((d) => d.status !== "done").length;
+    const items: CareStripItem[] = [
+      {
+        id: "courses",
+        icon: "📚",
+        label: "今天课程",
+        value: String(todayCourseCount),
+        href: "/records"
+      },
+      {
+        id: "deadlines",
+        icon: "📋",
+        label: "未完成 DDL",
+        value: String(incompleteDdlCount),
+        href: "/records"
+      }
+    ];
+    if (cycleDay) {
+      items.push({
+        id: "period",
+        icon: "🌸",
+        label: "经期第",
+        value: `${cycleDay} 天`,
+        href: "/period"
+      });
+    } else if (periodDaysUntil !== null && periodDaysUntil <= 3) {
+      items.push({
+        id: "period",
+        icon: "🌸",
+        label: "预计经期",
+        value: `${periodDaysUntil} 天后`,
+        href: "/period"
+      });
+    }
+    return items;
+  }, [data.courses, data.deadlines, cycleDay, periodDaysUntil]);
+
+  // ──── Cloud-synced unread summary ────
   const [unreadSummary, setUnreadSummary] = useState<{ noteCount: number; albumCount: number; memoryCount: number; total: number; hasAny: boolean }>({
     noteCount: 0, albumCount: 0, memoryCount: 0, total: 0, hasAny: false,
   });
@@ -156,7 +207,6 @@ export default function HomePage() {
       const albumCount = albumIds.filter((id) => !albumReadSet.has(`album:${id}`)).length;
       setUnreadSummary({ noteCount, albumCount, memoryCount: 0, total: noteCount + albumCount, hasAny: noteCount + albumCount > 0 });
     }).catch(() => {
-      // Fallback to local read state
       const summary = getUnreadHomeSummary({ notes: data.loveNotes, albums: albumItems }, spaceCode, identityId);
       setUnreadSummary(summary);
     });
@@ -167,100 +217,16 @@ export default function HomePage() {
   const unreadNotesCount = unreadSummary.noteCount;
   const unreadAlbumsMemoryCount = unreadSummary.albumCount + unreadSummary.memoryCount;
 
-  async function refreshLoveNote() {
-    const connection = getCloudConnection();
-    if (!connection) {
-      if (!isCloudConfigured()) {
-        setSyncMessage("云同步未配置，本地模式可继续使用。");
-        return;
-      }
-      const result = await syncLoveNotesIntoLocalData(spaceCode);
-      if (result.ok && result.data) {
-        setData(result.data);
-        setSyncMessage("小纸条已刷新。");
-      } else {
-        setSyncMessage("刷新失败，已显示本地缓存。");
-      }
-      return;
-    }
-    const result = await pullAndPersistCloudData(connection.code);
-    if (result.ok && result.data) {
-      setData(result.data);
-      setSyncMessage("小纸条已刷新。");
-    } else {
-      setSyncMessage(result.error || "刷新失败，已保留本地小纸条。");
-    }
-  }
+  const refreshLoveNote = () => setData(loadAppData());
 
-  // ──── 今日最重要事项 ────
-  const todaySummary = useMemo((): TodaySummaryResult => buildTodaySummary({
-    appSide: "partner",
-    courses: data.courses,
-    deadlines: data.deadlines,
-    periodRecords,
-    periodSettings,
-    unreadMissYouCount,
-    featuredNote: featuredLoveNote,
-    randomMemory,
-    now
-  }), [data.courses, data.deadlines, periodRecords, periodSettings, unreadMissYouCount, featuredLoveNote, randomMemory, now]);
-
-  // ──── 今日照顾摘要条（课程 / DDL / 经期） ────
-  const careStripItems = useMemo((): CareStripItem[] => {
-    const items: CareStripItem[] = [];
-    const todayDay = getCurrentDayName(now);
-
-    // 课程
-    const todayCourses = data.courses
-      .filter((c) => c.day === todayDay)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    items.push({
-      id: "course",
-      icon: "📚",
-      label: "课程",
-      value: todayCourses.length > 0 ? `${todayCourses.length} 节` : "无",
-      href: "/schedule"
-    });
-
-
-    // 经期
-    const cycleDay = getCurrentCycleDay(periodRecords);
-    const daysUntil = getDaysUntilNextPeriod(periodRecords, periodSettings, now);
-    const periodValue = periodRecords.length > 0
-      ? (cycleDay ? `第${cycleDay}天` : daysUntil !== null ? `距下次${daysUntil >= 0 ? `${daysUntil}天` : `过${Math.abs(daysUntil)}天`}` : "—")
-      : "暂无";
-    items.push({
-      id: "period",
-      icon: "🌸",
-      label: "经期",
-      value: periodValue,
-      href: "/period"
-    });
-
-    return items;
-  }, [data.courses, periodRecords, periodSettings, now]);
-
-  useEffect(() => {
-    const localDate = now.toISOString().slice(0, 10);
-    fetch(`/api/miss-you?code=${encodeURIComponent(spaceCode)}&localDate=${localDate}&limit=1&viewer=xiaoguai&includeUnread=true`)
-      .then((res) => res.json())
-      .then((payload) => {
-        if (payload.ok && typeof payload.unreadFromOtherCount === "number") {
-          setUnreadMissYouCount(payload.unreadFromOtherCount);
-        }
-      })
-      .catch(() => {
-        // Non-blocking
-      });
-  }, [now, spaceCode]);
-
+  const todayLabel = safeTodayLabel();
   const reduceMotion = useAccessibleMotion();
 
   return (
     <AppShell>
-      {/* ── 1. Hero ── */}
+      {/* ── Hero header ── */}
       <motion.header
-        className="relative mb-4 overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br from-blush/50 via-cream/80 to-lilac/30 px-5 py-5 shadow-soft backdrop-blur-md"
+        className="relative mb-4 overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br from-skySoft/50 via-cream/80 to-lilac/30 px-5 py-5 shadow-soft backdrop-blur-md"
         variants={safeVariants(fadeInScale, reduceMotion)}
         initial="hidden"
         animate="visible"
@@ -278,9 +244,13 @@ export default function HomePage() {
           </div>
         </div>
         <p className="mt-2 text-sm leading-5 text-cocoa/50">
-          天气、提醒和今天的小纸条，都收在这里了。
+          今天有想看的吗？
         </p>
-        {/* Unread notes/memories pill — top position in Hero */}
+
+        {/* Weather caring hint — inside Hero */}
+        <WeatherCareHint state={weatherState} />
+
+        {/* Unread notes/memories pills */}
         <AnimatePresence>
           {unreadSummary.hasAny ? (
             <motion.div
@@ -311,6 +281,7 @@ export default function HomePage() {
         </AnimatePresence>
       </motion.header>
 
+      {/* ── Cards ── */}
       <motion.div
         className="space-y-3"
         variants={safeVariants(staggerContainer, reduceMotion)}
@@ -320,34 +291,24 @@ export default function HomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
-        {/* 2. 天气 & 时间（compact 模式） */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <WeatherCareCard state={weatherState} compact />
-        </motion.div>
-
-        {/* 3. 今日最重要事项 */}
+        {/* 1. TodaySummary — first priority */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <TodaySummaryCard summary={todaySummary} />
         </motion.div>
 
-        {/* 4. 想你区域（合并未读想念 + 想你一下） */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="partner" />
-        </motion.div>
-
-        {/* 5. 今日照顾摘要条（课程 / DDL / 经期） */}
-        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <TodayCareStrip items={careStripItems} />
-        </motion.div>
-
-        {/* 6. 置顶小纸条 */}
+        {/* 2. LoveNoteCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} />
         </motion.div>
 
-        {/* 7. 最近回忆 */}
+        {/* 3. MissYouCombinedCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <section className="soft-card mb-2">
+          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="partner" />
+        </motion.div>
+
+        {/* 4. RecentMemories (2 photos) */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <section className="soft-card">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="section-kicker mb-1">最近回忆</p>
@@ -356,7 +317,7 @@ export default function HomePage() {
               <Link className="text-sm text-sage" href="/albums">相册</Link>
             </div>
             {recentMemories.length ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2">
                 {recentMemories.map((item) => (
                   <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
                     {item.imageUrl ? (
@@ -373,6 +334,11 @@ export default function HomePage() {
               <p className="empty-state text-left">相册还在等第一张回忆。</p>
             )}
           </section>
+        </motion.div>
+
+        {/* 5. TodayCareStrip — secondary entries */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <TodayCareStrip items={careStripItems} />
         </motion.div>
       </motion.div>
     </AppShell>
