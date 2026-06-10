@@ -14,6 +14,7 @@ import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData } from "@/lib/cloudSync";
 import { pickFeaturedLoveNote } from "@/lib/loveNotes";
+import { getLatestVisibleMemories } from "@/lib/recentContent";
 import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
@@ -102,10 +103,7 @@ export default function MeHomePage() {
   }, [spaceCode]);
 
   const featuredLoveNote = useMemo(() => pickFeaturedLoveNote(data.loveNotes), [data]);
-  const recentMemories = useMemo(() => {
-    const favorites = albumItems.filter((item) => item.isFavorite);
-    return (favorites.length ? favorites : albumItems).slice(0, 2);
-  }, [albumItems]);
+  const recentMemories = useMemo(() => getLatestVisibleMemories(albumItems, 2), [albumItems]);
   const randomMemory = useMemo(() => pickRandomMemory(buildRandomMemoryItems(data.loveNotes, albumItems)), [data.loveNotes, albumItems]);
   const todaySummary: TodaySummaryResult = useMemo(() => buildTodaySummary({
     courses: data.courses,
@@ -346,7 +344,7 @@ export default function MeHomePage() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="section-kicker mb-1">最近回忆</p>
-                <h2 className="font-semibold text-cocoa">最近回忆</h2>
+                <h2 className="font-semibold text-cocoa">最近整理的</h2>
               </div>
               <Link className="text-sm text-sage" href="/me/albums">相册</Link>
             </div>

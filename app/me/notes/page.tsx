@@ -114,10 +114,11 @@ export default function NotesPage() {
           <div className="-mx-1 mb-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
             {filters.map(([value, label]) => (
               <AppButton
-                variant={filter === value ? "primary" : "secondary"}
+                variant={filter === value ? "secondary" : "secondary"}
                 size="sm"
-                className="shrink-0 whitespace-nowrap"
+                className={filter === value ? "shrink-0 whitespace-nowrap bg-[var(--app-accent)] text-white ring-2 ring-[var(--app-accent)]/30 font-semibold" : "shrink-0 whitespace-nowrap"}
                 key={value}
+                aria-pressed={filter === value}
                 onClick={() => setFilter(value)}
               >
                 {label}
