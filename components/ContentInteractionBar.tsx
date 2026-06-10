@@ -353,7 +353,7 @@ export default function ContentInteractionBar({
       } catch {
         setLiked(prevLiked);
         setLikeCount(prevCount);
-        setError("喜欢没有保存成功，等网络好一点再试试。");
+        setError("刚刚没发出去，可以再试一次。");
       }
     } finally {
       setBusyLike(false);
@@ -413,7 +413,7 @@ export default function ContentInteractionBar({
               ...prev,
               [reactionId]: { count: prevEntry.count, active: prevEntry.active },
             }));
-            setError("操作失败，请重试。");
+            setError("刚刚没发出去，可以再试一次。");
             return;
           }
           await fallbackReactionToggleLocally(code, reactionId, newActive);
@@ -433,7 +433,7 @@ export default function ContentInteractionBar({
             ...prev,
             [reactionId]: { count: prevEntry.count, active: prevEntry.active },
           }));
-          setError("反应没有保存成功，等网络好一点再试试。");
+          setError("刚刚没发出去，可以再试一次。");
         }
       } finally {
         setBusyReactions((prev) => {

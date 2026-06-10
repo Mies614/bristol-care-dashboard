@@ -27,6 +27,7 @@ import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
 import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
+import { X } from "lucide-react";
 import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 
 const filters = [
@@ -173,10 +174,13 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
   useEffect(() => {
     if (selected) {
       loadAlbumComments(selected.id);
+      if (selected.createdBy !== identity) {
+        markAsRead(selected.id);
+      }
     } else {
       setSelectedComments([]);
     }
-  }, [selected, loadAlbumComments]);
+  }, [selected, loadAlbumComments, markAsRead, identity]);
 
   async function handleAddAlbumComment(body: string, _identity: string) {
     if (!selected) return;
@@ -532,7 +536,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
             transition={safeTransition({ duration: 0.2 }, reduceMotion)}
           >
             <motion.div
-              className="mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float pb-[calc(1rem+env(safe-area-inset-bottom,0px)+64px)]"
+              className="relative mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float pb-[calc(1rem+env(safe-area-inset-bottom,0px)+64px)]"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               onAnimationComplete={(definition) => {
@@ -545,6 +549,14 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={safeTransition({ duration: 0.22, ease: [0.25, 0.25, 0.25, 1] }, reduceMotion)}
             >
+            {/* Close button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setSelected(null); }}
+              className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-cocoa/60 shadow-sm backdrop-blur-sm transition hover:bg-white hover:text-cocoa active:scale-90"
+              aria-label="关闭"
+            >
+              <X size={18} strokeWidth={2} />
+            </button>
             {selected.videoUrl && (playing || !selected.imageUrl) ? (
               <video
                 ref={videoRef}

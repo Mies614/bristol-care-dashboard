@@ -122,7 +122,7 @@ export default function ContentComments({
         updatedAt: new Date().toISOString(),
       };
       addLocalComment(spaceCode, localComment);
-      setError("网络有点慢，先帮你存在本机了。");
+      setError("网络慢了一点，先帮你存在本机。");
       return true;
     } catch {
       return false;
@@ -152,7 +152,7 @@ export default function ContentComments({
         setExpanded(true);
       } else {
         // Keep input, show gentle error
-        setError("发送失败了，内容还在，可以再试一次。");
+        setError("刚刚没发出去，可以再试一次。");
       }
     } finally {
       setSubmitting(false);
@@ -207,7 +207,7 @@ export default function ContentComments({
           disabled={disabled || submitting}
           placeholder={placeholder}
           rows={2}
-          className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 pr-16 text-sm text-cocoa placeholder:text-cocoa/40 resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50"
+          className="w-full rounded-2xl mb-[calc(env(safe-area-inset-bottom,0px)+8px)] border border-white/60 bg-white/40 px-4 py-2.5 pr-16 text-sm text-cocoa placeholder:text-cocoa/40 resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}

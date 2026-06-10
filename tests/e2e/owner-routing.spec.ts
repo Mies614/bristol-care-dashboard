@@ -50,7 +50,7 @@ test.describe("Owner-side routing (/me)", () => {
     // The TodaySummaryCard on /me should link to /me/notes (or another /me path),
     // not to the bare partner /notes route.
     // Check that any "小纸条墙" link goes to /me/notes
-    const notesLinks = page.locator('a[href="/notes"]');
+    const _notesLinks = page.locator('a[href="/notes"]');
 
     // The TodaySummaryCard is the one that shows "小纸条墙" or "相册" —
     // it should now use /me-prefixed routes on the /me page

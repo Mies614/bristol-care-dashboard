@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const navStatus = {
     records: data?.deadlines?.some((d) => d.status !== "done") ?? false,
-    memories: data?.loveNotes?.some((n) => n.active) ?? false,
+    memories: false,
     settings: false,
   };
 
