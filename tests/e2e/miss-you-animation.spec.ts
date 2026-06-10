@@ -25,7 +25,7 @@ test.describe("MissYou — partner home (/)", () => {
       // Wait a moment for any animation
       await page.waitForTimeout(500);
       // Page should still be functional
-      const body = await page.textContent("body");
+      const body = await page.evaluate(() => document.body.innerText || "");
       expect(body).not.toContain("undefined");
     }
   });
@@ -40,7 +40,7 @@ test.describe("MissYou — partner home (/)", () => {
 
   test("page does not show undefined or null", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const body = await page.textContent("body");
+    const body = await page.evaluate(() => document.body.innerText || "");
     expect(body).not.toContain("undefined");
     expect(body).not.toMatch(/\bnull\b/);
     expect(body).not.toContain("NaN");
@@ -66,7 +66,7 @@ test.describe("MissYou — owner home (/me)", () => {
     if (await btn.isVisible({ timeout: 3000 })) {
       await btn.click();
       await page.waitForTimeout(500);
-      const body = await page.textContent("body");
+      const body = await page.evaluate(() => document.body.innerText || "");
       expect(body).not.toContain("undefined");
     }
   });
@@ -117,7 +117,7 @@ test.describe("MissYou — reduced-motion safety", () => {
     // Emulate prefers-reduced-motion
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const body = await page.textContent("body");
+    const body = await page.evaluate(() => document.body.innerText || "");
     expect(body).not.toContain("undefined");
     // Button should still be visible
     const btn = page.locator("button[aria-label='想他一下']");
