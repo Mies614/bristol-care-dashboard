@@ -12,6 +12,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { Input } from "@/components/ui/input";
 import { formatApiError } from "@/lib/utils";
 import type { LoveNote } from "@/lib/types";
+import type { AppSide } from "@/lib/appIdentity";
 
 const filters = [
   ["all", "全部"],
@@ -21,8 +22,8 @@ const filters = [
   ["image", "照片"],
   ["video", "视频"],
   ["mixed", "混合"],
-  ["me", "我发的"],
-  ["xiaoguai", "小乖发的"]
+  ["me", "我写的"],
+  ["xiaoguai", "他写的"]
 ] as const;
 
 const sorts = [
@@ -30,6 +31,8 @@ const sorts = [
   ["latest", "最新优先"],
   ["oldest", "最早优先"]
 ] as const;
+
+const side: AppSide = "partner";
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<LoveNote[]>([]);
@@ -83,36 +86,29 @@ export default function NotesPage() {
     <AppShell>
       {/* Hero */}
       <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Note Wall</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">小纸条墙</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">像便签和明信片一样，把想说的轻轻留在这里。</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {["✎ 写文字", "🎤 录语音", "📷 发照片", "🎬 发视频"].map((item) => (
-            <span className="rounded-full bg-white/60 px-3 py-1.5 text-xs text-[var(--app-muted)]" key={item}>{item}</span>
-          ))}
-        </div>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">把想说的轻轻留在这里。</p>
       </header>
 
       <div className="space-y-3.5">
-        {/* Composer - 写纸条区，优先放置 */}
+        {/* Composer */}
         <AppCard className="bg-gradient-to-br from-white/85 to-blush/40">
           <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((v) => !v)} type="button">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">✎ New Note</p>
-              <p className="font-semibold text-[var(--app-text)]">写一张小纸条</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">✎ 写纸条</p>
+              <p className="font-semibold text-[var(--app-text)]">今天想写点什么？</p>
             </div>
             <AppButton variant={composerOpen ? "secondary" : "primary"} size="sm" type="button">{composerOpen ? "收起" : "写一张"}</AppButton>
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
-              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} />
+              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} side={side} />
             </div>
           </div>
         </AppCard>
 
-        {/* Filters - 筛选区，移动端优先展示高频筛选项 */}
+        {/* Filters */}
         <AppCard>
-          {/* 快速筛选标签 - 移动端横向滑动 */}
           <div className="-mx-1 mb-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
             {filters.map(([value, label]) => (
               <AppButton
@@ -126,7 +122,6 @@ export default function NotesPage() {
               </AppButton>
             ))}
           </div>
-          {/* 高级筛选 - 移动端单列 */}
           <div className="space-y-2">
             <select
               className="w-full rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-3 py-2 text-sm text-[var(--app-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
@@ -163,7 +158,7 @@ export default function NotesPage() {
           ) : null}
         </AppCard>
 
-        <NoteWall notes={notes} onPatch={patchNote} identityId={identityId} />
+        <NoteWall notes={notes} onPatch={patchNote} identityId={identityId} side={side} />
       </div>
     </AppShell>
     </SharedAccessGate>

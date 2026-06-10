@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { formatApiError } from "@/lib/utils";
 import { useFixedAppIdentity } from "@/hooks/useFixedAppIdentity";
 import type { LoveNote } from "@/lib/types";
+import type { AppSide } from "@/lib/appIdentity";
 
 const filters = [
   ["all", "全部"],
@@ -21,8 +22,8 @@ const filters = [
   ["image", "照片"],
   ["video", "视频"],
   ["mixed", "混合"],
-  ["me", "我发的"],
-  ["xiaoguai", "小乖发的"]
+  ["me", "我写的"],
+  ["xiaoguai", "小乖写的"]
 ] as const;
 
 const sorts = [
@@ -30,6 +31,8 @@ const sorts = [
   ["latest", "最新优先"],
   ["oldest", "最早优先"]
 ] as const;
+
+const side: AppSide = "owner";
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<LoveNote[]>([]);
@@ -42,7 +45,7 @@ export default function NotesPage() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const { identityId } = useFixedAppIdentity();
-  void identityId; // identity from /me route prefix
+  void identityId;
 
   async function loadNotes() {
     const params = new URLSearchParams({ code: getDefaultSpaceCode(), filter, sort });
@@ -85,7 +88,6 @@ export default function NotesPage() {
     <AppShell>
       {/* Hero */}
       <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-skySoft/50 via-cream/80 to-lilac/30 p-5 shadow-float backdrop-blur-xl">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">My Notes</p>
         <h1 className="text-2xl font-semibold text-[var(--app-text)]">我的小纸条</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">写给小乖，也看看她留给你的话。</p>
       </header>
@@ -95,14 +97,14 @@ export default function NotesPage() {
         <AppCard className="bg-gradient-to-br from-white/85 to-skySoft/40">
           <button className="flex w-full items-center justify-between text-left" onClick={() => setComposerOpen((v) => !v)} type="button">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">✎ New Note</p>
-              <p className="font-semibold text-[var(--app-text)]">写一张小纸条</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">✎ 写纸条</p>
+              <p className="font-semibold text-[var(--app-text)]">想对小乖说什么？</p>
             </div>
             <AppButton variant={composerOpen ? "secondary" : "primary"} size="sm" type="button">{composerOpen ? "收起" : "写一张"}</AppButton>
           </button>
           <div className={`grid transition-all duration-300 ${composerOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
             <div className="overflow-hidden">
-              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} />
+              <NoteComposer onCreated={async () => { await loadNotes(); setComposerOpen(false); }} identityId={identityId} side={side} />
             </div>
           </div>
         </AppCard>
@@ -152,7 +154,7 @@ export default function NotesPage() {
           ) : null}
         </AppCard>
 
-        <NoteWall notes={notes} onPatch={patchNote} identityId={identityId} />
+        <NoteWall notes={notes} onPatch={patchNote} identityId={identityId} side={side} />
       </div>
     </AppShell>
     </SharedAccessGate>

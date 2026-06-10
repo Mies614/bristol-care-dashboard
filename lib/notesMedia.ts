@@ -22,7 +22,7 @@ export function getNoteMediaDownloadUrl(note: LoveNote): string | null {
  */
 export function getNoteMediaDownloadLabel(note: LoveNote): string {
   if (note.videoUrl) return "保存视频";
-  if (note.imageUrl) return "保存照片";
+  if (note.imageUrl) return "保存图片";
   if (note.audioUrl) return "保存语音";
   return "下载";
 }
@@ -49,7 +49,7 @@ export function getAlbumMediaDownloadUrl(album: AlbumItem): string | null {
  */
 export function getAlbumMediaDownloadLabel(album: AlbumItem): string {
   if (album.videoUrl) return "保存视频";
-  if (album.imageUrl) return "保存照片";
+  if (album.imageUrl) return "保存图片";
   return "下载";
 }
 

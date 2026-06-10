@@ -10,6 +10,7 @@ import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } f
 import { VoiceRecorder } from "./VoiceRecorder";
 import { classifyUploadError } from "@/lib/uploadError";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import type { AppSide } from "@/lib/appIdentity";
 
 type Draft = {
   content: string;
@@ -17,9 +18,22 @@ type Draft = {
   mood: string;
 };
 
-const moods = ["", "开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"];
+const CORE_STYLES = [
+  { value: "sticky" as const, label: "便签" },
+  { value: "postcard" as const, label: "明信片" },
+  { value: "minimal" as const, label: "极简" },
+];
 
-export function NoteComposer({ onCreated, identityId: propIdentityId }: { onCreated: () => Promise<void> | void; identityId?: string }) {
+const EXTRA_STYLES = [
+  { value: "bubble" as const, label: "气泡" },
+  { value: "photo_card" as const, label: "照片卡" },
+  { value: "timeline" as const, label: "时间线" },
+  { value: "romantic" as const, label: "浪漫" },
+];
+
+const moods = ["开心", "想你", "累了", "记录一下", "加油", "今日小事", "重要", "悄悄话"];
+
+export function NoteComposer({ onCreated, identityId: propIdentityId, side }: { onCreated: () => Promise<void> | void; identityId?: string; side?: AppSide }) {
   const [draft, setDraft] = useState<Draft>({ content: "", displayStyle: "sticky", mood: "" });
   const [image, setImage] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
@@ -27,10 +41,12 @@ export function NoteComposer({ onCreated, identityId: propIdentityId }: { onCrea
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadCanRetry, setUploadCanRetry] = useState(false);
+  const [showExtraStyles, setShowExtraStyles] = useState(false);
   const cancelRef = useRef(false);
 
   const code = getDefaultSpaceCode();
   const author = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const isOwner = side === "owner";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -121,40 +137,157 @@ export function NoteComposer({ onCreated, identityId: propIdentityId }: { onCrea
     }
   }
 
+  const isCoreStyle = CORE_STYLES.some((s) => s.value === draft.displayStyle);
+
   return (
     <form className="soft-card space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={submit}>
+      {/* Header */}
       <div>
-        <p className="section-kicker mb-1">Write</p>
-        <h2 className="font-semibold text-cocoa">写一张小纸条</h2>
+        <h2 className="font-semibold text-cocoa">{isOwner ? "写给小乖" : "写一张小纸条"}</h2>
       </div>
-      <div className="grid grid-cols-1 gap-2">
-        <select className="field" value={draft.displayStyle} onChange={(event) => setDraft({ ...draft, displayStyle: event.target.value as Draft["displayStyle"] })}>
-          <option value="sticky">便签</option>
-          <option value="postcard">明信片</option>
-          <option value="bubble">聊天气泡</option>
-          <option value="photo_card">照片卡</option>
-          <option value="timeline">时间线</option>
-          <option value="minimal">极简</option>
-          <option value="romantic">浪漫</option>
-        </select>
+
+      {/* Style selector — 3 core + foldable extras */}
+      <div>
+        <p className="text-xs text-cocoa/40 mb-1.5">样式</p>
+        <div className="flex flex-wrap gap-1.5">
+          {CORE_STYLES.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                draft.displayStyle === s.value
+                  ? "bg-rose-400 text-white shadow-sm"
+                  : "bg-white/60 text-cocoa/60 hover:bg-white/85"
+              }`}
+              onClick={() => setDraft({ ...draft, displayStyle: s.value })}
+              aria-label={`样式：${s.label}`}
+            >
+              {s.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              !isCoreStyle
+                ? "bg-rose-400 text-white shadow-sm"
+                : "bg-white/60 text-cocoa/60 hover:bg-white/85"
+            }`}
+            onClick={() => setShowExtraStyles(!showExtraStyles)}
+            aria-label={showExtraStyles ? "收起更多样式" : "更多样式"}
+          >
+            {showExtraStyles ? "收起" : !isCoreStyle ? EXTRA_STYLES.find((s) => s.value === draft.displayStyle)?.label || "更多" : "更多"}
+          </button>
+        </div>
+        {showExtraStyles && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {EXTRA_STYLES.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  draft.displayStyle === s.value
+                    ? "bg-rose-400 text-white shadow-sm"
+                    : "bg-white/60 text-cocoa/60 hover:bg-white/85"
+                }`}
+                onClick={() => setDraft({ ...draft, displayStyle: s.value })}
+                aria-label={`样式：${s.label}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      <select className="field" value={draft.mood} onChange={(event) => setDraft({ ...draft, mood: event.target.value })}>
-        {moods.map((mood) => <option key={mood || "empty"} value={mood}>{mood || "选择心情标签"}</option>)}
-      </select>
-      <textarea className="field min-h-32" placeholder="想写的话，可以很短，也可以慢慢说。" value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} />
+
+      {/* Mood — compact chips */}
+      <div>
+        <p className="text-xs text-cocoa/40 mb-1.5">心情</p>
+        <div className="flex flex-wrap gap-1.5">
+          {moods.map((mood) => (
+            <button
+              key={mood}
+              type="button"
+              className={`rounded-full px-2.5 py-1 text-xs transition ${
+                draft.mood === mood
+                  ? "bg-rose-400 text-white shadow-sm"
+                  : "bg-white/60 text-cocoa/60 hover:bg-white/85"
+              }`}
+              onClick={() => setDraft({ ...draft, mood: draft.mood === mood ? "" : mood })}
+              aria-label={`心情：${mood}${draft.mood === mood ? "（已选）" : ""}`}
+            >
+              {mood}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Text input */}
+      <textarea
+        className="field min-h-28"
+        placeholder={isOwner ? "想对小乖说什么？" : "今天想写点什么？"}
+        value={draft.content}
+        onChange={(event) => setDraft({ ...draft, content: event.target.value })}
+        aria-label="小纸条内容"
+      />
+
+      {/* Voice recorder */}
       <VoiceRecorder onChange={setAudio} />
-      <label className="file-panel">
-        <span className="font-medium text-cocoa">上传已有音频</span>
-        <input className="mt-3 block w-full text-sm" type="file" accept="audio/*,.m4a,.mp3,.wav,.webm,.aac" onChange={(event) => setAudio(event.currentTarget.files?.[0] || audio)} />
-      </label>
-      <label className="file-panel">
-        <span className="font-medium text-cocoa">照片</span>
-        <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(event) => setImage(event.currentTarget.files?.[0] || null)} />
-      </label>
-      <label className="file-panel">
-        <span className="font-medium text-cocoa">视频</span>
-        <input className="mt-3 block w-full text-sm" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(event) => setVideo(event.currentTarget.files?.[0] || null)} />
-      </label>
+
+      {/* Media buttons — one row */}
+      <div>
+        <p className="text-xs text-cocoa/40 mb-1.5">添加</p>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/85 transition cursor-pointer">
+            📷 照片
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              className="sr-only"
+              onChange={(event) => setImage(event.currentTarget.files?.[0] || null)}
+              aria-label="添加照片"
+            />
+          </label>
+          <label className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/85 transition cursor-pointer">
+            🎬 视频
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm"
+              className="sr-only"
+              onChange={(event) => setVideo(event.currentTarget.files?.[0] || null)}
+              aria-label="添加视频"
+            />
+          </label>
+          <label className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/85 transition cursor-pointer">
+            🎵 音频
+            <input
+              type="file"
+              accept="audio/*,.m4a,.mp3,.wav,.webm,.aac"
+              className="sr-only"
+              onChange={(event) => setAudio(event.currentTarget.files?.[0] || audio)}
+              aria-label="添加音频文件"
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* File preview state */}
+      {image && (
+        <div className="rounded-lg bg-white/60 px-3 py-1.5 text-xs text-cocoa/60">
+          已选照片：{image.name}
+        </div>
+      )}
+      {video && (
+        <div className="rounded-lg bg-white/60 px-3 py-1.5 text-xs text-cocoa/60">
+          已选视频：{video.name}
+        </div>
+      )}
+      {(audio instanceof File) && (
+        <div className="rounded-lg bg-white/60 px-3 py-1.5 text-xs text-cocoa/60">
+          已选音频：{audio.name}
+        </div>
+      )}
+
+      {/* Upload progress */}
       {submitting ? (
         <div className="space-y-2">
           <div className="rounded-full h-1.5 w-full overflow-hidden bg-[var(--app-card-border)]">
@@ -166,11 +299,19 @@ export function NoteComposer({ onCreated, identityId: propIdentityId }: { onCrea
           </div>
           <p className="text-center text-xs text-[var(--app-muted)]">{message || "上传中..."}</p>
         </div>
-      ) : message ? <p className="notice">{message}</p> : null}
+      ) : message ? (
+        <p className="text-xs text-rose/60">{message}</p>
+      ) : null}
+
+      {/* Submit + cancel */}
       <div className="flex gap-2">
-        <button className="btn-primary flex-1" disabled={submitting} type="submit">{submitting ? "请稍候..." : "贴到小纸条墙"}</button>
+        <button className="btn-primary flex-1" disabled={submitting} type="submit">
+          {submitting ? "请稍候..." : (isOwner ? "写给小乖" : "贴到墙上")}
+        </button>
         {submitting ? (
-          <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>取消</button>
+          <button className="btn-secondary" type="button" onClick={() => { cancelRef.current = true; setMessage("正在取消上传..."); }}>
+            取消
+          </button>
         ) : uploadCanRetry && message ? (
           <button className="btn-secondary" type="submit">重试上传</button>
         ) : null}

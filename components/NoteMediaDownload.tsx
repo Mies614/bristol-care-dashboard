@@ -12,16 +12,22 @@ export function NoteMediaDownload({ note, className = "" }: NoteMediaDownloadPro
   const url = getNoteMediaDownloadUrl(note);
   if (!url) return null;
 
+  const label = getNoteMediaDownloadLabel(note);
+  const isVideo = Boolean(note.videoUrl);
+  const icon = isVideo ? "🎬" : note.imageUrl ? "🖼️" : "🎵";
+
   return (
     <a
       href={url}
       download
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/80 transition-colors ${className}`}
+      aria-label={label}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/90 hover:text-cocoa/80 active:scale-95 transition-all ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
-      {getNoteMediaDownloadLabel(note)}
+      <span aria-hidden="true" className="text-[11px]">{icon}</span>
+      {label}
     </a>
   );
 }

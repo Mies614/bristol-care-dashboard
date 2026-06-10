@@ -1,13 +1,11 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SharedAccessGate } from "@/components/SharedAccessGate";
-import { useAccessibleMotion, safeTransition, fadeInScale, staggerContainer, staggerItem } from "@/lib/design/motion";
+import { useAccessibleMotion, safeTransition, safeVariants, staggerContainer, staggerItem } from "@/lib/design/motion";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import ContentInteractionBar from "@/components/ContentInteractionBar";
@@ -19,6 +17,7 @@ import { cleanupVideoElement } from "@/lib/media-utils";
 import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
+import { AppEmptyState } from "@/components/ui/AppEmptyState";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatApiError } from "@/lib/utils";
@@ -27,9 +26,11 @@ import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
 import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
+import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { X } from "lucide-react";
 import { MediaActionButton } from "@/components/ui/MediaActionButton";
 import { useCloudReadStates } from "@/hooks/useCloudReadStates";
+import type { AppSide } from "@/lib/appIdentity";
 
 const filters = [
   ["all", "全部"],
@@ -54,22 +55,16 @@ function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "uploa
 
 export type AlbumsPageContentProps = {
   identityId?: string;
-  appSide?: "partner" | "owner";
+  appSide?: AppSide;
 };
 
-export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSide }: AlbumsPageContentProps = {}) {
+export function AlbumsPageContent({ identityId: propIdentityId, appSide }: AlbumsPageContentProps = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [items, setItems] = useState<AlbumItem[]>([]);
   const [selected, setSelected] = useState<AlbumItem | null>(null);
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
   const [message, setMessage] = useState("");
   const code = getDefaultSpaceCode();
-  const [gridSummaries, setGridSummaries] = useState<Record<string, {
-    likeCount: number;
-    hasLiked: boolean;
-    commentCount: number;
-    reactions: Record<string, { count: number; active: boolean }>;
-  }>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadStage, setUploadStage] = useState("");
   const [cancelled, setCancelled] = useState(false);
@@ -80,6 +75,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
   const [video, setVideo] = useState<File | null>(null);
 
   const identity = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
+  const isOwner = appSide === "owner";
 
   // Cloud-synced read states for album grid
   const albumIds = useMemo(
@@ -96,8 +92,6 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
 
   const [selectedComments, setSelectedComments] = useState<CommentEntry[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [_selectedLikeCount, setSelectedLikeCount] = useState(0);
-  const [_selectedLiked, setSelectedLiked] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("upload=1")) setUploadOpen(true);
@@ -105,51 +99,137 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
+  // Keyboard: Escape closes lightbox
+  useEffect(() => {
+    if (!selected) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [selected]);
+
   const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : ""), [image]);
   const videoPreview = useMemo(() => (video ? URL.createObjectURL(video) : ""), [video]);
 
   async function loadItems() {
     const response = await fetch(`/api/albums?code=${encodeURIComponent(code)}&filter=${filter}`);
     const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return setMessage(formatApiError(payload, "相册加载失败。"));
+    setItems(payload.items || []);
+  }
+
+  async function patchItem(id: string, body: Record<string, unknown>) {
+    setMessage("");
+    const response = await fetch("/api/albums", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, id, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      setMessage(formatApiError(payload, "相册加载失败。"));
+      setMessage(formatApiError(payload, "更新失败。"));
       return;
     }
-    const albumItems: AlbumItem[] = payload.items || [];
-    setItems(albumItems);
+    if (payload.deleted) {
+      setSelected(null);
+      toast.success("已删除。");
+    }
+    await loadItems();
+  }
 
-    if (albumItems.length > 0 && identity) {
-      try {
-        const ids = albumItems.map((a) => a.id).join(",");
-        const res = await fetch(
-          `/api/interactions?spaceCode=${encodeURIComponent(code)}&contentType=album&contentIds=${encodeURIComponent(ids)}&identity=${encodeURIComponent(identity)}`
-        );
-        const ip = await res.json();
-        if (ip.ok && ip.summaries) {
-          setGridSummaries((prev) => {
-            const next = { ...prev };
-            for (const [cid, s] of Object.entries(ip.summaries as Record<string, {
-              likeCount: number;
-              hasLiked: boolean;
-              commentCount: number;
-              reactions: Record<string, { count: number; active: boolean }>;
-            }>)) {
-              next[cid] = s;
-            }
-            return next;
-          });
-        }
-      } catch {
-        // Non-critical
+  async function deleteItem(item: AlbumItem) {
+    if (!confirm("确定删除这张回忆吗？")) return;
+    const response = await fetch("/api/albums", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, id: item.id })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return setMessage(formatApiError(payload, "删除失败。"));
+    }
+    setSelected(null);
+    toast.success("已删除。");
+    await loadItems();
+  }
+
+  async function upload(event: React.FormEvent) {
+    event.preventDefault();
+    if (!image && !video) return setMessage("至少选择一张图片或视频。");
+    if (image) {
+      const validation = validateAlbumImageFile(image);
+      if (!validation.ok) return setMessage(validation.error || "图片不符合要求。");
+    }
+    if (video) {
+      const validation = validateAlbumVideoFile(video);
+      if (!validation.ok) return setMessage(validation.error || "视频不符合要求。");
+    }
+
+    setUploading(true);
+    setCancelled(false);
+    setMessage("");
+    let uploadedImage: UploadedAlbumFile | null = null;
+    let uploadedVideo: UploadedAlbumFile | null = null;
+    let generatedThumbnail = false;
+
+    try {
+      if (image) {
+        setUploadStage(createUploadStageMessage("upload_image"));
+        uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
+        if (cancelled) throw new Error("上传已取消。");
       }
+      if (video) {
+        setUploadStage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
+        uploadedVideo = await uploadAlbumFileDirectly(video, "video", code);
+        if (cancelled) throw new Error("上传已取消。");
+        if (uploadedVideo && shouldGenerateVideoThumbnail(video)) {
+          setUploadStage("生成视频封面...");
+          generatedThumbnail = true; void await createThumbnailFileFromVideo(video);
+        }
+      }
+      setUploadStage(createUploadStageMessage("save"));
+      const response = await fetch("/api/albums", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildAlbumMetadataPayload({
+          code,
+          imageUpload: uploadedImage,
+          
+          videoUpload: uploadedVideo,
+          createdBy: identity,
+          typeOverride: generatedThumbnail ? "video" as const : undefined,
+          
+          draft
+        }))
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(formatApiError(payload, "文件已上传但保存失败，请重试。"));
+        return;
+      }
+      toast.success("已经放进相册了。");
+      setUploadOpen(false);
+      setDraft({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
+      setImage(null);
+      setVideo(null);
+      await loadItems();
+    } catch (error) {
+      setMessage(formatUploadError(
+        image && !uploadedImage ? "upload_image" : video && !uploadedVideo ? "upload_video" : "save_metadata",
+        error
+      ));
+    } finally {
+      setUploading(false);
+      setUploadStage("");
     }
   }
 
-  const loadAlbumComments = useCallback(async (albumId: string) => {
+  async function loadAlbumComments(contentId: string) {
     setCommentsLoading(true);
     try {
       const res = await fetch(
-        `/api/comments?spaceCode=${encodeURIComponent(code)}&contentType=album&contentId=${encodeURIComponent(albumId)}&identity=${encodeURIComponent(identity)}`
+        `/api/comments?spaceCode=${encodeURIComponent(code)}&contentType=album&contentId=${encodeURIComponent(contentId)}&identity=${encodeURIComponent(identity)}`
       );
       const payload = await res.json();
       if (payload.ok && Array.isArray(payload.comments)) {
@@ -161,7 +241,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
           deletedAt: c.deletedAt as string | undefined,
           updatedAt: c.updatedAt as string | undefined,
           isDeleted: Boolean(c.deletedAt),
-          isMine: (c.identity as string) === identity,
+          isMine: c.identity === identity,
         }));
         setSelectedComments(entries);
       }
@@ -170,44 +250,23 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
     } finally {
       setCommentsLoading(false);
     }
-  }, [code, identity]);
-
-  useEffect(() => {
-    if (selected) {
-      loadAlbumComments(selected.id);
-      if (selected.createdBy !== identity) {
-        markAsRead(selected.id);
-      }
-    } else {
-      setSelectedComments([]);
-    }
-  }, [selected, loadAlbumComments, markAsRead, identity]);
+  }
 
   async function handleAddAlbumComment(body: string, _identity: string) {
-    if (!selected) return;
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        spaceCode: code,
-        contentType: "album",
-        contentId: selected.id,
-        identity,
-        body,
-      }),
+      body: JSON.stringify({ spaceCode: code, contentType: "album", contentId: selected?.id, identity, body }),
     });
     const payload = await res.json();
     if (!payload.ok) {
-      if (res.status >= 400 && res.status < 500) {
-        throw new ApiClientError(payload.error || "发送失败");
-      }
+      if (res.status >= 400 && res.status < 500) throw new ApiClientError(payload.error || "发送失败");
       throw new Error(payload.error || "发送失败");
     }
-    await loadAlbumComments(selected.id);
+    if (selected) await loadAlbumComments(selected.id);
   }
 
   async function handleDeleteAlbumComment(commentId: string, _identity: string) {
-    if (!selected) return;
     const res = await fetch("/api/comments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -215,214 +274,123 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
     });
     const payload = await res.json();
     if (!payload.ok) {
-      if (res.status >= 400 && res.status < 500) {
-        throw new ApiClientError(payload.error || "删除失败");
-      }
+      if (res.status >= 400 && res.status < 500) throw new ApiClientError(payload.error || "删除失败");
       throw new Error(payload.error || "删除失败");
     }
-    await loadAlbumComments(selected.id);
+    if (selected) await loadAlbumComments(selected.id);
   }
 
-  async function upload(event: React.FormEvent) {
-    event.preventDefault();
-    setMessage("");
-    if (!image && !video) {
-      setMessage("请至少选择一张图片或一个视频。");
-      return;
+  // Side-aware open lightbox — mark as read
+  function openLightbox(item: AlbumItem) {
+    setSelected(item);
+    setPlaying(false);
+    setSelectedComments([]);
+    // Mark as read if it's not mine
+    if (item.createdBy !== identity) {
+      markAsRead(item.id);
     }
-    if (image) {
-      const validation = validateAlbumImageFile(image);
-      if (!validation.ok) return setMessage(validation.error || "图片不符合要求。");
-    }
-    if (video) {
-      const validation = validateAlbumVideoFile(video);
-      if (!validation.ok) return setMessage(validation.error || "视频不符合要求。");
-    }
-    setUploading(true);
-    setCancelled(false);
-    let uploadedImage: UploadedAlbumFile | null = null;
-    let uploadedVideo: UploadedAlbumFile | null = null;
-    let generatedThumbnail = false;
-    let currentStage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata" = "upload_image";
-    try {
-      if (image) {
-        currentStage = "upload_image";
-        setUploadStage(`${createUploadStageMessage("upload_image")}${isLargeMediaFile(image, "image") ? "，文件较大，可能较慢" : ""}`);
-        uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
-        if (cancelled) throw new Error("已取消");
-      }
-      if (shouldGenerateVideoThumbnail(image, video) && video) {
-        currentStage = "generate_thumbnail";
-        setUploadStage("正在生成视频封面");
-        try {
-          const thumbnailFile = await createThumbnailFileFromVideo(video);
-          currentStage = "upload_image";
-          setUploadStage("正在上传封面");
-          uploadedImage = await uploadAlbumFileDirectly(thumbnailFile, "image", code);
-          generatedThumbnail = true;
-          if (cancelled) throw new Error("已取消");
-        } catch {
-          uploadedImage = null;
-          generatedThumbnail = false;
-        }
-      }
-      if (video) {
-        currentStage = "upload_video";
-        setUploadStage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
-        uploadedVideo = await uploadAlbumFileDirectly(video, "video", code);
-        if (cancelled) throw new Error("已取消");
-      }
-      currentStage = "save_metadata";
-      setUploadStage(createUploadStageMessage("save"));
-      const response = await fetch("/api/albums", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildAlbumMetadataPayload({
-          code,
-          draft,
-          imageUpload: uploadedImage,
-          videoUpload: uploadedVideo,
-          createdBy: identity,
-          typeOverride: generatedThumbnail ? "video" : undefined
-        }))
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const errMsg = formatApiError(payload, "文件已上传，但记录保存失败，请重试保存。");
-        setMessage(errMsg);
-        toast.error(errMsg);
-        return;
-      }
-    } catch (error) {
-      const errMsg = formatUploadError(currentStage, error);
-      setMessage(errMsg);
-      toast.error("上传失败，请重试");
-      return;
-    } finally {
-      setUploading(false);
-      setUploadStage("");
-    }
-    setDraft({ title: "", note: "", takenAt: "", location: "", isFavorite: false });
-    setImage(null);
-    setVideo(null);
-    setUploadOpen(false);
-    toast.success("回忆已加入相册 ✨");
-    await loadItems();
   }
 
-  async function patchItem(id: string, body: Record<string, unknown>) {
-    const response = await fetch("/api/albums", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, id, ...body })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(formatApiError(payload, body.action === "delete" ? "删除失败。" : "精选状态更新失败。"));
-      return;
-    }
-    setMessage(payload.deleted ? "已删除这张回忆。" : "已更新。");
-    setSelected(null);
-    await loadItems();
-  }
+  const selectedDownloadUrl = selected ? getAlbumMediaDownloadUrl(selected) : null;
+  const selectedDownloadLabel = selected ? getAlbumMediaDownloadLabel(selected) : "";
+  const selectedMediaType = selected?.videoUrl ? "video" as const : "image" as const;
 
-  function deleteItem(item: AlbumItem) {
-    if (!confirm("确定删除这张回忆吗？删除后首页和相册不会再显示。")) return;
-    patchItem(item.id, { action: "delete" });
-  }
-
-  const selectedDownloadUrl = useMemo(() => selected ? getAlbumMediaDownloadUrl(selected) : null, [selected]);
-  const selectedMediaType = useMemo(() => selected ? (selected.videoUrl ? "video" as const : "image" as const) : "image" as const, [selected]);
-  const selectedDownloadLabel = useMemo(() => selected ? getAlbumMediaDownloadLabel(selected) : "打开原文件", [selected]);
   const reduceMotion = useAccessibleMotion();
+  const isUnread = (item: AlbumItem) => !readKeySet.has(`album:${item.id}`) && item.createdBy !== identity && !item.deletedAt;
+
+  // Side-aware copy
+  const heroTitle = isOwner ? "我的相册" : "相册";
+  const heroSubtitle = isOwner ? "整理给小乖看的照片和视频。" : "把照片和视频都轻轻放在这里。";
+  const emptyTitle = isOwner ? "还没有整理照片" : "相册还在等第一张回忆";
+  const emptyDesc = isOwner ? "先放一张照片或视频给小乖吧。" : "等他放一张照片进来吧。";
+  const commentPlaceholder = isOwner ? "给这张照片留个话..." : "说点什么吧...";
 
   return (
     <SharedAccessGate>
     <AppShell>
-      <motion.header
-        className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60 p-5 shadow-float backdrop-blur-xl"
-        variants={fadeInScale}
-        initial="hidden"
-        animate="visible"
-        transition={safeTransition({ duration: 0.26, ease: "easeOut" }, reduceMotion)}
-      >
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">Albums</p>
-        <h1 className="text-2xl font-semibold text-[var(--app-text)]">我们的相册</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">每张照片都是一个很小的故事，慢慢翻才会发现。</p>
-      </motion.header>
+      {/* Hero */}
+      <header className={`mb-4 overflow-hidden rounded-[2rem] border border-white/75 p-5 shadow-float backdrop-blur-xl ${
+        isOwner
+          ? "bg-gradient-to-br from-white/88 via-indigo-50/50 to-white/80"
+          : "bg-gradient-to-br from-white/88 via-blush/55 to-lilac/60"
+      }`}>
+        <h1 className="text-2xl font-semibold text-[var(--app-text)]">{heroTitle}</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">{heroSubtitle}</p>
+      </header>
 
-      <div className="space-y-4">
-        <AppCard className="bg-gradient-to-br from-white/85 to-blush/40">
-          <button className="flex w-full items-center justify-between text-left" onClick={() => setUploadOpen((value) => !value)} type="button">
-            <span>
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1 block">+ Add Memory</span>
-              <span className="font-semibold text-[var(--app-text)]">添加一张回忆</span>
-            </span>
-            <AppButton variant={uploadOpen ? "secondary" : "primary"} size="sm" type="button">{uploadOpen ? "收起" : "添加"}</AppButton>
-          </button>
-          <form className={`grid transition-all duration-300 ${uploadOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} onSubmit={upload}>
-            <div className="space-y-3 overflow-hidden">
-              <Input placeholder="标题" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
-              <Textarea className="min-h-24" placeholder="备注" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
-              <div className="grid grid-cols-2 gap-2">
-                <Input type="date" value={draft.takenAt} onChange={(e) => setDraft({ ...draft, takenAt: e.target.value })} />
-                <Input placeholder="地点" value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
-              </div>
-              <label className="flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-card-border)] bg-[var(--app-card-bg)] px-4 py-3 shadow-sm cursor-pointer">
-                <input checked={draft.isFavorite} type="checkbox" className="accent-[var(--app-accent)]" onChange={(e) => setDraft({ ...draft, isFavorite: e.target.checked })} />
-                <span className="text-sm text-[var(--app-text)]">设为精选</span>
-              </label>
-              <label className="block rounded-[var(--app-radius)] border border-dashed border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm cursor-pointer hover:border-[var(--app-accent)] transition">
-                <span className="font-medium text-[var(--app-text)]">封面图片</span>
-                <span className="mt-1 block text-xs text-[var(--app-muted)]">JPG / PNG / WebP / HEIC / HEIF，最大 30MB</span>
-                <Input className="mt-3 block w-full cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} />
-              </label>
-              <label className="block rounded-[var(--app-radius)] border border-dashed border-[var(--app-card-border)] bg-[var(--app-card-bg)] p-4 shadow-sm cursor-pointer hover:border-[var(--app-accent)] transition">
-                <span className="font-medium text-[var(--app-text)]">视频 / 实况视频</span>
-                <span className="mt-1 block text-xs text-[var(--app-muted)]">MP4 / MOV / WebM，最大 100MB</span>
-                <Input className="mt-3 block w-full cursor-pointer" type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} />
-              </label>
-              <div className="grid gap-2">
-                {imagePreview ? <img className="max-h-56 w-full rounded-[1.35rem] object-cover shadow-sm" src={imagePreview} alt="图片预览" /> : null}
-                {image?.type.includes("heic") || image?.type.includes("heif") ? (
-                  <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
-                    该格式可能无法在浏览器中预览，但可以上传保存。
-                  </div>
-                ) : null}
-                {videoPreview ? <video className="max-h-56 w-full rounded-[1.35rem] bg-black shadow-sm" src={videoPreview} controls /> : null}
-              </div>
-              {uploading ? (
-                <div className="space-y-2">
-                  <div className="rounded-full h-1.5 w-full overflow-hidden bg-[var(--app-card-border)]">
-                    <motion.div
-                      className="h-full rounded-full bg-[var(--app-accent)]"
-                      animate={{ width: ["0%", "70%", "85%", "90%"] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", times: [0, 0.4, 0.7, 1] }}
-                    />
-                  </div>
-                  <p className="text-center text-xs text-[var(--app-muted)]">{uploadStage || "上传中..."}</p>
-                </div>
-              ) : null}
-              <div className="flex gap-2">
-                <AppButton variant="primary" className="flex-1" disabled={uploading} type="submit">
-                  {uploading ? "请稍候..." : "上传到相册"}
-                </AppButton>
-                {uploading ? (
-                  <AppButton variant="secondary" type="button" onClick={() => { setCancelled(true); setUploading(false); setUploadStage(""); setMessage("已取消"); }}>
-                    取消
-                  </AppButton>
-                ) : null}
-              </div>
+      <div className="space-y-3.5">
+        {/* Upload entry */}
+        <AppCard className={isOwner ? "bg-gradient-to-br from-white/85 to-indigo-50/40" : "bg-gradient-to-br from-white/85 to-blush/40"}>
+          <button
+            className="flex w-full items-center justify-between text-left"
+            onClick={() => setUploadOpen((v) => !v)}
+            type="button"
+          >
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">
+                {isOwner ? "📷 整理照片" : "📷 放进相册"}
+              </p>
+              <p className="font-semibold text-[var(--app-text)]">
+                {isOwner ? "放一张照片或视频给小乖" : "放一张回忆进来"}
+              </p>
             </div>
-          </form>
+            <AppButton variant={uploadOpen ? "secondary" : "primary"} size="sm" type="button">
+              {uploadOpen ? "收起" : isOwner ? "上传" : "放一张"}
+            </AppButton>
+          </button>
+          <div className={`grid transition-all duration-300 ${uploadOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"}`}>
+            <div className="overflow-hidden">
+              <form className="soft-card space-y-3 bg-gradient-to-br from-white/85 to-blush/45" onSubmit={upload}>
+                <Input placeholder="标题（可选）" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+                <Textarea placeholder="想说的话（可选）" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/85 transition cursor-pointer">
+                    🖼️ 照片
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" className="sr-only" onChange={(e) => setImage(e.currentTarget.files?.[0] || null)} aria-label="选择照片" />
+                  </label>
+                  <label className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/85 transition cursor-pointer">
+                    🎬 视频
+                    <input type="file" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" className="sr-only" onChange={(e) => setVideo(e.currentTarget.files?.[0] || null)} aria-label="选择视频" />
+                  </label>
+                </div>
+                {imagePreview && (
+                  <div className="rounded-lg bg-white/60 px-3 py-1.5 text-xs text-cocoa/60">已选照片：{image?.name}</div>
+                )}
+                {videoPreview && (
+                  <div className="rounded-lg bg-white/60 px-3 py-1.5 text-xs text-cocoa/60">已选视频：{video?.name}</div>
+                )}
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="rounded-full h-1.5 w-full overflow-hidden bg-[var(--app-card-border)]">
+                      <motion.div className="h-full rounded-full bg-[var(--app-accent)]" animate={{ width: ["0%", "65%", "85%"] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
+                    </div>
+                    <p className="text-center text-xs text-[var(--app-muted)]">{uploadStage || "正在放进相册..."}</p>
+                  </div>
+                )}
+                {message && !uploading && <p className="text-xs text-rose/60">{message}</p>}
+                <div className="flex gap-2">
+                  <button className="btn-primary flex-1" disabled={uploading} type="submit">
+                    {uploading ? "请稍候..." : isOwner ? "放进相册" : "放进去"}
+                  </button>
+                  {uploading && (
+                    <button className="btn-secondary" type="button" onClick={() => { setCancelled(true); setMessage("正在取消..."); }}>
+                      取消
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
         </AppCard>
 
+        {/* Filter tabs */}
         <AppCard>
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="-mx-1 mb-2 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
             {filters.map(([value, label]) => (
               <AppButton
                 variant={filter === value ? "primary" : "secondary"}
                 size="sm"
+                className="shrink-0 whitespace-nowrap"
                 key={value}
                 onClick={() => setFilter(value)}
               >
@@ -430,115 +398,77 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
               </AppButton>
             ))}
           </div>
-          {uploading ? (
-            <div className="mb-3 flex items-center gap-2 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] px-4 py-3 text-sm text-[var(--app-accent)]">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--app-accent)]" />
-              <span>{uploadStage || "准备上传…"}</span>
-            </div>
-          ) : null}
-          {message && !uploading ? (
-            <div className="mb-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">
-              {message}
-            </div>
-          ) : null}
-          {items.length ? (
-            <motion.div
-              className="grid grid-cols-2 gap-3"
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              key={items.length}
-            >
-                  {items.map((item) => {
-                    const s = gridSummaries[item.id];
-                    return (
-                    <motion.button
-                      className="group relative overflow-hidden rounded-[1.35rem] bg-white/60 shadow-sm"
-                      key={item.id}
-                      variants={staggerItem}
-                      onClick={() => {
-                        setSelected(item);
-                        setPlaying(false);
-                        if (item.createdBy !== identity && !item.deletedAt && !readKeySet.has(`album:${item.id}`)) {
-                          markAsRead(item.id);
-                        }
-                      }}
-                      type="button"
-                    >
-                      {item.imageUrl ? (
-                        <ImageWithSkeleton
-                          src={item.imageUrl}
-                          alt={item.title || "相册照片"}
-                          aspectRatio="portrait"
-                          className="transition group-hover:scale-105"
-                        />
-                      ) : item.videoUrl ? (
-                        <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/65 to-lilac/60">
-                          <span className="text-4xl text-white/80 drop-shadow-lg">▶</span>
-                        </div>
-                      ) : (
-                        <div className="aspect-[3/4] flex items-center justify-center bg-gradient-to-br from-cocoa/40 to-blush/35">
-                          <span className="text-3xl text-white/60">🖼</span>
+        </AppCard>
+
+        {/* Grid */}
+        {items.length > 0 ? (
+          <motion.div
+            className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+            variants={safeVariants(staggerContainer, reduceMotion)}
+            initial="hidden"
+            animate="visible"
+          >
+            {items.map((item) => {
+              const unread = isUnread(item);
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={safeVariants(staggerItem, reduceMotion)}
+                >
+                  <AppCard
+                    interactive
+                    compact
+                    className="overflow-hidden p-0"
+                    onClick={() => openLightbox(item)}
+                  >
+                    <div className="relative">
+                      <ImageWithSkeleton
+                        src={item.imageUrl || ""}
+                        alt={item.title || "相册照片"}
+                        aspectRatio="square"
+                        showPlayIcon={Boolean(item.videoUrl)}
+                      />
+                      {unread && (
+                        <div className="absolute top-2 right-2">
+                          <UnreadBadge mode="dot" label="未读" />
                         </div>
                       )}
-                      {item.type === "video" ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
-                          ▶ VIDEO
-                        </span>
-                      ) : item.type === "live_photo" ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
-                          ◉ LIVE
-                        </span>
-                      ) : null}
-                      {item.isFavorite ? (
-                        <span className="absolute right-2 top-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-medium text-cocoa shadow-sm">★</span>
-                      ) : null}
-                      {item.createdBy !== identity && !item.deletedAt && !readKeySet.has(`album:${item.id}`) ? (
-                        <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-rose-400 ring-2 ring-white" />
-                      ) : null}
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-2.5 text-left text-white">
-                        <p className="truncate text-sm font-medium leading-snug">{item.title || "未命名回忆"}</p>
-                        <p className="mt-0.5 text-[11px] opacity-70">{item.location || item.takenAt?.slice(0, 10) || ""}</p>
-                      </div>
-                      <div className="absolute inset-x-0 bottom-0 p-2 pt-6 pointer-events-none">
-                        <div className="pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                          <ContentInteractionBar
-                            spaceCode={code}
-                            contentType="album"
-                            contentId={item.id}
-                            identityId={identity}
-                            compact
-                            showReactions={false}
-                            showComments={false}
-                            likeCountOverride={s?.likeCount}
-                            hasLikedOverride={s?.hasLiked}
-                            disabled={false}
-                          />
-                        </div>
-                      </div>
-                    </motion.button>
-                  );
-                  })}
-            </motion.div>
-          ) : (
-            <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有放进相册的照片，之后慢慢补上。</p>
-          )}
-        </AppCard>
+                    </div>
+                    {item.title && (
+                      <p className="px-3 py-2 text-xs font-medium text-cocoa/70 truncate">{item.title}</p>
+                    )}
+                  </AppCard>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        ) : (
+          <AppEmptyState
+            title={emptyTitle}
+            description={emptyDesc}
+            icon={<span className="text-4xl">📷</span>}
+          />
+        )}
+
+        {/* Message banner */}
+        {message && !uploading && !uploadOpen && (
+          <div className="rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)]">{message}</div>
+        )}
       </div>
 
+      {/* Lightbox */}
       <AnimatePresence>
         {selected ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-[var(--app-text)]/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-cocoa/50 p-4 backdrop-blur-sm"
             onClick={() => setSelected(null)}
-            style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={safeTransition({ duration: 0.2 }, reduceMotion)}
           >
             <motion.div
-              className="relative mx-auto max-h-[calc(var(--app-vh,1vh)*100-2rem)] max-h-[calc(100dvh-2rem)] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float pb-[calc(1rem+env(safe-area-inset-bottom,0px)+64px)]"
+              className="mx-auto max-h-[92dvh] max-w-md overflow-auto rounded-[1.75rem] bg-cream p-4 shadow-float pb-[calc(1rem+env(safe-area-inset-bottom,0px)+64px)]"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               onAnimationComplete={(definition) => {
@@ -551,95 +481,104 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={safeTransition({ duration: 0.22, ease: [0.25, 0.25, 0.25, 1] }, reduceMotion)}
             >
-            {/* Close button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setSelected(null); }}
-              className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-cocoa/60 shadow-sm backdrop-blur-sm transition hover:bg-white hover:text-cocoa active:scale-90"
-              aria-label="关闭"
-            >
-              <X size={18} strokeWidth={2} />
-            </button>
-            {selected.videoUrl && (playing || !selected.imageUrl) ? (
-              <video
-                ref={videoRef}
-                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
-                src={selected.videoUrl}
-                controls
-                autoPlay
-                preload="metadata"
-                onEnded={() => setPlaying(false)}
-              />
-            ) : selected.imageUrl ? (
-              <ImageWithSkeleton
-                src={selected.imageUrl}
-                alt={selected.title || "相册照片"}
-                aspectRatio="video"
-                className="max-h-[calc(var(--app-vh,1vh)*60)] max-h-[60dvh] w-full rounded-[1.35rem] object-contain"
-              />
-            ) : null}
-            {selected.videoUrl ? (
-              <AppButton variant="secondary" className="mt-3 w-full" onClick={() => setPlaying((value) => !value)}>
-                {playing ? "回到封面" : "播放实况/视频"}
-              </AppButton>
-            ) : null}
-            {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? (
-              <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words">
-                如果 MOV 无法播放，请在浏览器中打开或下载查看。
-              </div>
-            ) : null}
-            <div className="mt-4 space-y-2 text-sm text-[var(--app-muted)]">
-              <h2 className="text-lg font-semibold text-[var(--app-text)]">{selected.title || "未命名回忆"}</h2>
-              {selected.takenAt ? <p>{selected.takenAt.slice(0, 10)}</p> : null}
-              {selected.location ? <p>{selected.location}</p> : null}
-              {selected.note ? <p className="leading-6">{selected.note}</p> : null}
-            </div>
+              {/* Close button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelected(null); }}
+                className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-cocoa/60 shadow-sm backdrop-blur-sm transition hover:bg-white hover:text-cocoa active:scale-90"
+                aria-label="关闭"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
 
-            <ContentInteractionBar
-              spaceCode={code}
-              contentType="album"
-              contentId={selected.id}
-              identityId={identity}
-              onOpenComments={() => loadAlbumComments(selected.id).catch(() => {})}
-              onLikeChanged={({ liked, count }) => {
-                setSelectedLiked(liked);
-                setSelectedLikeCount(count);
-              }}
-            />
-
-            <ContentComments
-              contentType="album"
-              contentId={selected.id}
-              spaceCode={code}
-              identity={identity}
-              appSide={_appSide}
-              comments={selectedComments}
-              loading={commentsLoading}
-              onAddComment={handleAddAlbumComment}
-              onDeleteComment={handleDeleteAlbumComment}
-              placeholder="写下你的想法..."
-              maxLength={200}
-            />
-
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <AppButton variant="secondary" size="sm" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>
-                {selected.isFavorite ? "取消精选" : "设为精选"}
-              </AppButton>
-              <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
-                删除
-              </AppButton>
-              {selectedDownloadUrl && (
-                <MediaActionButton
-                  mediaType={selectedMediaType}
-                  downloadUrl={selectedDownloadUrl}
-                  label={selectedDownloadLabel}
+              {/* Media display */}
+              {selected.videoUrl && (playing || !selected.imageUrl) ? (
+                <video
+                  ref={videoRef}
+                  className="max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
+                  src={selected.videoUrl}
+                  controls
+                  autoPlay
+                  preload="metadata"
+                  onEnded={() => setPlaying(false)}
                 />
-              )}
-              <div className="flex-1" />
-              <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>
-                关闭
-              </AppButton>
-            </div>
-          </motion.div>
+              ) : selected.imageUrl ? (
+                <ImageWithSkeleton
+                  src={selected.imageUrl}
+                  alt={selected.title || "相册照片"}
+                  aspectRatio="video"
+                  className="max-h-[60dvh] w-full rounded-[1.35rem] object-contain"
+                />
+              ) : null}
+
+              {/* Media action row */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {selected.videoUrl && (
+                  <AppButton variant="secondary" size="sm" onClick={() => setPlaying((v) => !v)}>
+                    {playing ? "回到封面" : "播放"}
+                  </AppButton>
+                )}
+                {selectedDownloadUrl && (
+                  <MediaActionButton
+                    mediaType={selectedMediaType}
+                    downloadUrl={selectedDownloadUrl}
+                    label={selectedDownloadLabel}
+                  />
+                )}
+              </div>
+
+              {/* MOV hint */}
+              {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? (
+                <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words">
+                  如果 MOV 无法播放，请在浏览器中打开或下载查看。
+                </div>
+              ) : null}
+
+              {/* Metadata */}
+              <div className="mt-4 space-y-2 text-sm text-[var(--app-muted)]">
+                <h2 className="text-lg font-semibold text-[var(--app-text)]">{selected.title || "未命名回忆"}</h2>
+                {selected.takenAt ? <p>{selected.takenAt.slice(0, 10)}</p> : null}
+                {selected.location ? <p>{selected.location}</p> : null}
+                {selected.note ? <p className="leading-6">{selected.note}</p> : null}
+              </div>
+
+              {/* Interactions */}
+              <ContentInteractionBar
+                spaceCode={code}
+                contentType="album"
+                contentId={selected.id}
+                identityId={identity}
+                onOpenComments={() => loadAlbumComments(selected.id).catch(() => {})}
+              />
+
+              {/* Comments */}
+              <ContentComments
+                contentType="album"
+                contentId={selected.id}
+                spaceCode={code}
+                identity={identity}
+                appSide={appSide}
+                comments={selectedComments}
+                loading={commentsLoading}
+                onAddComment={handleAddAlbumComment}
+                onDeleteComment={handleDeleteAlbumComment}
+                placeholder={commentPlaceholder}
+                maxLength={200}
+              />
+
+              {/* Admin row */}
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <AppButton variant="secondary" size="sm" onClick={() => patchItem(selected.id, { action: "toggle_favorite" })}>
+                  {selected.isFavorite ? "取消精选" : "设为精选"}
+                </AppButton>
+                <AppButton variant="danger" size="sm" onClick={() => deleteItem(selected)}>
+                  删除
+                </AppButton>
+                <div className="flex-1" />
+                <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>
+                  关闭
+                </AppButton>
+              </div>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>

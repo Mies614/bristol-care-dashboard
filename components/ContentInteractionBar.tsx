@@ -462,7 +462,7 @@ export default function ContentInteractionBar({
     return () => clearTimeout(timer);
   }, [error]);
 
-  const buttonSize = compact ? "text-sm px-2 py-1" : "text-sm px-3 py-1.5";
+  const buttonSize = compact ? "text-sm px-2 py-1 min-h-[40px] min-w-[40px]" : "text-sm px-3 py-1.5 min-h-[44px] min-w-[44px]";
 
   return (
     <div className="flex items-center gap-1.5">
@@ -479,7 +479,7 @@ export default function ContentInteractionBar({
           toggleLike();
         }}
         disabled={disabled || busyLike}
-        title={liked ? "取消点赞" : "点赞"}
+        aria-label={liked ? "取消点赞" : "点赞"} title={liked ? "取消点赞" : "点赞"}
       >
         <span className={busyLike ? "animate-pulse" : ""}>{liked ? "❤️" : "🤍"}</span>
         {likeCount > 0 && <span className="tabular-nums text-[10px]">{likeCount}</span>}
@@ -504,7 +504,7 @@ export default function ContentInteractionBar({
                 toggleReaction(r.id);
               }}
               disabled={disabled || isBusy}
-              title={entry.active ? `取消${r.label}` : r.label}
+              aria-label={entry.active ? `取消${r.label}` : r.label} title={entry.active ? `取消${r.label}` : r.label}
             >
               <span className={isBusy ? "animate-pulse" : ""}>{r.emoji}</span>
               {entry.count > 0 && (
@@ -526,7 +526,7 @@ export default function ContentInteractionBar({
             onOpenComments?.();
           }}
           disabled={disabled}
-          title="评论"
+          aria-label="评论" title="评论"
         >
           <span>💬</span>
           {!compact && commentCount > 0 && (
