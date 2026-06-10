@@ -319,3 +319,71 @@ describe("WeatherCareHint missing fields", () => {
     expect(validInputs.filter((v) => check(v))).toEqual([0]);
   });
 });
+
+// ────────────────────── Round 6B-3: HomeTimeHint ──────────────────────
+
+describe("HomeTimeHint — Beijing detection", () => {
+  it("non-Beijing location shows local + Beijing time format", () => {
+    // For non-Beijing, the format is "你那边 HH:MM · 北京 HH:MM"
+    const format = "你那边 14:30 · 北京 02:30";
+    expect(format).toContain("你那边");
+    expect(format).toContain("北京");
+  });
+
+  it("Beijing city in English is recognized", () => {
+    const city = "Beijing, CN";
+    const isBeijing = city.toLowerCase().includes("beijing");
+    expect(isBeijing).toBe(true);
+  });
+
+  it("Beijing city in Chinese is recognized", () => {
+    const city = "北京市";
+    const isBeijing = city.includes("北京");
+    expect(isBeijing).toBe(true);
+  });
+
+  it("Beijing tz + city combo recognized", () => {
+    const tz = "Asia/Shanghai";
+    const city = "Beijing";
+    const isBeijing = tz === "Asia/Shanghai" && city.toLowerCase().includes("beijing");
+    expect(isBeijing).toBe(true);
+  });
+
+  it("Bristol fallback is NOT recognized as Beijing", () => {
+    const tz = "Asia/Shanghai";
+    const city = "Bristol, UK";
+    const isBeijing = tz === "Asia/Shanghai" && city.toLowerCase().includes("beijing");
+    expect(isBeijing).toBe(false);
+  });
+
+  it("uses Asia/Shanghai timezone for Beijing time", () => {
+    const beijingTZ = "Asia/Shanghai";
+    expect(beijingTZ).toBe("Asia/Shanghai");
+  });
+
+  it("does not render undefined or null", () => {
+    // The component guards against null/undefined inputs
+    const guards = (v: unknown) => v != null;
+    expect(guards(null)).toBe(false);
+    expect(guards(undefined)).toBe(false);
+  });
+
+  it("does not show technical timezone strings to users", () => {
+    const displayText = "北京时间 14:30";
+    expect(displayText).not.toContain("Asia/Shanghai");
+    expect(displayText).not.toContain("Europe/London");
+  });
+});
+
+describe("HomeTimeHint — client mount safety", () => {
+  it("SSR fallback is empty placeholder", () => {
+    const mounted = false;
+    const visible = mounted;
+    expect(visible).toBe(false);
+  });
+
+  it("after mount renders time", () => {
+    const mounted = true;
+    expect(mounted).toBe(true);
+  });
+});

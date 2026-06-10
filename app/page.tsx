@@ -8,6 +8,7 @@ import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare } from "@/components/WeatherCareCard";
 import { WeatherCareHint } from "@/components/WeatherCareHint";
+import { HomeTimeHint } from "@/components/HomeTimeHint";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
@@ -244,6 +245,9 @@ export default function HomePage() {
           </div>
         </div>
         <p className="mt-2 text-sm leading-5 text-cocoa/50">
+        {/* Time hint — local + Beijing */}
+        <HomeTimeHint weather={weatherState} />
+
           今天有想看的吗？
         </p>
 

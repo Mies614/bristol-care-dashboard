@@ -58,6 +58,32 @@ test.describe("Partner homepage (/)", () => {
     const allLink = page.locator('a[href="/notes"]').first();
     await expect(allLink).toBeVisible();
   });
+
+  test("shows Beijing time or local time", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    // The HomeTimeHint should render "北京" somewhere in the hero
+    const hero = page.locator("header").first();
+    const heroText = await hero.innerText();
+    expect(heroText).toMatch(/北京/);
+  });
+
+  test("does not show undefined in time area", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const body = page.locator("body");
+    // "undefined" should not appear anywhere visible
+    const pageText = await body.innerText();
+    expect(pageText).not.toContain("undefined");
+  });
+
+  test("does not show null in time area", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const body = page.locator("body");
+    expect(await body.innerText()).not.toContain("null");
+  });
+
 });
 
 test.describe("Owner homepage (/me)", () => {
