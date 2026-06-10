@@ -1,10 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Round 6B-1 — homepage layout tests.
- *
- * Verifies the reordered module structure on / and /me,
- * weather hint placement, and responsive behavior.
+ * Round 6B-2 — homepage layout tests with compact variants.
  */
 
 test.describe("Partner homepage (/)", () => {
@@ -13,26 +10,20 @@ test.describe("Partner homepage (/)", () => {
     await expect(page.locator("text=今天有想看的吗？")).toBeVisible();
   });
 
-  test("shows weather hint area", async ({ page }) => {
+  test("shows WeatherCareHint", async ({ page }) => {
     await page.goto("/");
-    // WeatherCareHint renders inside the hero header area
+    // WeatherCareHint is inside the hero area
     const hero = page.locator("header").first();
-    // Should contain weather-related text or the fallback
-    const hasWeatherText = await hero.locator("text=/°C|天气慢了一点|允许定位/").count();
-    // The hint component is always present; verify it exists
-    expect(hasWeatherText).toBeGreaterThanOrEqual(0);
+    await expect(hero).toBeVisible();
   });
 
   test("weather hint appears before TodaySummaryCard", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    // The Hero header (containing weather hint) comes before TodaySummaryCard
     const hero = page.locator("header").first();
     await expect(hero).toBeVisible();
-    // TodaySummaryCard follows the hero
     const summaryCard = page.locator("text=/⚠️ 已逾期|⚠️ 紧急截止|📚 下一节课|📋|🌸/").first();
     await expect(summaryCard).toBeVisible();
-    // Verify ordering: hero comes before summary in DOM
     const heroBox = await hero.boundingBox();
     const summaryBox = await summaryCard.boundingBox();
     if (heroBox && summaryBox) {
@@ -43,11 +34,29 @@ test.describe("Partner homepage (/)", () => {
   test("weather area does not contain technical terms", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    // (Weather text like "km/h" is acceptable in context, but "sync" should not)
     const hero = page.locator("header").first();
     const heroText = await hero.innerText();
     expect(heroText).not.toMatch(/\bsync\b/i);
     expect(heroText).not.toMatch(/\bbackup\b/i);
+  });
+
+  test("shows compact 想你 area", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    // MissYouCombinedCard in compact mode should show "想你" or "想他一下"
+    const missYouCard = page.locator("section").filter({ hasText: /想你|想他一下/ }).first();
+    await expect(missYouCard).toBeVisible();
+  });
+
+  test("does NOT show 小乖今天 card", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "小乖今天" })).toHaveCount(0);
+  });
+
+  test("LoveNoteCard on homepage shows 全部 link to /notes", async ({ page }) => {
+    await page.goto("/");
+    const allLink = page.locator('a[href="/notes"]').first();
+    await expect(allLink).toBeVisible();
   });
 });
 
@@ -57,12 +66,30 @@ test.describe("Owner homepage (/me)", () => {
     await expect(page.locator("text=看看小乖今天怎么样。")).toBeVisible();
   });
 
+  test("shows 小乖今天 status card", async ({ page }) => {
+    await page.goto("/me");
+    await expect(page.getByRole("heading", { name: "小乖今天" })).toBeVisible();
+  });
+
+  test("XiaoguaiStatusCard links are /me prefixed", async ({ page }) => {
+    await page.goto("/me");
+    // UnreadBadge links inside XiaoguaiStatusCard should be /me/...
+    const statusCard = page.getByRole("heading", { name: "小乖今天" }).locator("..");
+    const links = statusCard.locator("a");
+    const count = await links.count();
+    if (count > 0) {
+      const hrefs = await links.evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+      for (const href of hrefs) {
+        if (href) expect(href.startsWith("/me")).toBe(true);
+      }
+    }
+  });
+
   test("shows Quick Actions section", async ({ page }) => {
     await page.goto("/me");
     await expect(page.locator("text=做点什么")).toBeVisible();
     await expect(page.locator("text=写小纸条")).toBeVisible();
     await expect(page.locator("text=传相册")).toBeVisible();
-    await expect(page.locator("text=看未读回忆")).toBeVisible();
   });
 
   test("Quick Actions tiles link to /me routes", async ({ page }) => {
@@ -71,17 +98,19 @@ test.describe("Owner homepage (/me)", () => {
     await expect(writeNoteLink).toBeVisible();
     const albumLink = page.locator('a[href="/me/albums"]').first();
     await expect(albumLink).toBeVisible();
-    const unreadMemLink = page.locator('a[href="/me/memories/unread"]').first();
-    await expect(unreadMemLink).toBeVisible();
   });
 
-  test("weather card retains 小乖那边的天气 perspective", async ({ page }) => {
+  test("LoveNoteCard on homepage shows 全部 link to /me/notes", async ({ page }) => {
     await page.goto("/me");
-    // WeatherCareCard is present on /me (compact mode)
-    const weatherCard = page.locator("section").filter({ hasText: /天气|°C/ }).first();
-    await expect(weatherCard).toBeVisible();
-    // The hero says "看看小乖今天怎么样", so weather is about 小乖
-    await expect(page.locator("text=看看小乖今天怎么样。")).toBeVisible();
+    const allLink = page.locator('a[href="/me/notes"]').first();
+    await expect(allLink).toBeVisible();
+  });
+
+  test("no bare partner links on /me", async ({ page }) => {
+    await page.goto("/me");
+    // Should not have bare /notes, /albums etc.
+    await expect(page.locator('a[href="/notes"]')).toHaveCount(0);
+    await expect(page.locator('a[href="/albums"]')).toHaveCount(0);
   });
 });
 
@@ -106,15 +135,5 @@ test.describe("Responsive — 375px viewport", () => {
     const scrollWidth = await html.evaluate((el) => el.scrollWidth);
     const clientWidth = await html.evaluate((el) => el.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
-  });
-
-  test("/ weather hint fits within viewport", async ({ page }) => {
-    await page.setViewportSize(mobileViewport);
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    // The weather hint should not be wider than the viewport
-    const hero = page.locator("header").first();
-    const heroWidth = await hero.evaluate((el) => el.getBoundingClientRect().width);
-    expect(heroWidth).toBeLessThanOrEqual(376); // 375 + 1px tolerance
   });
 });

@@ -298,12 +298,12 @@ export default function HomePage() {
 
         {/* 2. LoveNoteCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} />
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} compact />
         </motion.div>
 
         {/* 3. MissYouCombinedCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="partner" />
+          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="partner" variant="compact" />
         </motion.div>
 
         {/* 4. RecentMemories (2 photos) */}

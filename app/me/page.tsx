@@ -19,6 +19,7 @@ import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { getUnreadHomeSummary } from "@/lib/readState";
 import { fetchCloudReadStates, buildReadKeySet } from "@/lib/readStateClient";
 import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
+import { XiaoguaiStatusCard } from "@/components/XiaoguaiStatusCard";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
@@ -200,6 +201,19 @@ export default function MeHomePage() {
   const refreshLoveNote = () => setData(loadAppData());
 
   const todayLabel = safeTodayLabel();
+  const [missYouPartnerCount, setMissYouPartnerCount] = useState(0);
+  useEffect(() => {
+    const d = new Date();
+    const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    fetch(`/api/miss-you?spaceCode=${encodeURIComponent(spaceCode)}&localDate=${localDate}&limit=1&viewer=${encodeURIComponent(identityId)}`)
+      .then((res) => res.json())
+      .then((payload) => {
+        if (payload.ok && payload.todayByAuthor) {
+          setMissYouPartnerCount(payload.todayByAuthor.xiaoguai || 0);
+        }
+      })
+      .catch(() => {});
+  }, [spaceCode, identityId]);
   const reduceMotion = useAccessibleMotion();
 
   return (
@@ -263,6 +277,17 @@ export default function MeHomePage() {
         {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
         {syncMessage ? <p className="notice">{syncMessage}</p> : null}
 
+        {/* XiaoguaiStatusCard */}
+        <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
+          <XiaoguaiStatusCard
+            weather={weatherState}
+            missYouCount={missYouPartnerCount}
+            unreadNotesCount={unreadNotesCount}
+            unreadAlbumsMemoryCount={unreadAlbumsMemoryCount}
+          />
+        </motion.div>
+
+
         {/* 1. TodaySummaryCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
           <TodaySummaryCard summary={todaySummary} />
@@ -298,12 +323,12 @@ export default function MeHomePage() {
 
         {/* 4. MissYouCombinedCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="owner" />
+          <MissYouCombinedCard spaceCode={spaceCode} identityId={identityId} appSide="owner" variant="compact" />
         </motion.div>
 
         {/* 5. LoveNoteCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
-          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} appSide="owner" />
+          <LoveNoteCard note={featuredLoveNote} fallback={data.note} onRefresh={refreshLoveNote} identityId={identityId} appSide="owner" compact />
         </motion.div>
 
         {/* 6. RecentMemories (2 photos) */}
