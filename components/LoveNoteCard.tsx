@@ -13,7 +13,17 @@ import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { NoteMediaDownload } from "./NoteMediaDownload";
 
-export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId, appSide }: { note?: LoveNote; fallback: string; onRefresh?: () => void; identityId?: string; appSide?: "partner" | "owner" }) {
+interface LoveNoteCardProps {
+  note?: LoveNote;
+  fallback: string;
+  onRefresh?: () => void;
+  identityId?: string;
+  appSide?: "partner" | "owner";
+  /** When true, hide comments and interaction bar for homepage preview */
+  compact?: boolean;
+}
+
+export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId, appSide, compact }: LoveNoteCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
   const [comments, setComments] = useState<CommentEntryType[]>([]);
@@ -63,10 +73,10 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
   }, [note, identity, spaceCode]);
 
   useEffect(() => {
-    if (showComments && note) {
+    if (showComments && note && !compact) {
       loadComments();
     }
-  }, [showComments, note, loadComments]);
+  }, [showComments, note, loadComments, compact]);
 
   const handleMarkRead = useCallback(() => {
     if (note && unread) {
@@ -117,27 +127,39 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
     await loadComments();
   }
 
+  const title = isOwner ? "小乖最近的小纸条" : "最近的小纸条";
+
   return (
-    <section className="soft-card relative overflow-hidden bg-white/55" onClick={handleMarkRead}>
+    <section className="soft-card relative overflow-hidden bg-white/55" onClick={compact ? undefined : handleMarkRead}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {unread ? (
+          {unread && !compact ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-rose/15 px-2 py-0.5 text-[10px] font-medium text-rose">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose" />
               未读
             </span>
           ) : null}
-          <h2 className="text-sm font-semibold text-cocoa/60">✉ 今天的小纸条</h2>
+          <h2 className="text-sm font-semibold text-cocoa/60">{title}</h2>
         </div>
-        {onRefresh ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Link className="btn-secondary btn-small" href={notesHref}>全部</Link>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link className="btn-secondary btn-small" href={notesHref}>全部</Link>
+          {!compact && onRefresh ? (
             <button className="btn-secondary btn-small" onClick={onRefresh}>刷新</button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
-      <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
-      {note?.imageUrl && !imageFailed ? (
+
+      {compact ? (
+        <Link href={notesHref} className="mt-3 block">
+          <p className="whitespace-pre-wrap text-[0.95rem] leading-7 text-cocoa/78 line-clamp-3">
+            {content}
+          </p>
+        </Link>
+      ) : (
+        <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
+      )}
+
+      {!compact && note?.imageUrl && !imageFailed ? (
         <div className="mt-4 space-y-2">
           <img
             alt={note.imageAlt || "小纸条图片"}
@@ -148,21 +170,21 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
-      {note?.audioUrl ? (
+      {!compact && note?.audioUrl ? (
         <div className="mt-4 space-y-2">
           <audio className="w-full" src={note.audioUrl} controls />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
-      {note?.videoUrl ? (
+      {!compact && note?.videoUrl ? (
         <div className="mt-4 space-y-2">
           <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
 
-      {/* Interaction bar */}
-      {note && (
+      {/* Interaction bar — hidden in compact mode */}
+      {note && !compact && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
           <ContentInteractionBar
             spaceCode={spaceCode}
@@ -177,8 +199,8 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         </div>
       )}
 
-      {/* Comments */}
-      {note && showComments ? (
+      {/* Comments — hidden in compact mode */}
+      {note && showComments && !compact ? (
         <div className="mt-3 border-t border-white/70 pt-3" onClick={(e) => e.stopPropagation()}>
           <ContentComments
             contentType="note"
@@ -196,7 +218,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         </div>
       ) : null}
 
-      {imageFailed ? <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-cocoa/65">图片暂时加载失败。</p> : null}
+      {!compact && imageFailed ? <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-cocoa/65">图片暂时加载失败。</p> : null}
     </section>
   );
 }

@@ -108,19 +108,17 @@ function getCardTitle(identityId: string): string {
   return identityId === "me" ? "想小乖" : "想你";
 }
 
-function getCardSubtitle(identityId: string): string {
-  return identityId === "me" ? "给她发一个轻轻的想念。" : "点一下，就把这一刻收起来。";
-}
-
 export interface MissYouCombinedCardProps {
   spaceCode?: string;
   identityId?: string;
   appSide?: "partner" | "owner";
+  variant?: "default" | "compact";
 }
 
-export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide: _appSide }: MissYouCombinedCardProps = {}) {
+export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide: _appSide, variant = "default" }: MissYouCombinedCardProps = {}) {
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
   const spaceCode = propSpaceCode || getDefaultSpaceCode();
+  const isCompact = variant === "compact";
 
   const [data, setData] = useState<MissYouData>({
     todayCount: 0,
@@ -198,9 +196,6 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
   useEffect(() => {
     fetchData();
     retryPending();
-    const handleOnline = () => retryPending();
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
   }, [fetchData, retryPending]);
 
   async function handleMarkSeen() {
@@ -210,7 +205,11 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
       const response = await fetch("/api/miss-you", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spaceCode, viewer: identityId, action: "mark_seen" })
+        body: JSON.stringify({
+          spaceCode,
+          viewer: identityId,
+          localDate
+        })
       });
       const payload = await response.json();
       if (payload.ok) {
@@ -233,7 +232,9 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
     setLoading(true);
     try {
       setAnimating(true);
-      setHearts((prev) => [...prev, { id: Date.now(), left: 30 + Math.random() * 40 }]);
+      if (!isCompact && !reduceMotion) {
+        setHearts((prev) => [...prev, { id: Date.now(), left: 30 + Math.random() * 40 }]);
+      }
 
       const recipient = getRecipientForAuthor(identityId);
       const response = await fetch("/api/miss-you", {
@@ -269,7 +270,7 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
           createdAt: new Date().toISOString()
         });
         savePendingQueue(identityId, pending);
-        const offlineMsg = "网络有点慢，先帮你记在本机了。";
+        const offlineMsg = "网络有点慢，先帮你存在本机。";
         toast(offlineMsg);
       }
     } catch {
@@ -283,7 +284,7 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
         createdAt: new Date().toISOString()
       });
       savePendingQueue(identityId, pending);
-      const offlineMsg = "网络有点慢，先帮你记在本机了。";
+      const offlineMsg = "网络有点慢，先帮你存在本机。";
       toast(offlineMsg);
     } finally {
       setLoading(false);
@@ -296,7 +297,6 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
   const otherLabel = getOtherIdentityLabel(identityId);
   const buttonLabel = getSelfActionLabel(identityId);
   const cardTitle = getCardTitle(identityId);
-  const cardSubtitle = getCardSubtitle(identityId);
   const partnerIdentity = identityId === "me" ? DEFAULT_NORMAL_IDENTITY_ID : "me";
   const partnerTodayCount = data.todayByAuthor[partnerIdentity] || 0;
   const partnerLatestEvent = data.unreadFromOtherEvents?.[0] ?? data.lastEvent;
@@ -304,13 +304,60 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
     ? formatTime(partnerLatestEvent.created_at)
     : null;
 
+  // ── Compact mode ──
+  if (isCompact) {
+    return (
+      <motion.section
+        className="soft-card overflow-hidden bg-gradient-to-br from-white/85 via-blush/30 to-white/80"
+        variants={safeVariants(staggerItem, reduceMotion)}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-cocoa/70">
+              {cardTitle}
+              {partnerTodayCount > 0 ? ` · ${otherLabel}今天想你 ${partnerTodayCount} 次` : ""}
+            </p>
+            {partnerTodayCount > 0 && partnerLatestTime ? (
+              <p className="mt-0.5 text-xs text-cocoa/45">
+                上次想你 {partnerLatestTime}
+              </p>
+            ) : partnerTodayCount === 0 ? (
+              <p className="mt-0.5 text-xs text-cocoa/40">
+                还没收到{otherLabel}今天的想念
+              </p>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {hasUnread && (
+              <button
+                className="btn-secondary btn-small text-[11px]"
+                disabled={markingSeen}
+                onClick={handleMarkSeen}
+              >
+                {markingSeen ? "..." : "知道啦"}
+              </button>
+            )}
+            <button
+              className={`btn-primary btn-small text-[11px] transition-transform ${animating ? "scale-95" : ""}`}
+              disabled={loading}
+              onClick={handleClick}
+            >
+              {loading ? "..." : buttonLabel}
+            </button>
+          </div>
+        </div>
+      </motion.section>
+    );
+  }
+
+  // ── Default mode ──
   return (
     <motion.section
       className="soft-card relative overflow-hidden bg-gradient-to-br from-white/88 via-blush/45 to-roseSoft/30"
       variants={safeVariants(staggerItem, reduceMotion)}
     >
       {/* ── 飘浮爱心 ── */}
-      {hearts.map((heart) => (
+      {!reduceMotion && hearts.map((heart) => (
         <span
           key={heart.id}
           className="pointer-events-none absolute animate-float-up text-xl"
@@ -327,7 +374,9 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
           {cardTitle}{todaysYouCount > 0 ? ` · 今天已想了 ${todaysYouCount} 次` : ""}
         </p>
 
-        <p className="mt-0.5 text-xs text-cocoa/50">{cardSubtitle}</p>
+        <p className="mt-0.5 text-xs text-cocoa/50">
+          {identityId === "me" ? "给她发一个轻轻的想念。" : "点一下，就把这一刻收起来。"}
+        </p>
 
         {/* ── 收到统计 ── */}
         {partnerTodayCount > 0 ? (
