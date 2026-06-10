@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
+import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
 import { loadAppData } from "@/lib/storage";
@@ -211,10 +212,9 @@ export default function MeHomePage() {
             >
               <Link
                 href="/me/memories/unread"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+                className="mt-3"
               >
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-                {unreadAlbumsMemoryCount} 个新回忆等你看
+                <UnreadBadge mode="label" count={unreadAlbumsMemoryCount} label={`${unreadAlbumsMemoryCount} 个新回忆等你看`} className="shadow-sm" />
               </Link>
             </motion.div>
           )}
@@ -228,10 +228,9 @@ export default function MeHomePage() {
             >
               <Link
                 href="/me/notes"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-200 active:scale-[var(--tap-scale)]"
+                className="mt-3"
               >
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-                {unreadNotesCount} 条小纸条还没看
+                <UnreadBadge mode="label" count={unreadNotesCount} label={`${unreadNotesCount} 条小纸条还没看`} className="shadow-sm" />
               </Link>
             </motion.div>
           )}

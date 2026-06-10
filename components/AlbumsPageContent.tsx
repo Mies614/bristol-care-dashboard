@@ -28,6 +28,7 @@ import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
 import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
 import { X } from "lucide-react";
+import { MediaActionButton } from "@/components/ui/MediaActionButton";
 import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 
 const filters = [
@@ -331,6 +332,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
   }
 
   const selectedDownloadUrl = useMemo(() => selected ? getAlbumMediaDownloadUrl(selected) : null, [selected]);
+  const selectedMediaType = useMemo(() => selected ? (selected.videoUrl ? "video" as const : "image" as const) : "image" as const, [selected]);
   const selectedDownloadLabel = useMemo(() => selected ? getAlbumMediaDownloadLabel(selected) : "打开原文件", [selected]);
   const reduceMotion = useAccessibleMotion();
 
@@ -626,15 +628,11 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide: _appSid
                 删除
               </AppButton>
               {selectedDownloadUrl && (
-                <a
-                  href={selectedDownloadUrl}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/85 active:scale-[var(--tap-scale)]"
-                >
-                  {selectedDownloadLabel}
-                </a>
+                <MediaActionButton
+                  mediaType={selectedMediaType}
+                  downloadUrl={selectedDownloadUrl}
+                  label={selectedDownloadLabel}
+                />
               )}
               <div className="flex-1" />
               <AppButton variant="secondary" size="sm" onClick={() => setSelected(null)}>

@@ -10,6 +10,7 @@ import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry } from "@/lib/contentInteractions";
+import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { NoteMediaDownload } from "./NoteMediaDownload";
 
 export interface NoteCardProps {
@@ -142,12 +143,7 @@ export function NoteCard({
       <div className="mb-2 flex items-center justify-between gap-2 text-xs text-cocoa/55">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-white/60 px-2.5 py-1">{getUserFacingAuthorLabel(note.author)}</span>
-          {isUnread ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose/15 px-2 py-0.5 text-[10px] font-medium text-rose">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose" />
-              未读
-            </span>
-          ) : null}
+          {isUnread ? <UnreadBadge mode="label" label="未读小纸条" /> : null}
         </div>
         <span>{note.createdAt ? new Date(note.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚"}</span>
       </div>
