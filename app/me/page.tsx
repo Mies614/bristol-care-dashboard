@@ -20,7 +20,7 @@ import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
 import { buildTodaySummary, TodaySummaryCard } from "@/components/TodaySummaryCard";
 import type { TodaySummaryResult } from "@/components/TodaySummaryCard";
 import { TodayCareStrip, type CareStripItem } from "@/components/TodayCareStrip";
-import { CoupleCareStrip } from "@/components/CoupleCareStrip";
+import { CoupleCareStrip as _CoupleCareStrip } from "@/components/CoupleCareStrip";
 import { getCurrentDayName } from "@/lib/schedule";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem, fadeInScale, safeTransition } from "@/lib/design/motion";
 import { useFixedAppIdentity } from "@/hooks/useFixedAppIdentity";

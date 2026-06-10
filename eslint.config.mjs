@@ -28,6 +28,7 @@ const eslintConfig = [
     ignores: [
       ".next/**",
       "node_modules/**",
+      ".agents/**",
       "next-env.d.ts",
       "public/sw.js",
       "public/workbox-*.js",

@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
-    globals: true
+    globals: true,
+    exclude: ["node_modules/**", "tests/e2e/**"]
   },
   resolve: {
     alias: {

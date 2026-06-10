@@ -9,3 +9,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+# Skills (installed by npx skills, tracked via skills-lock.json)
+.agents/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Editor temp files
+*.swp
+*.swo
+*~
