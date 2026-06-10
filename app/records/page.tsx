@@ -12,6 +12,7 @@ import { getTodayCourses } from "@/lib/schedule";
 import { loadAppData } from "@/lib/storage";
 import type { AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { AppCard } from "@/components/ui/AppCard";
+import { ActionTile } from "@/components/ui/ActionTile";
 import { AppButton } from "@/components/ui/AppButton";
 import { useAccessibleMotion, safeVariants, staggerContainer, staggerItem } from "@/lib/design/motion";
 
@@ -78,7 +79,16 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="生活安排总览" subtitle="课程、DDL 和身体节奏，一目了然。" />
+      <PageHeader title="记录" subtitle="把今天的小事，轻轻收好。" />
+
+        <div className="mb-4 space-y-2">
+          <ActionTile
+            title="小纸条"
+            description="写下今天想说的话。"
+            icon="💌"
+            href="/notes"
+          />
+        </div>
 
       <motion.div
         className="space-y-4"

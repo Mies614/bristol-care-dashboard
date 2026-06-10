@@ -24,6 +24,8 @@ import {
 } from "@/lib/cardWalletDb";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusPill } from "@/components/ui/StatusPill";
 
 type ActiveCard = {
   card: WalletCard;
@@ -151,12 +153,8 @@ export default function CardsPage() {
 
   return (
     <AppShell>
-      <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/75 bg-gradient-to-br from-white/90 via-skySoft/55 to-lilac/45 p-5 shadow-float backdrop-blur-xl">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-muted)] mb-1">会员卡</p>
-        <h1 className="text-2xl font-semibold text-[var(--app-text)]">会员卡夹</h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">常用卡放在这里，结账时点开就能扫。</p>
-        <p className="mt-3 rounded-2xl bg-white/62 px-3 py-2 text-sm text-[var(--app-muted)]">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
-      </header>
+      <PageHeader title="卡夹" subtitle="常用卡放在这里，结账时点开就能扫。" action={<StatusPill variant="partner">小乖端</StatusPill>} />
+      <p className="-mt-2 mb-4 rounded-[var(--app-radius)] bg-white/62 px-3 py-2 text-sm text-[var(--app-muted)]">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <AppButton variant="primary" onClick={() => setCreating(true)}>新增会员卡</AppButton>
