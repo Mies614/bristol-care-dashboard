@@ -73,7 +73,7 @@ export function PwaInstallPrompt() {
   if (!show || !deferredPrompt) return null;
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-72">
+    <div className="fixed bottom-24 left-4 right-4 z-40 sm:left-auto sm:right-4 sm:w-72">
       <div className="rounded-2xl border border-white/80 bg-white/92 p-4 shadow-lg backdrop-blur-md">
         <p className="text-sm font-medium text-cocoa mb-1">添加到手机桌面</p>
         <p className="text-xs text-cocoa/55 mb-3">

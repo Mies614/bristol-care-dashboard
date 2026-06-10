@@ -50,7 +50,7 @@ export function MobileSheet({
           <motion.div
             className={cn(
               "absolute bottom-0 left-0 right-0 max-h-[90dvh] overflow-auto rounded-t-[1.75rem] bg-cream shadow-float",
-              "pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
+              "pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]",
               className
             )}
             onClick={(e) => e.stopPropagation()}

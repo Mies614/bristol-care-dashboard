@@ -74,7 +74,7 @@ export function BottomNav({ status }: { status?: NavStatus }) {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 pointer-events-none",
+        "fixed inset-x-0 bottom-0 z-40 pointer-events-none",
         "px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]",
       )}
     >
