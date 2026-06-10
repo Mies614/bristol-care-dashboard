@@ -136,6 +136,7 @@ test.describe("BottomNav", () => {
     await expect(nav).toBeVisible();
     // Main content should have padding to avoid being obscured
     const main = page.locator("main");
+    await main.waitFor({ state: "attached" });
     const mainPadding = await main.evaluate((el) => getComputedStyle(el).paddingBottom);
     expect(parseFloat(mainPadding)).toBeGreaterThan(60);
   });
