@@ -122,14 +122,11 @@ describe("syncStatus", () => {
       expect(friendlySyncError("invalid token")).toContain("认证失败");
     });
 
-    it("truncates very long messages", async () => {
+    it("returns generic fallback for unknown long messages", async () => {
       const { friendlySyncError } = await import("@/lib/syncStatus");
       const long = "x".repeat(200);
       const result = friendlySyncError(long);
-      expect(result).not.toBeNull();
-      if (result) {
-        expect(result.length).toBeLessThanOrEqual(130);
-      }
+      expect(result).toBe("同步遇到一点问题，稍后会自动重试。");
     });
   });
 
