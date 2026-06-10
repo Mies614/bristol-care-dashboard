@@ -228,4 +228,40 @@ describe("syncQueue", () => {
 
     expect(getPendingSyncCount()).toBe(6);
   });
+  it("deduplicates identical comment items", async () => {
+    const { enqueueSyncItem, getPendingSyncCount } = await importModule();
+
+    const comment = {
+      type: "comment" as const,
+      method: "POST" as const,
+      url: "/api/comments",
+      body: { spaceCode: "test", contentId: "n1", body: "hi" },
+      spaceCode: "test",
+      identity: "partner1"
+    };
+
+    enqueueSyncItem(comment);
+    enqueueSyncItem(comment);
+    enqueueSyncItem({ ...comment, body: { ...comment.body, body: "hi" } });
+
+    expect(getPendingSyncCount()).toBe(1);
+  });
+
+  it("deduplicates identical interaction items", async () => {
+    const { enqueueSyncItem, getPendingSyncCount } = await importModule();
+
+    const interaction = {
+      type: "interaction" as const,
+      method: "POST" as const,
+      url: "/api/interactions",
+      body: { spaceCode: "test", interactionType: "like", contentId: "n1" },
+      spaceCode: "test",
+      identity: "partner1"
+    };
+
+    enqueueSyncItem(interaction);
+    enqueueSyncItem(interaction);
+
+    expect(getPendingSyncCount()).toBe(1);
+  });
 });

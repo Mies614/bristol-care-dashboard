@@ -6,6 +6,7 @@ import { useCurrentIdentity } from "@/hooks/useCurrentIdentity";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import type { AppSide } from "@/lib/appIdentity";
 import { addLocalComment, softDeleteLocalComment } from "@/lib/interactionsLocal";
+import { enqueueSyncItem } from "@/lib/syncQueue";
 
 export type { CommentEntryType };
 
@@ -122,6 +123,7 @@ export default function ContentComments({
         updatedAt: new Date().toISOString(),
       };
       addLocalComment(spaceCode, localComment);
+      enqueueSyncItem({ type: "comment", method: "POST", url: "/api/comments", body: { spaceCode, contentType, contentId, identity: activeIdentity, body }, spaceCode, identity: activeIdentity });
       setError("网络慢了一点，先帮你存在本机。");
       return true;
     } catch {
@@ -207,15 +209,17 @@ export default function ContentComments({
           disabled={disabled || submitting}
           placeholder={placeholder}
           rows={2}
-          className="w-full rounded-2xl mb-[calc(env(safe-area-inset-bottom,0px)+8px)] border border-white/60 bg-white/40 px-4 py-2.5 pr-16 text-sm text-cocoa placeholder:text-cocoa/40 resize-none focus:outline-none focus:ring-2 focus:ring-rose-300/40 focus:border-rose/40 disabled:opacity-50"
+          aria-label="写下评论"
+          className="w-full rounded-2xl mb-[calc(env(safe-area-inset-bottom,0px)+8px)] border border-white/60 bg-white/40 px-4 py-2.5 pr-16 text-sm text-cocoa placeholder:text-cocoa/40 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]/40 focus:border-[var(--app-accent)]/40 disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}
           disabled={!isInputReady}
+          aria-label="发送评论"
           className={
             isInputReady
-              ? "absolute right-2 bottom-2 bg-rose-400 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm transition hover:bg-rose-500 active:scale-95"
-              : "absolute right-2 bottom-2 bg-rose-100 text-cocoa/40 px-4 py-1.5 rounded-full text-sm font-medium cursor-not-allowed"
+              ? "absolute right-2 bottom-2 bg-[var(--app-accent)] text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm transition hover:brightness-110 active:scale-[0.97] motion-reduce:active:scale-100"
+              : "absolute right-2 bottom-2 bg-[var(--app-accent-soft)] text-[var(--app-muted)] px-4 py-1.5 rounded-full text-sm font-medium cursor-not-allowed"
           }
         >
           {submitting ? "..." : submitLabel}

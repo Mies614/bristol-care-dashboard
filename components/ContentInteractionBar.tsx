@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import type { ContentType, InteractionSummary } from "@/lib/contentInteractions";
 import { getLikeCount, getCommentCount, isLikedByIdentity } from "@/lib/contentInteractions";
+import { enqueueSyncItem } from "@/lib/syncQueue";
 
 // ─── Reaction config ───
 // These map to the "reaction" field in content_interactions
@@ -249,6 +250,7 @@ export default function ContentInteractionBar({
       setLiked(newLikedState);
       setLikeCount(newLikeCount);
       setError("网络有点慢，先帮你存在本机了。");
+      enqueueSyncItem({ type: "interaction", method: "POST", url: "/api/interactions", body: { spaceCode: code, contentType, contentId, identity: identityId, interactionType: "like" }, spaceCode: code, identity: identityId });
       if (onLikeChanged) {
         onLikeChanged({ liked: newLikedState, count: newLikeCount });
       }
@@ -294,6 +296,7 @@ export default function ContentInteractionBar({
         return next;
       });
       setError("网络有点慢，先帮你存在本机了。");
+      enqueueSyncItem({ type: "interaction", method: "POST", url: "/api/interactions", body: { spaceCode: code, contentType, contentId, identity: identityId, interactionType: "reaction", reaction: reactionId }, spaceCode: code, identity: identityId });
     },
     [contentType, contentId, identityId]
   );
@@ -462,16 +465,16 @@ export default function ContentInteractionBar({
     return () => clearTimeout(timer);
   }, [error]);
 
-  const buttonSize = compact ? "text-sm px-2 py-1 min-h-[40px] min-w-[40px]" : "text-sm px-3 py-1.5 min-h-[44px] min-w-[44px]";
+  const buttonSize = compact ? "text-xs px-2 py-1 min-h-[38px] min-w-[38px]" : "text-sm px-3 py-1.5 min-h-[42px] min-w-[42px]";
 
   return (
     <div className="flex items-center gap-1.5">
       {/* Like button */}
       <button
-        className={`inline-flex items-center gap-1 rounded-full transition ${buttonSize} ${
+        className={`inline-flex items-center gap-1 rounded-full transition active:scale-[0.97] motion-reduce:active:scale-100 ${buttonSize} ${
           liked
-            ? "bg-roseSoft/70 text-cocoa/80 shadow-sm"
-            : "bg-white/60 text-cocoa/50 hover:bg-white/85"
+            ? "bg-[var(--app-accent)]/20 text-[var(--app-accent)] font-medium shadow-sm"
+            : "bg-white/50 text-[var(--app-muted)] hover:bg-white/80 hover:text-[var(--app-text)]"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
@@ -479,7 +482,7 @@ export default function ContentInteractionBar({
           toggleLike();
         }}
         disabled={disabled || busyLike}
-        aria-label={liked ? "取消点赞" : "点赞"} title={liked ? "取消点赞" : "点赞"}
+        aria-pressed={liked} aria-label={liked ? "取消点赞" : "点赞"}
       >
         <span className={busyLike ? "animate-pulse" : ""}>{liked ? "❤️" : "🤍"}</span>
         {likeCount > 0 && <span className="tabular-nums text-[10px]">{likeCount}</span>}
@@ -493,10 +496,10 @@ export default function ContentInteractionBar({
           return (
             <button
               key={r.id}
-              className={`inline-flex items-center gap-0.5 rounded-full transition ${buttonSize} ${
+              className={`inline-flex items-center gap-0.5 rounded-full transition active:scale-[0.97] motion-reduce:active:scale-100 ${buttonSize} ${
                 entry.active
-                  ? "bg-roseSoft/70 text-cocoa/80 shadow-sm"
-                  : "bg-white/60 text-cocoa/50 hover:bg-white/85"
+                  ? "bg-[var(--app-accent)]/20 text-[var(--app-accent)] font-medium shadow-sm"
+                  : "bg-white/50 text-[var(--app-muted)] hover:bg-white/80 hover:text-[var(--app-text)]"
               } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -504,7 +507,7 @@ export default function ContentInteractionBar({
                 toggleReaction(r.id);
               }}
               disabled={disabled || isBusy}
-              aria-label={entry.active ? `取消${r.label}` : r.label} title={entry.active ? `取消${r.label}` : r.label}
+              aria-pressed={entry.active} aria-label={entry.active ? `取消${r.label}` : r.label}
             >
               <span className={isBusy ? "animate-pulse" : ""}>{r.emoji}</span>
               {entry.count > 0 && (
@@ -517,7 +520,7 @@ export default function ContentInteractionBar({
       {/* Comment button */}
       {showComments && (
         <button
-          className={`inline-flex items-center gap-1 rounded-full bg-white/60 hover:bg-white/85 transition ${buttonSize} ${
+          className={`inline-flex items-center gap-1 rounded-full bg-white/50 hover:bg-white/80 hover:text-[var(--app-text)] transition active:scale-[0.97] motion-reduce:active:scale-100 ${buttonSize} ${
             disabled ? "opacity-50 cursor-not-allowed" : ""
           }`}
           onClick={(e) => {
@@ -526,7 +529,7 @@ export default function ContentInteractionBar({
             onOpenComments?.();
           }}
           disabled={disabled}
-          aria-label="评论" title="评论"
+          aria-label={commentCount > 0 ? `评论 (${commentCount})` : "评论"}
         >
           <span>💬</span>
           {!compact && commentCount > 0 && (
