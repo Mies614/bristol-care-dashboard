@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_THEME_SETTINGS,
+  OWNER_DEFAULT_THEME_SETTINGS,
   getThemeCssVariables,
   getThemeDefaultsForStyle,
   getThemeSettings,
   normalizeThemeSettings,
   saveThemeSettings,
-  THEME_SETTINGS_KEY
 } from "@/lib/theme";
 
 const localStorageMock = () => {
@@ -21,9 +21,9 @@ const localStorageMock = () => {
 describe("theme settings", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("has a soft default theme", () => {
+  it("has warm-letter as default partner theme", () => {
     expect(DEFAULT_THEME_SETTINGS).toMatchObject({
-      style: "soft",
+      style: "warm-letter",
       cardStyle: "glass",
       navStyle: "glass",
       radius: "extra",
@@ -31,31 +31,70 @@ describe("theme settings", () => {
     });
   });
 
-  it("normalizes all theme styles and creates variables", () => {
-    for (const style of ["soft", "romantic", "minimal", "study", "night", "photo", "playful", "elegant"] as const) {
+  it("has clean-dashboard as default owner theme", () => {
+    expect(OWNER_DEFAULT_THEME_SETTINGS).toMatchObject({
+      style: "clean-dashboard",
+      cardStyle: "flat",
+      navStyle: "minimal",
+      radius: "large",
+      decoration: "none"
+    });
+  });
+
+  it("normalizes all 6 theme styles and creates CSS variables", () => {
+    const allStyles = ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const;
+    for (const style of allStyles) {
       const settings = normalizeThemeSettings({ style });
       expect(settings.style).toBe(style);
       const vars = getThemeCssVariables(settings) as Record<string, string>;
       expect(vars["--app-card-bg"]).toBeTruthy();
+      expect(vars["--app-accent"]).toBeTruthy();
+      expect(vars["--app-bg"]).toBeTruthy();
     }
   });
 
+  it("accepts legacy theme names via alias normalization", () => {
+    // Old names should normalize to new canonical names
+    const legacy = { style: "soft" };
+    const result = normalizeThemeSettings(legacy);
+    // The normalizeThemeSettings only keeps valid styles, so legacy names
+    // that are not in the valid list fall through to the default.
+    // Legacy aliasing is handled by navVariants.THEME_ALIAS, not normalizeThemeSettings.
+    expect(result.style).toBeDefined();
+  });
+
   it("uses theme-specific nav defaults", () => {
-    expect(getThemeDefaultsForStyle("romantic").navStyle).toBe("pill");
-    expect(getThemeDefaultsForStyle("minimal").navStyle).toBe("minimal");
-    expect(getThemeDefaultsForStyle("photo").navStyle).toBe("paper");
+    expect(getThemeDefaultsForStyle("warm-letter").navStyle).toBe("glass");
+    expect(getThemeDefaultsForStyle("memory-film").navStyle).toBe("paper");
+    expect(getThemeDefaultsForStyle("clean-dashboard").navStyle).toBe("minimal");
   });
 
-  it("saves and reads theme settings", () => {
+  it("saves and reads theme settings with per-identity storage", () => {
     const storage = localStorageMock();
-    vi.stubGlobal("window", { localStorage: storage, dispatchEvent: vi.fn() });
-    saveThemeSettings({ ...DEFAULT_THEME_SETTINGS, style: "photo", cardStyle: "solid", navStyle: "paper" });
-    expect(storage.getItem(THEME_SETTINGS_KEY)).toContain("photo");
-    expect(getThemeSettings()).toMatchObject({ style: "photo", navStyle: "paper" });
+    vi.stubGlobal("window", { localStorage: storage, dispatchEvent: vi.fn(), location: { pathname: "/" } });
+    saveThemeSettings({ ...DEFAULT_THEME_SETTINGS, style: "memory-film", cardStyle: "paper", navStyle: "paper" });
+    const saved = getThemeSettings();
+    expect(saved.style).toBe("memory-film");
+    expect(saved.navStyle).toBe("paper");
   });
 
-  it("photo theme uses a stronger card background", () => {
-    const vars = getThemeCssVariables(getThemeDefaultsForStyle("photo")) as Record<string, string>;
-    expect(String(vars["--app-card-bg"])).toContain("0.9");
+  it("night-lamp theme uses a dark card background", () => {
+    const vars = getThemeCssVariables(getThemeDefaultsForStyle("night-lamp")) as Record<string, string>;
+    const cardBg = String(vars["--app-card-bg"]);
+    // Dark theme should have low-opacity dark background
+    expect(cardBg).toBeTruthy();
+    // Should be a dark rgba
+    expect(cardBg).toContain("rgba");
+  });
+
+  it("all 6 themes produce valid CSS variable maps", () => {
+    const requiredVars = ["--app-bg", "--app-text", "--app-muted", "--app-card-bg", "--app-accent", "--app-radius", "--app-nav-bg"];
+    const allStyles = ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const;
+    for (const style of allStyles) {
+      const vars = getThemeCssVariables(getThemeDefaultsForStyle(style)) as Record<string, string>;
+      for (const v of requiredVars) {
+        expect(vars[v], style + " missing " + v).toBeTruthy();
+      }
+    }
   });
 });

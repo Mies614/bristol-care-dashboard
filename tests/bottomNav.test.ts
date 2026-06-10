@@ -89,21 +89,21 @@ describe("bottom nav", () => {
     }
   });
 
-  it("accepts all 8 theme styles in theme settings", () => {
-    for (const style of ["soft", "romantic", "minimal", "study", "night", "photo", "playful", "elegant"] as const) {
+  it("accepts all 6 theme styles in theme settings", () => {
+    for (const style of ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const) {
       expect(normalizeThemeSettings({ style }).style).toBe(style);
     }
   });
 
   it("normalizes theme aliases correctly", () => {
-    expect(normalizeThemeStyle("classic")).toBe("soft");
-    expect(normalizeThemeStyle("rose")).toBe("romantic");
-    expect(normalizeThemeStyle("lavender")).toBe("elegant");
-    expect(normalizeThemeStyle("sky")).toBe("study");
-    expect(normalizeThemeStyle("forest")).toBe("minimal");
-    expect(normalizeThemeStyle("sunshine")).toBe("playful");
-    expect(normalizeThemeStyle("ink")).toBe("night");
-    expect(normalizeThemeStyle("moonlight")).toBe("photo");
+    expect(normalizeThemeStyle("classic")).toBe("warm-letter");
+    expect(normalizeThemeStyle("rose")).toBe("warm-letter");
+    expect(normalizeThemeStyle("lavender")).toBe("soft-aurora");
+    expect(normalizeThemeStyle("sky")).toBe("soft-aurora");
+    expect(normalizeThemeStyle("forest")).toBe("garden");
+    expect(normalizeThemeStyle("sunshine")).toBe("warm-letter");
+    expect(normalizeThemeStyle("ink")).toBe("night-lamp");
+    expect(normalizeThemeStyle("moonlight")).toBe("memory-film");
   });
 
   it("normalizes nav style aliases correctly", () => {
@@ -112,13 +112,13 @@ describe("bottom nav", () => {
   });
 
   it("falls back to defaults for unknown values", () => {
-    expect(normalizeThemeStyle("unknown")).toBe("soft");
+    expect(normalizeThemeStyle("unknown")).toBe("warm-letter");
     expect(normalizeNavStyle("unknown")).toBe("glass");
   });
 
   it("generates nav container classes for all 5 nav styles", () => {
     for (const navStyle of ["glass", "pill", "paper", "minimal", "floating"] as const) {
-      const result = getNavContainerClass(navStyle, "soft");
+      const result = getNavContainerClass(navStyle, "warm-letter");
       expect(result).toBeTruthy();
       expect(result).toContain("mx-auto");
       expect(result).toContain("max-w-md");
@@ -138,12 +138,12 @@ describe("bottom nav", () => {
   });
 
   it("generates active indicator classes for minimal nav", () => {
-    const minimalIndicator = getActiveIndicatorClass("soft", "minimal");
+    const minimalIndicator = getActiveIndicatorClass("warm-letter", "minimal");
     expect(minimalIndicator).toContain("after:absolute");
     expect(minimalIndicator).toContain("after:bottom-0.5");
 
     // Non-minimal nav styles should return empty string
-    const glassIndicator = getActiveIndicatorClass("soft", "glass");
+    const glassIndicator = getActiveIndicatorClass("warm-letter", "glass");
     expect(glassIndicator).toBe("");
   });
 
@@ -173,7 +173,7 @@ describe("bottom nav", () => {
   });
 
   it("generates status dot classes for all theme styles", () => {
-    for (const style of ["soft", "romantic", "minimal", "study", "night", "photo", "playful", "elegant"] as const) {
+    for (const style of ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const) {
       const result = getStatusDotClass(style);
       expect(result).toBeTruthy();
       expect(result).toContain("rounded-full");

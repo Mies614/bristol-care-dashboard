@@ -10,6 +10,7 @@ import { validateNoteAudioFile, validateNoteImageFile, validateNoteVideoFile } f
 import { VoiceRecorder } from "./VoiceRecorder";
 import { classifyUploadError } from "@/lib/uploadError";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { enqueueSyncItem } from "@/lib/syncQueue";
 import type { AppSide } from "@/lib/appIdentity";
 
 type Draft = {
@@ -114,6 +115,7 @@ export function NoteComposer({ onCreated, identityId: propIdentityId, side }: { 
       if (!response.ok) {
         setMessage([payload.error || "文件已上传，但记录保存失败，请重试保存。", payload.code ? `code: ${payload.code}` : "", payload.step ? `step: ${payload.step}` : "", payload.detail ? `detail: ${payload.detail}` : ""].filter(Boolean).join(" · "));
         setUploadCanRetry(true);
+        enqueueSyncItem({ type: "note", method: "POST", url: "/api/notes", body: { code, author, identity: author, content: draft.content, display_style: draft.displayStyle, mood: draft.mood || undefined }, spaceCode: code, identity: author });
         return;
       }
       setDraft({ content: "", displayStyle: "sticky", mood: "" });
