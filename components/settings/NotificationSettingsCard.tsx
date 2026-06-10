@@ -241,7 +241,7 @@ export function NotificationSettingsCard() {
           )}
           {pushState === "misconfigured" && (
             <p className="text-[10px] text-amber/70">
-              通知服务暂未配置（VAPID 密钥缺失）。运行 npm run generate:vapid 生成密钥。
+              通知服务暂未配置，请在管理后台完成密钥设置。
             </p>
           )}
         </div>

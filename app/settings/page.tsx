@@ -597,6 +597,7 @@ export default function SettingsPage() {
                 className="hidden"
                 type="file"
                 accept="application/json"
+                aria-label="选择 JSON 备份文件"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
@@ -647,7 +648,7 @@ export default function SettingsPage() {
 
         {/* ──────────────────── 9. 诊断 ──────────────────── */}
         <SettingsSection title="诊断" subtitle="检查系统健康和调试工具" defaultOpen={false}>
-          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可检查 Supabase 连接、localStorage 状态和服务的各项健康指标，并一键复制诊断报告。</p>
+          <p className="text-xs text-[var(--app-muted)] mb-3">诊断页面可以检查服务连接和各项健康指标，并一键复制诊断报告。</p>
           <a className="block w-full" href="/debug"><AppButton variant="secondary" className="w-full">🔍 打开诊断页面</AppButton></a>
         </SettingsSection>
       </div>

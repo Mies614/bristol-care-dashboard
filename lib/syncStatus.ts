@@ -73,7 +73,7 @@ export function friendlySyncError(raw: string | null): string | null {
     return "云端权限不足，请检查访问码";
   if (raw.includes("not found") || raw.includes("404"))
     return "云端空间未找到，请确认访问码正确";
-  return raw.length > 120 ? raw.slice(0, 120) + "..." : raw;
+  return "同步遇到一点问题，稍后会自动重试。";
 }
 
 export function getStorageModeLabel(mode: StorageMode): string {

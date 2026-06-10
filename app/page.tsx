@@ -5,6 +5,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
+import { AppEmptyState } from "@/components/ui/AppEmptyState";
+import { AppCard } from "@/components/ui/AppCard";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare } from "@/components/WeatherCareCard";
 import { WeatherCareHint } from "@/components/WeatherCareHint";
@@ -292,8 +294,16 @@ export default function HomePage() {
         initial="hidden"
         animate="visible"
       >
-        {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
-        {syncMessage ? <p className="notice">{syncMessage}</p> : null}
+        {initError ? (
+          <AppCard variant="soft">
+            <p className="text-sm text-[var(--app-muted)]">页面初始化遇到一点问题，已使用默认数据。</p>
+          </AppCard>
+        ) : null}
+        {syncMessage ? (
+          <AppCard variant="soft">
+            <p className="text-sm text-[var(--app-muted)]">{syncMessage}</p>
+          </AppCard>
+        ) : null}
 
         {/* 1. TodaySummary — first priority */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>
@@ -335,7 +345,7 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              <p className="empty-state text-left">相册还在等第一张回忆。</p>
+              <AppEmptyState title="相册还在等第一张回忆。" />
             )}
           </section>
         </motion.div>

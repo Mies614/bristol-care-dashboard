@@ -309,9 +309,9 @@ export function NoteCard({
         {/* Admin controls */}
         {onPatch ? (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/60 pt-3" onClick={(event) => event.stopPropagation()}>
-            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={onEdit} type="button">编辑</button>
-            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button">{note.pinned ? "取消置顶" : "置顶"}</button>
-            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: note.active })} type="button">{note.active ? "隐藏" : "恢复"}</button>
+            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={onEdit} type="button" aria-label="编辑小纸条">编辑</button>
+            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "toggle_pinned" })} type="button" aria-label={note.pinned ? "取消置顶" : "置顶"}>{note.pinned ? "取消置顶" : "置顶"}</button>
+            <button className="btn-secondary btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "set_active", active: note.active })} type="button" aria-label={note.active ? "隐藏小纸条" : "恢复小纸条"}>{note.active ? "隐藏" : "恢复"}</button>
             <select className="field h-7 w-14 min-w-0 py-0 text-xs" disabled={busy} value={note.displayStyle || "sticky"} onChange={(event) => onPatch({ id: note.id, action: "change_style", display_style: event.target.value })}>
               <option value="sticky">便签</option>
               <option value="postcard">明信片</option>
@@ -321,7 +321,7 @@ export function NoteCard({
               <option value="timeline">时间线</option>
               <option value="romantic">浪漫</option>
             </select>
-            <button className="btn-danger btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button">删除</button>
+            <button className="btn-danger btn-small text-xs" disabled={busy} onClick={() => onPatch({ id: note.id, action: "delete" })} type="button" aria-label="删除小纸条">删除</button>
           </div>
         ) : null}
       </article>

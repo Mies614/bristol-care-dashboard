@@ -86,12 +86,12 @@ export function VoiceRecorder({ onChange }: { onChange: (blob: Blob | null) => v
       <div className="flex flex-wrap items-center gap-2">
         {supported ? (
           recording ? (
-            <button className="btn-danger btn-small" type="button" onClick={stop}>停止录音 {seconds}s</button>
+            <button className="btn-danger btn-small" type="button" onClick={stop} aria-label="停止录音">停止录音 {seconds}s</button>
           ) : (
-            <button className="btn-secondary btn-small" type="button" onClick={start}>开始录音</button>
+            <button className="btn-secondary btn-small" type="button" onClick={start} aria-label="开始录音">开始录音</button>
           )
         ) : <span className="text-xs">当前浏览器暂不支持网页录音，可以上传一段已有音频。</span>}
-        {audioUrl ? <button className="btn-secondary btn-small" type="button" onClick={clear}>清除录音</button> : null}
+        {audioUrl ? <button className="btn-secondary btn-small" type="button" onClick={clear} aria-label="清除录音">清除录音</button> : null}
       </div>
       {audioUrl ? <audio className="mt-3 w-full" src={audioUrl} controls /> : null}
       <p className="mt-2 text-xs text-cocoa/50">最长建议 5 分钟，超过会自动停止。</p>

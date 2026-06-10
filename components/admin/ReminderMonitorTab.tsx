@@ -72,7 +72,7 @@ export function ReminderMonitorTab({ password }: ReminderMonitorTabProps) {
       });
       const data = await res.json();
       if (data.status === "unavailable") {
-        setMessage(data.message || "Supabase 未配置，提醒监控不可用。");
+        setMessage(data.message || "云端服务未配置，提醒监控不可用。");
       } else if (data.error) {
         setMessage(data.error);
       } else {

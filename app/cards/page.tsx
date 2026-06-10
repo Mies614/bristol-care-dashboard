@@ -157,9 +157,9 @@ export default function CardsPage() {
       <p className="-mt-2 mb-4 rounded-[var(--app-radius)] bg-white/62 px-3 py-2 text-sm text-[var(--app-muted)]">已保存 {savedCount}/{cards.length || 0} · 图片只保存在当前设备，离线也可以打开已保存的卡。</p>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <AppButton variant="primary" onClick={() => setCreating(true)}>新增会员卡</AppButton>
-        <AppButton variant="secondary" onClick={() => setSorting((current) => !current)}>{sorting ? "完成排序" : "编辑排序"}</AppButton>
-        <AppButton variant="secondary" onClick={restoreDefaults}>恢复默认卡</AppButton>
+        <AppButton variant="primary" onClick={() => setCreating(true)} aria-label="新增会员卡">新增会员卡</AppButton>
+        <AppButton variant="secondary" onClick={() => setSorting((current) => !current)} aria-label={sorting ? "完成排序" : "编辑排序"}>{sorting ? "完成排序" : "编辑排序"}</AppButton>
+        <AppButton variant="secondary" onClick={restoreDefaults} aria-label="恢复默认卡">恢复默认卡</AppButton>
       </div>
 
       {message ? (
@@ -184,7 +184,7 @@ export default function CardsPage() {
       ) : (
         <AppCard>
           <p className="py-8 text-center text-sm text-[var(--app-muted)]">还没有会员卡，可以先添加一张。</p>
-          <AppButton variant="primary" className="mt-3 w-full" onClick={() => setCreating(true)}>新增会员卡</AppButton>
+          <AppButton variant="primary" className="mt-3 w-full" onClick={() => setCreating(true)} aria-label="新增会员卡">新增会员卡</AppButton>
         </AppCard>
       )}
 

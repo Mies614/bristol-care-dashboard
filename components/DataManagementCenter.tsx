@@ -108,8 +108,8 @@ export function DataManagementCenter({
                 } else {
                   setMessage("导入完成，暂未同步到云端。");
                 }
-              } catch (error) {
-                setMessage(error instanceof Error ? error.message : "导入失败。");
+              } catch (_error) {
+                setMessage("导入失败，请检查文件格式后重试。");
               } finally {
                 event.currentTarget.value = "";
               }

@@ -41,7 +41,7 @@ const filters = [
 ] as const;
 
 function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "upload_video" | "save_metadata", error: unknown) {
-  const message = error instanceof Error ? error.message : String(error || "未知错误");
+  const _detail = error instanceof Error ? error.message : String(error || "");
   const label =
     stage === "generate_thumbnail"
       ? "视频封面生成失败"
@@ -50,7 +50,11 @@ function formatUploadError(stage: "generate_thumbnail" | "upload_image" | "uploa
         : stage === "upload_video"
           ? "视频上传失败"
           : "相册保存失败";
-  return `stage: ${stage} · error: ${label} · detail: ${message}`;
+  // Only show stage detail in development; user-facing message stays clean
+  if (process.env.NODE_ENV === "development") {
+    return `${label} · ${_detail}`;
+  }
+  return label + "，请稍后再试。";
 }
 
 export type AlbumsPageContentProps = {

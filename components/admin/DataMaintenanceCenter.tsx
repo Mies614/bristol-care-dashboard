@@ -279,7 +279,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
       );
       const p = await res.json() as ApiResponse;
       if (p.status === "unavailable") {
-        setMessage("Supabase 未配置，无法检查孤儿文件。");
+        setMessage("云端存储未配置，无法检查孤儿文件。");
       } else if (p.ok) {
         const summary = p.summary as OrphanSummary;
         setOrphanSummary(summary);
@@ -351,7 +351,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
       {tab === "backup" && (
         <div className="space-y-3">
           <p className="text-xs text-cocoa/50">
-            从 Supabase 导出完整数据备份为 JSON 文件。包含小纸条、DDL、课程、相册和经期记录。
+            从云端导出完整数据备份为 JSON 文件。包含小纸条、DDL、课程、相册和经期记录。
           </p>
           <div className="flex flex-wrap gap-2">
             <AppButton variant="primary" size="sm" onClick={handleExport} disabled={loading || !password}>
@@ -504,7 +504,7 @@ export function DataMaintenanceCenter({ onRefresh }: { onRefresh: () => void }) 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs text-cocoa/50">
-              检查 Supabase Storage 中的孤儿文件（未被数据库引用）和缺失引用（数据库引用但 Storage 中不存在）。只检查不删除。
+              检查云端存储中的孤儿文件（未被数据库引用）和缺失引用（数据库引用但云端中不存在）。只检查不删除。
             </p>
             <AppButton variant="secondary" size="sm" onClick={fetchOrphans} disabled={orphanLoading}>
               {orphanLoading ? "检查中..." : "🔍 检查孤儿文件"}

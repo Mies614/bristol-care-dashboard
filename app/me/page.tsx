@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
+import { AppCard } from "@/components/ui/AppCard";
 import { ActionTile } from "@/components/ui/ActionTile";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare, WeatherCareCard } from "@/components/WeatherCareCard";
@@ -274,8 +275,16 @@ export default function MeHomePage() {
 
       {/* ── Cards ── */}
       <motion.div className="space-y-3" variants={safeVariants(staggerContainer, reduceMotion)} initial="hidden" animate="visible">
-        {initError ? <p className="notice notice-error">页面初始化遇到一点问题，已使用默认数据。{initError}</p> : null}
-        {syncMessage ? <p className="notice">{syncMessage}</p> : null}
+        {initError ? (
+          <AppCard variant="soft">
+            <p className="text-sm text-[var(--app-muted)]">页面初始化遇到一点问题，已使用默认数据。</p>
+          </AppCard>
+        ) : null}
+        {syncMessage ? (
+          <AppCard variant="soft">
+            <p className="text-sm text-[var(--app-muted)]">{syncMessage}</p>
+          </AppCard>
+        ) : null}
 
         {/* XiaoguaiStatusCard */}
         <motion.div variants={safeVariants(staggerItem, reduceMotion)}>

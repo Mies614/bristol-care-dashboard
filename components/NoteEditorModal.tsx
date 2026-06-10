@@ -74,8 +74,8 @@ export function NoteEditorModal({ note, onClose, onSave }: { note: LoveNote; onC
           展示这张小纸条
         </label>
         <div className="flex gap-2">
-          <button className="btn-primary flex-1" disabled={saving} type="submit">{saving ? "保存中..." : "保存"}</button>
-          <button className="btn-secondary flex-1" type="button" onClick={onClose}>取消</button>
+          <button className="btn-primary flex-1" disabled={saving} type="submit" aria-label="保存编辑">{saving ? "保存中..." : "保存"}</button>
+          <button className="btn-secondary flex-1" type="button" onClick={onClose} aria-label="取消编辑">取消</button>
         </div>
       </motion.form>
     </motion.div>

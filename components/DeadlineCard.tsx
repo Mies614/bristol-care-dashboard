@@ -44,22 +44,22 @@ export function DeadlineCard({
       {(onToggle || onEdit || onDelete || onCalendar) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {onToggle ? (
-            <button className="btn-secondary btn-small" onClick={onToggle}>
+            <button className="btn-secondary btn-small" onClick={onToggle} aria-label={deadline.status === "done" ? "标记为未完成" : "标记为已完成"}>
               {deadline.status === "done" ? "标为待办" : "标记完成"}
             </button>
           ) : null}
           {onEdit ? (
-            <button className="btn-secondary btn-small" onClick={onEdit}>
+            <button className="btn-secondary btn-small" onClick={onEdit} aria-label="编辑 DDL">
               编辑
             </button>
           ) : null}
           {onCalendar ? (
-            <button className="btn-secondary btn-small" disabled={deadline.status === "done"} onClick={onCalendar}>
+            <button className="btn-secondary btn-small" disabled={deadline.status === "done"} onClick={onCalendar} aria-label="添加到日历">
               添加提醒
             </button>
           ) : null}
           {onDelete ? (
-            <button className="btn-danger btn-small" onClick={onDelete}>
+            <button className="btn-danger btn-small" onClick={onDelete} aria-label="删除 DDL">
               删除
             </button>
           ) : null}

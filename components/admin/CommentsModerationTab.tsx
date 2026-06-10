@@ -177,7 +177,7 @@ export function CommentsModerationTab({ password }: { password: string }) {
     <div className="space-y-4">
       {supabaseUnavailable && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-800">
-          ⚠️ Supabase 未配置或不可用，无法加载评论和互动数据。
+          ⚠️ 云端服务未配置或不可用，无法加载评论和互动数据。
           <button
             className="ml-2 underline hover:text-amber-600"
             onClick={fetchAll}

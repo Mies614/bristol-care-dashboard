@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { useAccessibleMotion, safeVariants, staggerItem } from "@/lib/design/motion";
+
+// ─── Types ───────────────────────────────────────────────
 
 interface MissYouData {
   todayCount: number;
@@ -17,13 +19,108 @@ interface MissYouData {
   unreadFromOtherEvents: Array<{ id: string; author: string; message: string; created_at: string }>;
 }
 
+interface HeartSprite {
+  id: number;
+  x: number;
+  delay: number;
+  drift: "center" | "left" | "right";
+  char: string;
+  size: number;
+}
+
+interface PendingItem {
+  id: string;
+  author: string;
+  recipient: string;
+  message: string;
+  localDate: string;
+  createdAt: string;
+}
+
+// ─── Constants ───────────────────────────────────────────
+
+const HEART_CHARS = ["♥", "♡", "❤", "💕", "💗"];
+const DRIFT_DIRS: HeartSprite["drift"][] = ["center", "left", "right"];
 const FEEDBACK_MESSAGES = [
   "收到啦，这一下会被好好收起来。",
   "我也会想你。",
   "这一刻已经放进今天的小心事里。",
   "想你这件事，今天也有记录啦。",
-  "这一下轻轻的，但很重要。"
+  "这一下轻轻的，但很重要。",
 ];
+
+// ─── Intensity levels ────────────────────────────────────
+// Based on the user's own todayCount
+
+type Intensity = "quiet" | "warm" | "glowing" | "full" | "overflow";
+
+function getIntensity(selfCount: number): Intensity {
+  if (selfCount === 0) return "quiet";
+  if (selfCount <= 2) return "warm";
+  if (selfCount <= 5) return "glowing";
+  if (selfCount <= 9) return "full";
+  return "overflow";
+}
+
+function getIntensityLabel(intensity: Intensity, identityId: string): string {
+  const isOwner = identityId === "me";
+  switch (intensity) {
+    case "quiet":
+      return isOwner ? "今天还没想小乖" : "今天还没按下想你";
+    case "warm":
+      return isOwner ? "今天想了小乖几次" : "今天想了他几次";
+    case "glowing":
+      return isOwner ? "今天有点想小乖" : "今天有点想他";
+    case "full":
+      return isOwner ? "今天很想小乖" : "今天很想他";
+    case "overflow":
+      return isOwner ? "想念快装满了" : "想念快装满了";
+  }
+}
+
+function getIntensityEmoji(intensity: Intensity): string {
+  switch (intensity) {
+    case "quiet": return "💭";
+    case "warm": return "💕";
+    case "glowing": return "💗";
+    case "full": return "💝";
+    case "overflow": return "💖";
+  }
+}
+
+function getIntensityBg(intensity: Intensity): string {
+  switch (intensity) {
+    case "quiet":
+      return "bg-gradient-to-br from-white/88 via-white/80 to-white/80";
+    case "warm":
+      return "bg-gradient-to-br from-white/88 via-blush/20 to-white/80";
+    case "glowing":
+      return "bg-gradient-to-br from-white/88 via-blush/35 to-roseSoft/20";
+    case "full":
+      return "bg-gradient-to-br from-white/90 via-blush/50 to-roseSoft/30";
+    case "overflow":
+      return "bg-gradient-to-br from-white/92 via-blush/60 to-roseSoft/40";
+  }
+}
+
+function getIntensityGlow(intensity: Intensity): string {
+  if (intensity === "quiet" || intensity === "warm") return "";
+  if (intensity === "overflow") return "shadow-glow animate-heart-glow";
+  if (intensity === "full") return "shadow-glow";
+  return "shadow-soft";
+}
+
+function getHeartCount(intensity: Intensity): number {
+  switch (intensity) {
+    case "quiet": return 0;
+    case "warm": return 0;
+    case "glowing": return 2;
+    case "full": return 3;
+    case "overflow": return 5;
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────
 
 function getLocalDateKey(): string {
   try {
@@ -58,15 +155,6 @@ function formatTime(isoString: string): string {
   } catch {
     return "";
   }
-}
-
-interface PendingItem {
-  id: string;
-  author: string;
-  recipient: string;
-  message: string;
-  localDate: string;
-  createdAt: string;
 }
 
 function getPendingKey(identityId: string): string {
@@ -108,6 +196,8 @@ function getCardTitle(identityId: string): string {
   return identityId === "me" ? "想小乖" : "想你";
 }
 
+// ─── Component ───────────────────────────────────────────
+
 export interface MissYouCombinedCardProps {
   spaceCode?: string;
   identityId?: string;
@@ -115,10 +205,13 @@ export interface MissYouCombinedCardProps {
   variant?: "default" | "compact";
 }
 
+let heartIdCounter = 0;
+
 export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: propIdentityId, appSide: _appSide, variant = "default" }: MissYouCombinedCardProps = {}) {
   const identityId = propIdentityId || DEFAULT_NORMAL_IDENTITY_ID;
   const spaceCode = propSpaceCode || getDefaultSpaceCode();
   const isCompact = variant === "compact";
+  const isOwner = identityId === "me";
 
   const [data, setData] = useState<MissYouData>({
     todayCount: 0,
@@ -130,11 +223,19 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
     unreadFromOtherEvents: []
   });
   const [loading, setLoading] = useState(false);
-  const [animating, setAnimating] = useState(false);
-  const [hearts, setHearts] = useState<Array<{ id: number; left: number }>>([]);
+  const [sprites, setSprites] = useState<HeartSprite[]>([]);
+  const [countBump, setCountBump] = useState(false);
   const [markingSeen, setMarkingSeen] = useState(false);
   const localDate = getLocalDateKey();
   const reduceMotion = useAccessibleMotion();
+  const spriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup sprite timer on unmount
+  useEffect(() => {
+    return () => {
+      if (spriteTimerRef.current) clearTimeout(spriteTimerRef.current);
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -150,133 +251,118 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
           viewer: payload.viewer,
           lastSeenAt: payload.lastSeenAt,
           unreadFromOtherCount: payload.unreadFromOtherCount,
-          unreadFromOtherEvents: payload.unreadFromOtherEvents || []
+          unreadFromOtherEvents: payload.unreadFromOtherEvents || [],
         });
       }
     } catch {
-      // Silent fail
+      // Silently fail — miss-you data is optional for first paint
     }
-  }, [localDate, spaceCode, identityId]);
-
-  const retryPending = useCallback(async () => {
-    const pending = loadPendingQueue(identityId);
-    if (pending.length === 0) return;
-    const remaining: PendingItem[] = [];
-    for (const item of pending) {
-      try {
-        const response = await fetch("/api/miss-you", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            spaceCode,
-            author: item.author,
-            recipient: item.recipient,
-            message: item.message,
-            localDate: item.localDate
-          })
-        });
-        const payload = await response.json();
-        if (payload.ok) {
-          setData((prev) => ({
-            ...prev,
-            todayCount: payload.todayCount,
-            todayByAuthor: payload.todayByAuthor || {}
-          }));
-          toast.success("已同步成功 ✨");
-        } else {
-          remaining.push(item);
-        }
-      } catch {
-        remaining.push(item);
-      }
-    }
-    savePendingQueue(identityId, remaining);
-  }, [spaceCode, identityId]);
+  }, [spaceCode, localDate, identityId]);
 
   useEffect(() => {
     fetchData();
-    retryPending();
-  }, [fetchData, retryPending]);
+  }, [fetchData]);
 
-  async function handleMarkSeen() {
-    if (markingSeen) return;
+  // ─── Handle mark-seen ──────────────────
+
+  const handleMarkSeen = useCallback(async () => {
+    if (!data.unreadFromOtherEvents.length) return;
     setMarkingSeen(true);
     try {
-      const response = await fetch("/api/miss-you", {
+      const lastTime = data.unreadFromOtherEvents[0].created_at;
+      await fetch("/api/miss-you", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           spaceCode,
+          action: "markSeen",
+          lastSeenAt: lastTime,
           viewer: identityId,
-          localDate
-        })
+        }),
       });
-      const payload = await response.json();
-      if (payload.ok) {
-        setData((prev) => ({
-          ...prev,
-          unreadFromOtherCount: 0,
-          unreadFromOtherEvents: [],
-          lastSeenAt: payload.lastSeenAt
-        }));
-      }
+      setData((prev) => ({ ...prev, unreadFromOtherCount: 0, unreadFromOtherEvents: [] }));
     } catch {
-      // Silent fail
+      // Mark-seen failures are non-blocking
     } finally {
       setMarkingSeen(false);
     }
-  }
+  }, [data.unreadFromOtherEvents, spaceCode, identityId]);
 
-  async function handleClick() {
-    if (loading) return;
+  // ─── Handle click — heart burst + mutation ──────────────────
+
+  const handleClick = useCallback(async () => {
     setLoading(true);
-    try {
-      setAnimating(true);
-      if (!isCompact && !reduceMotion) {
-        setHearts((prev) => [...prev, { id: Date.now(), left: 30 + Math.random() * 40 }]);
-      }
+    setCountBump(true);
+    setTimeout(() => setCountBump(false), 400);
 
-      const recipient = getRecipientForAuthor(identityId);
+    // Spawn heart sprites
+    if (!reduceMotion) {
+      const count = isCompact ? 2 : 4;
+      const newSprites: HeartSprite[] = [];
+      for (let i = 0; i < count; i++) {
+        newSprites.push({
+          id: ++heartIdCounter,
+          x: 20 + Math.random() * 60,           // 20-80% from left
+          delay: i * 60 + Math.random() * 40,    // staggered 60-100ms apart
+          drift: DRIFT_DIRS[Math.floor(Math.random() * DRIFT_DIRS.length)],
+          char: HEART_CHARS[Math.floor(Math.random() * HEART_CHARS.length)],
+          size: 0.8 + Math.random() * 0.8,       // 0.8-1.6rem scale
+        });
+      }
+      setSprites((prev) => [...prev, ...newSprites]);
+
+      // Cleanup sprites after animation completes
+      if (spriteTimerRef.current) clearTimeout(spriteTimerRef.current);
+      spriteTimerRef.current = setTimeout(() => {
+        setSprites((prev) => prev.filter((s) => !newSprites.includes(s)));
+      }, 1500);
+    }
+
+    try {
       const response = await fetch("/api/miss-you", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           spaceCode,
           author: identityId,
-          recipient,
-          localDate
-        })
+          recipient: getRecipientForAuthor(identityId),
+          message: "想你一下",
+          localDate,
+        }),
       });
       const payload = await response.json();
-
       if (payload.ok) {
-        setData((prev) => ({
-          ...prev,
-          todayCount: payload.todayCount,
-          todayByAuthor: payload.todayByAuthor || {}
-        }));
-        const feedbackText = getMissYouFeedback(payload.todayCount);
-        toast(feedbackText, {
-          className: "!rounded-[var(--app-radius)] !border !border-[var(--app-card-border)] !bg-[var(--app-card-bg)] !text-[var(--app-text)]"
+        // Optimistically update count
+        setData((prev) => {
+          const byAuthor = { ...prev.todayByAuthor };
+          byAuthor[identityId] = (byAuthor[identityId] || 0) + 1;
+          return {
+            ...prev,
+            todayCount: prev.todayCount + 1,
+            todayByAuthor: byAuthor,
+            lastEvent: payload.event || prev.lastEvent,
+          };
         });
+        const feedback = getMissYouFeedback((data.todayByAuthor[identityId] || 0) + 1);
+        toast(feedback);
       } else {
+        // Queue locally
         const pending = loadPendingQueue(identityId);
         pending.push({
-          id: crypto.randomUUID?.() || String(Date.now()),
+          id: `pending_${Date.now()}`,
           author: identityId,
-          recipient,
+          recipient: getRecipientForAuthor(identityId),
           message: "想你一下",
           localDate,
           createdAt: new Date().toISOString()
         });
         savePendingQueue(identityId, pending);
-        const offlineMsg = "网络有点慢，先帮你存在本机。";
-        toast(offlineMsg);
+        toast("网络慢了一点，先帮你存在本机。");
       }
     } catch {
       const pending = loadPendingQueue(identityId);
       pending.push({
-        id: crypto.randomUUID?.() || String(Date.now()),
+        id: `pending_${Date.now()}`,
         author: identityId,
         recipient: getRecipientForAuthor(identityId),
         message: "想你一下",
@@ -284,13 +370,12 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
         createdAt: new Date().toISOString()
       });
       savePendingQueue(identityId, pending);
-      const offlineMsg = "网络有点慢，先帮你存在本机。";
-      toast(offlineMsg);
+      toast("网络慢了一点，先帮你存在本机。");
     } finally {
       setLoading(false);
-      setTimeout(() => setAnimating(false), 600);
+      
     }
-  }
+  }, [spaceCode, identityId, localDate, reduceMotion, isCompact, data.todayByAuthor]);
 
   const hasUnread = data.unreadFromOtherCount > 0;
   const todaysYouCount = data.todayByAuthor[identityId] || 0;
@@ -304,17 +389,103 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
     ? formatTime(partnerLatestEvent.created_at)
     : null;
 
-  // ── Compact mode ──
+  const intensity = getIntensity(todaysYouCount);
+  const intensityLabel = getIntensityLabel(intensity, identityId);
+  const intensityEmoji = getIntensityEmoji(intensity);
+  const bgClass = getIntensityBg(intensity);
+  const glowClass = getIntensityGlow(intensity);
+  const ambientHearts = getHeartCount(intensity);
+
+  // ── Shared button component ─────────────────────────────
+
+  const missYouButton = (
+    <button
+      className={`btn-primary btn-small text-[11px] transition-all duration-200 active:scale-[0.96] ${
+        countBump ? "animate-count-bump" : ""
+      }`}
+      disabled={loading}
+      onClick={handleClick}
+      aria-label={buttonLabel}
+    >
+      {loading ? "..." : buttonLabel}
+    </button>
+  );
+
+  const markSeenButton = hasUnread ? (
+    <button
+      className="btn-secondary btn-small text-[11px]"
+      disabled={markingSeen}
+      onClick={handleMarkSeen}
+      aria-label="标记为已读"
+    >
+      {markingSeen ? "..." : "知道啦"}
+    </button>
+  ) : null;
+
+  // ── Heart sprites render helper ─────────────────────────
+
+  const renderSprites = () => {
+    if (reduceMotion || sprites.length === 0) return null;
+    return sprites.map((sprite) => {
+      const animClass =
+        sprite.drift === "left" ? "animate-heart-float-left"
+        : sprite.drift === "right" ? "animate-heart-float-right"
+        : "animate-heart-float";
+      return (
+        <span
+          key={sprite.id}
+          className={`pointer-events-none absolute z-20 ${animClass}`}
+          style={{
+            left: `${sprite.x}%`,
+            bottom: "20%",
+            animationDelay: `${sprite.delay}ms`,
+            fontSize: `${sprite.size}rem`,
+          }}
+          aria-hidden="true"
+        >
+          {sprite.char}
+        </span>
+      );
+    });
+  };
+
+  // ── Ambient heart cluster ───────────────────────────────
+
+  const renderAmbientHearts = () => {
+    if (ambientHearts === 0 || isCompact) return null;
+    return (
+      <div className="mt-1.5 flex items-center gap-0.5" aria-hidden="true">
+        {Array.from({ length: ambientHearts }).map((_, i) => (
+          <span
+            key={i}
+            className="inline-block animate-heart-pop text-xs text-rose-300/70"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            ♥
+          </span>
+        ))}
+        {todaysYouCount > 5 && (
+          <span className="ml-1 text-[10px] text-rose-300/60">
+            ×{todaysYouCount}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // ── Compact mode ────────────────────────────────────────
+
   if (isCompact) {
     return (
       <motion.section
-        className="soft-card overflow-hidden bg-gradient-to-br from-white/85 via-blush/30 to-white/80"
+        className={`soft-card relative overflow-hidden ${bgClass}`}
         variants={safeVariants(staggerItem, reduceMotion)}
       >
-        <div className="flex items-center justify-between gap-2">
+        {renderSprites()}
+        <div className="relative z-10 flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-cocoa/70">
-              {cardTitle}
+              {intensityEmoji} {cardTitle}
               {partnerTodayCount > 0 ? ` · ${otherLabel}今天想你 ${partnerTodayCount} 次` : ""}
             </p>
             {partnerTodayCount > 0 && partnerLatestTime ? (
@@ -326,88 +497,86 @@ export function MissYouCombinedCard({ spaceCode: propSpaceCode, identityId: prop
                 还没收到{otherLabel}今天的想念
               </p>
             ) : null}
+            {todaysYouCount > 0 && (
+              <p className={`mt-0.5 text-xs ${countBump ? "animate-count-bump" : ""} ${intensity === "quiet" ? "text-cocoa/30" : intensity === "warm" ? "text-rose-400/70" : "text-rose-500/80"}`}>
+                {intensityLabel}
+              </p>
+            )}
+            {reduceMotion && todaysYouCount > 2 && renderAmbientHearts()}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {hasUnread && (
-              <button
-                className="btn-secondary btn-small text-[11px]"
-                disabled={markingSeen}
-                onClick={handleMarkSeen}
-              >
-                {markingSeen ? "..." : "知道啦"}
-              </button>
-            )}
-            <button
-              className={`btn-primary btn-small text-[11px] transition-transform ${animating ? "scale-95" : ""}`}
-              disabled={loading}
-              onClick={handleClick}
-            >
-              {loading ? "..." : buttonLabel}
-            </button>
+            {markSeenButton}
+            {missYouButton}
           </div>
         </div>
       </motion.section>
     );
   }
 
-  // ── Default mode ──
+  // ── Default mode ────────────────────────────────────────
+
   return (
     <motion.section
-      className="soft-card relative overflow-hidden bg-gradient-to-br from-white/88 via-blush/45 to-roseSoft/30"
+      className={`soft-card relative overflow-hidden ${bgClass} ${glowClass}`}
       variants={safeVariants(staggerItem, reduceMotion)}
     >
-      {/* ── 飘浮爱心 ── */}
-      {!reduceMotion && hearts.map((heart) => (
-        <span
-          key={heart.id}
-          className="pointer-events-none absolute animate-float-up text-xl"
-          style={{ left: `${heart.left}%`, bottom: "20%" }}
-          onAnimationEnd={() => setHearts((prev) => prev.filter((h) => h.id !== heart.id))}
-        >
-          ♥
-        </span>
-      ))}
+      {renderSprites()}
 
       <div className="relative z-10">
-        {/* ── 一行标题 + 计数 ── */}
-        <p className="text-sm font-semibold text-cocoa/70">
-          {cardTitle}{todaysYouCount > 0 ? ` · 今天已想了 ${todaysYouCount} 次` : ""}
-        </p>
+        {/* ── 标题 + 强度提示 ── */}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-cocoa/70">
+            {cardTitle}
+            {todaysYouCount > 0 ? ` · 今天已想了 ${todaysYouCount} 次` : ""}
+          </p>
+          {todaysYouCount > 0 && (
+            <span
+              className={`inline-block text-xs font-medium ${countBump ? "animate-count-bump" : ""} ${
+                intensity === "quiet" ? "text-cocoa/30"
+                : intensity === "warm" ? "text-rose-400/60"
+                : intensity === "glowing" ? "text-rose-400/80"
+                : intensity === "full" ? "text-rose-500/90"
+                : "text-rose-500"
+              }`}
+            >
+              {intensityLabel}
+            </span>
+          )}
+        </div>
 
         <p className="mt-0.5 text-xs text-cocoa/50">
-          {identityId === "me" ? "给她发一个轻轻的想念。" : "点一下，就把这一刻收起来。"}
+          {isOwner ? "给她发一个轻轻的想念。" : "点一下，就把这一刻收起来。"}
         </p>
+
+        {/* ── 强度爱心指示 ── */}
+        <div className="mt-2 flex items-center gap-3">
+          {/* Ambient heart cluster */}
+          {intensity !== "quiet" && renderAmbientHearts()}
+
+          {/* Count display for reduced motion */}
+          {reduceMotion && todaysYouCount > 0 && (
+            <span className="text-xs text-rose-400/70">
+              {intensityEmoji} {intensityLabel}
+            </span>
+          )}
+        </div>
 
         {/* ── 收到统计 ── */}
         {partnerTodayCount > 0 ? (
-          <p className="mt-1 text-xs text-cocoa/50">
+          <p className="mt-1.5 text-xs text-cocoa/50">
             💕 {otherLabel}今天想你 {partnerTodayCount} 次
             {partnerLatestTime ? ` · 上次 ${partnerLatestTime}` : ""}
           </p>
         ) : (
-          <p className="mt-1 text-xs text-cocoa/40">
+          <p className="mt-1.5 text-xs text-cocoa/40">
             还没收到{otherLabel}今天的想念
           </p>
         )}
 
         {/* ── 按钮组 ── */}
-        <div className="mt-2 flex items-center gap-2">
-          <button
-            className={`btn-primary btn-small transition-transform ${animating ? "scale-95" : ""}`}
-            disabled={loading}
-            onClick={handleClick}
-          >
-            {loading ? "..." : buttonLabel}
-          </button>
-          {hasUnread && (
-            <button
-              className="btn-secondary btn-small"
-              disabled={markingSeen}
-              onClick={handleMarkSeen}
-            >
-              {markingSeen ? "..." : "知道啦"}
-            </button>
-          )}
+        <div className="mt-2.5 flex items-center gap-2">
+          {missYouButton}
+          {markSeenButton}
         </div>
       </div>
     </motion.section>
