@@ -83,3 +83,55 @@ Located at `components/ui/`: button, card, dialog, badge, input, textarea, selec
 3. Never bypass App primitives to use raw shadcn in page-level components
 4. All new UI primitives go in `components/ui/`
 5. Keep imports clean: `@/components/ui/ComponentName`
+
+## Side-Aware Accents (Round 10)
+
+### Principles
+- **Partner side** (小乖端, `/**`): warm rose/cream/blush, paper-like, gentle
+- **Owner side** (我端, `/me/**`): subtle violet/indigo, gentle dashboard
+- Both sides share the same design tokens; accents are lightweight overlays
+- Never let the two sides look like completely different products
+
+### Components with side-aware support
+| Component | Path | Side-Aware Feature |
+|---|---|---|
+| BottomNav | `components/navigation/BottomNav.tsx` | `data-side` attribute, active pill color (partner=rose, owner=indigo) |
+| PageHeader | `components/ui/PageHeader.tsx` | `appSide` prop for icon accent color |
+| StatusPill | `components/ui/StatusPill.tsx` | `owner` and `partner` variants |
+| AppCard | `components/ui/AppCard.tsx` | Used with gradient backgrounds per side |
+
+### When NOT to use strong accents
+- Empty states (use neutral/muted tones)
+- Loading skeletons (use neutral)
+- Error messages (use danger variant only for critical errors)
+- Data tables and admin panels
+
+## Motion Rules (Round 10)
+
+### Tap/Hover Feedback
+- Tap: `active:scale-[0.97]` or opacity 0.85
+- Hover: subtle scale 1.01 or background lighten
+- Transition: 150–250ms, ease-out
+
+### Reduced Motion
+- Always check `prefers-reduced-motion` via `useAccessibleMotion()`
+- When reduced: disable scale animations, use opacity-only transitions
+- When reduced: set animation duration to 0
+
+### BottomNav Motion
+- Active pill slides between tabs (spring animation, disabled for reduced motion)
+- Icon scales up 1.12x on active
+- Label fades in/out smoothly
+
+## Touch Target Rules (Round 10)
+- Buttons in navigation: ≥ 44px
+- Action buttons: ≥ 40px
+- Close buttons (sheets/lightbox): 44px
+- File input labels: use sr-only input + visible styled label
+- All interactive elements must have aria-label
+
+## Safe Area (Round 10)
+- AppShell: `pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]`
+- BottomNav: `pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]`
+- MobileSheet: `pb-[calc(1rem+env(safe-area-inset-bottom,0px))]`
+- All fixed-bottom elements must account for safe-area

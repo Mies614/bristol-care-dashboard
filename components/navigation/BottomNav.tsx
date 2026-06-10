@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { READ_STATE_CHANGED_EVENT } from "@/lib/readState";
 import { Home, CalendarDays, Heart, CreditCard, Settings } from "lucide-react";
-import { getNavItemsForPath, getActiveNavHref, shouldShowBottomNav } from "@/lib/navigation";
+import { getNavItemsForPath, getActiveNavHref, shouldShowBottomNav, isOwnerPath } from "@/lib/navigation";
 import {
   getNavContainerClass,
   normalizeNavStyle,
@@ -32,6 +32,7 @@ interface NavStatus {
 export function BottomNav({ status }: { status?: NavStatus }) {
   const pathname = usePathname();
   const [settings, setSettings] = useState(() => getThemeSettings());
+  const isOwner = isOwnerPath(pathname);
 
   // All hooks must be called before any conditional returns
   const shouldShow = shouldShowBottomNav(pathname);
@@ -65,6 +66,11 @@ export function BottomNav({ status }: { status?: NavStatus }) {
 
   if (!shouldShow) return null;
 
+  // Side-aware active accent: partner=rose, owner=indigo
+  const sideAccentClass = isOwner
+    ? "owner-nav"
+    : "partner-nav";
+
   return (
     <div
       className={cn(
@@ -74,7 +80,8 @@ export function BottomNav({ status }: { status?: NavStatus }) {
     >
       <nav
         aria-label="main navigation"
-        className={cn(getNavContainerClass(navStyle, themeStyle), "overflow-visible")}
+        data-side={isOwner ? "owner" : "partner"}
+        className={cn(getNavContainerClass(navStyle, themeStyle), "overflow-visible", sideAccentClass)}
       >
         <ul className="flex items-center justify-around gap-0 overflow-visible">
           {navItems.map((item) => {
@@ -94,6 +101,7 @@ export function BottomNav({ status }: { status?: NavStatus }) {
                 themeStyle={themeStyle}
                 decoration={decoration}
                 hasStatusDot={hasStatusDot}
+                isOwner={isOwner}
               />
             );
           })}

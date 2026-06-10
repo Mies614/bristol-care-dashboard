@@ -23,6 +23,7 @@ interface BottomNavItemProps {
   themeStyle: AppThemeStyle;
   decoration: ThemeDecoration;
   hasStatusDot?: boolean;
+  isOwner?: boolean;
 }
 
 export function BottomNavItem({
@@ -34,6 +35,7 @@ export function BottomNavItem({
   themeStyle,
   decoration,
   hasStatusDot,
+  isOwner,
 }: BottomNavItemProps) {
   const reduceMotion = useAccessibleMotion();
 
@@ -46,6 +48,19 @@ export function BottomNavItem({
   );
 
   const labelClass = getNavLabelClass(isActive, navStyle);
+
+  // Side-aware active pill: partner=rose, owner=indigo
+  const activePillBg = isOwner
+    ? "bg-indigo-100/80"
+    : "bg-[var(--app-accent-soft)]";
+
+  const activeIconColor = isOwner
+    ? "text-indigo-500"
+    : "text-[var(--app-accent)]";
+
+  const inactiveIconColor = isOwner
+    ? "text-indigo-300/60"
+    : "text-[var(--app-muted)]";
 
   return (
     <motion.li
@@ -64,12 +79,12 @@ export function BottomNavItem({
           {isActive && navStyle !== "minimal" && (
             <motion.span
               className={cn(
-                "absolute inset-0 -inset-x-2 -inset-y-1 z-0",
+                "absolute inset-0 -inset-x-2 -inset-y-1 z-0 shadow-sm",
                 navStyle === "pill" || navStyle === "floating"
-                  ? "rounded-full bg-[var(--app-accent-soft)] shadow-sm"
+                  ? `rounded-full ${activePillBg}`
                   : navStyle === "paper"
-                    ? "rounded-xl bg-[var(--app-accent-soft)]/60"
-                    : "rounded-2xl bg-[var(--app-accent-soft)] shadow-sm",
+                    ? `rounded-xl ${activePillBg}/60`
+                    : `rounded-2xl ${activePillBg}`,
               )}
               layoutId="bottomNavPill"
               transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 26, mass: 0.9 }}
@@ -80,7 +95,7 @@ export function BottomNavItem({
           <motion.span
             className={cn(
               "relative z-10 flex items-center justify-center",
-              isActive ? "text-[var(--app-accent)]" : "text-[var(--app-muted)]",
+              isActive ? activeIconColor : inactiveIconColor,
             )}
             animate={{
               scale: isActive ? 1.12 : 1,
