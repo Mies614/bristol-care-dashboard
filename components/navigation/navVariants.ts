@@ -3,11 +3,9 @@ import type { AppThemeStyle, ThemeNavStyle, ThemeDecoration } from "@/lib/types"
 const THEME_ALIAS: Record<string, AppThemeStyle> = {
   // New canonical names
   "warm-letter": "warm-letter",
-  "memory-film": "memory-film",
   "soft-aurora": "soft-aurora",
   "clean-dashboard": "clean-dashboard",
   "night-lamp": "night-lamp",
-  "garden": "garden",
   // Legacy aliases (backward compat)
   soft: "warm-letter",
   classic: "warm-letter",
@@ -15,10 +13,10 @@ const THEME_ALIAS: Record<string, AppThemeStyle> = {
   rose: "warm-letter",
   playful: "warm-letter",
   sunshine: "warm-letter",
-  photo: "memory-film",
-  moonlight: "memory-film",
-  study: "garden",
-  forest: "garden",
+  photo: "warm-letter",
+  moonlight: "warm-letter",
+  study: "soft-aurora",
+  forest: "soft-aurora",
   minimal: "clean-dashboard",
   elegant: "soft-aurora",
   lavender: "soft-aurora",
@@ -107,7 +105,7 @@ export function getActiveIndicatorClass(themeStyle: AppThemeStyle, navStyle: The
 function getMinimalIndicator(theme: AppThemeStyle): string {
   switch (theme) {
     case "clean-dashboard":
-    case "garden":
+    case "soft-aurora":
       return "after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-[var(--app-accent)]";
     case "night-lamp":
       return "after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2 after:h-[3px] after:w-2 after:rounded-full after:bg-[var(--app-accent)] after:shadow-[0_0_8px_var(--app-accent)]";
@@ -141,7 +139,7 @@ export function getStatusDotClass(themeStyle: AppThemeStyle): string {
   if (theme === "night-lamp") {
     return "w-2 h-2 rounded-full bg-[var(--app-accent)] shadow-[0_0_6px_var(--app-accent)]";
   }
-  if (theme === "garden" || theme === "clean-dashboard") {
+  if (theme === "soft-aurora" || theme === "clean-dashboard") {
     return "w-2 h-2 rounded-full bg-green-500";
   }
   return "w-2 h-2 rounded-full bg-[var(--app-accent)]";

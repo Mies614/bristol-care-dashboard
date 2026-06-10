@@ -162,7 +162,7 @@ export type BackgroundSettings = {
   photoVisibility?: number;
 };
 
-export type AppThemeStyle = "warm-letter" | "memory-film" | "soft-aurora" | "clean-dashboard" | "night-lamp" | "garden";
+export type AppThemeStyle = "warm-letter" | "soft-aurora" | "clean-dashboard" | "night-lamp";
 
 export type ThemeCardStyle = "glass" | "solid" | "paper" | "flat" | "outline";
 

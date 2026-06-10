@@ -24,11 +24,9 @@ export const OWNER_DEFAULT_THEME_SETTINGS: ThemeSettings = {
 
 const styleDefaults: Record<AppThemeStyle, Pick<ThemeSettings, "cardStyle" | "navStyle" | "radius" | "decoration">> = {
   "warm-letter":     { cardStyle: "glass",   navStyle: "glass",    radius: "extra",  decoration: "stars" },
-  "memory-film":     { cardStyle: "paper",   navStyle: "paper",    radius: "large",  decoration: "tape" },
   "soft-aurora":     { cardStyle: "glass",   navStyle: "floating", radius: "extra",  decoration: "stars" },
   "clean-dashboard": { cardStyle: "flat",    navStyle: "minimal",  radius: "large",  decoration: "none" },
-  "night-lamp":      { cardStyle: "glass",   navStyle: "glass",    radius: "large",  decoration: "moon" },
-  "garden":          { cardStyle: "solid",   navStyle: "paper",    radius: "large",  decoration: "dots" }
+  "night-lamp":      { cardStyle: "glass",   navStyle: "glass",    radius: "large",  decoration: "moon" }
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,7 +39,7 @@ export function getThemeDefaultsForStyle(style: AppThemeStyle): ThemeSettings {
 
 export function normalizeThemeSettings(value: unknown): ThemeSettings {
   if (!isRecord(value)) return { ...DEFAULT_THEME_SETTINGS };
-  const validStyles: AppThemeStyle[] = ["warm-letter","memory-film","soft-aurora","clean-dashboard","night-lamp","garden"];
+  const validStyles: AppThemeStyle[] = ["warm-letter","soft-aurora","clean-dashboard","night-lamp"];
   const style = validStyles.includes(value.style as AppThemeStyle)
     ? value.style as AppThemeStyle
     : DEFAULT_THEME_SETTINGS.style;
@@ -144,13 +142,6 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
       muted: "rgba(90,62,53,0.64)", danger: "#c45a4e", warning: "#b8933a", success: "#5d8a6a",
       bg: "#fff8f0", "bg-soft": "#f5ece3"
     },
-    // 2. memory-film — warm amber/sepia, nostalgic photo feel
-    "memory-film": {
-      accent: "#a07850", soft: "rgba(220,200,180,0.70)", card: "rgba(255,252,248,0.85)",
-      nav: "rgba(255,250,245,0.84)", border: "rgba(230,215,200,0.78)", text: "#4a3a2e",
-      muted: "rgba(74,58,46,0.64)", danger: "#b05a4a", warning: "#a08030", success: "#6a8a5a",
-      bg: "#f5ede0", "bg-soft": "#ebe0d2"
-    },
     // 3. soft-aurora — cool lavender/sky/lilac, dreamy
     "soft-aurora": {
       accent: "#8b7fc0", soft: "rgba(220,210,245,0.74)", card: "rgba(255,255,255,0.80)",
@@ -173,13 +164,7 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
       bg: "#1a1c2e", "bg-soft": "#252638"
     },
     // 6. garden — sage/mint/cream, natural botanical
-    "garden": {
-      accent: "#6b8a6a", soft: "rgba(210,230,210,0.72)", card: "rgba(252,255,250,0.84)",
-      nav: "rgba(248,252,246,0.84)", border: "rgba(210,225,210,0.80)", text: "#3a503a",
-      muted: "rgba(58,80,58,0.64)", danger: "#c45a4e", warning: "#b8933a", success: "#4a8a5a",
-      bg: "#f2f7f0", "bg-soft": "#e4ede2"
-    }
-  };
+    };
   const p = palettes[theme.style];
   const cardStyle = theme.cardStyle;
 
@@ -204,11 +189,9 @@ export function getThemeCssVariables(settings: ThemeSettings): CSSProperties {
 
   const btnMap: Record<string, string> = {
     "warm-letter":     "linear-gradient(135deg,rgba(184,112,96,0.9),rgba(184,112,96,0.75))",
-    "memory-film":     "linear-gradient(135deg,#a07850,#b89060)",
     "soft-aurora":     "linear-gradient(135deg,#8b7fc0,#a090d0)",
     "clean-dashboard": "#5b7d8a",
-    "night-lamp":      "linear-gradient(135deg,rgba(232,200,74,0.85),rgba(200,170,60,0.75))",
-    "garden":          "linear-gradient(135deg,#6b8a6a,#80a080)"
+    "night-lamp":      "linear-gradient(135deg,rgba(232,200,74,0.85),rgba(200,170,60,0.75))"
   };
   return {
     "--app-bg": p.bg,

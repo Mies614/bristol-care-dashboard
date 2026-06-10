@@ -89,8 +89,8 @@ describe("bottom nav", () => {
     }
   });
 
-  it("accepts all 6 theme styles in theme settings", () => {
-    for (const style of ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const) {
+  it("accepts all 4 theme styles in theme settings", () => {
+    for (const style of ["warm-letter", "soft-aurora", "clean-dashboard", "night-lamp"] as const) {
       expect(normalizeThemeSettings({ style }).style).toBe(style);
     }
   });
@@ -100,10 +100,10 @@ describe("bottom nav", () => {
     expect(normalizeThemeStyle("rose")).toBe("warm-letter");
     expect(normalizeThemeStyle("lavender")).toBe("soft-aurora");
     expect(normalizeThemeStyle("sky")).toBe("soft-aurora");
-    expect(normalizeThemeStyle("forest")).toBe("garden");
+    expect(normalizeThemeStyle("forest")).toBe("soft-aurora");
     expect(normalizeThemeStyle("sunshine")).toBe("warm-letter");
     expect(normalizeThemeStyle("ink")).toBe("night-lamp");
-    expect(normalizeThemeStyle("moonlight")).toBe("memory-film");
+    expect(normalizeThemeStyle("moonlight")).toBe("warm-letter");
   });
 
   it("normalizes nav style aliases correctly", () => {
@@ -173,7 +173,7 @@ describe("bottom nav", () => {
   });
 
   it("generates status dot classes for all theme styles", () => {
-    for (const style of ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const) {
+    for (const style of ["warm-letter", "soft-aurora", "clean-dashboard", "night-lamp"] as const) {
       const result = getStatusDotClass(style);
       expect(result).toBeTruthy();
       expect(result).toContain("rounded-full");

@@ -13,11 +13,9 @@ interface Props {
 
 const THEME_ORDER: AppThemeStyle[] = [
   "warm-letter",
-  "memory-film",
   "soft-aurora",
   "clean-dashboard",
   "night-lamp",
-  "garden",
 ];
 
 /** Default theme for partner side. */

@@ -42,7 +42,7 @@ describe("theme settings", () => {
   });
 
   it("normalizes all 6 theme styles and creates CSS variables", () => {
-    const allStyles = ["warm-letter", "memory-film", "soft-aurora", "clean-dashboard", "night-lamp", "garden"] as const;
+    const allStyles = ["warm-letter", "soft-aurora", "clean-dashboard", "night-lamp"] as const;
     for (const style of allStyles) {
       const settings = normalizeThemeSettings({ style });
       expect(settings.style).toBe(style);
@@ -65,17 +65,17 @@ describe("theme settings", () => {
 
   it("uses theme-specific nav defaults", () => {
     expect(getThemeDefaultsForStyle("warm-letter").navStyle).toBe("glass");
-    expect(getThemeDefaultsForStyle("memory-film").navStyle).toBe("paper");
+    expect(getThemeDefaultsForStyle("soft-aurora").navStyle).toBe("floating");
     expect(getThemeDefaultsForStyle("clean-dashboard").navStyle).toBe("minimal");
   });
 
   it("saves and reads theme settings with per-identity storage", () => {
     const storage = localStorageMock();
     vi.stubGlobal("window", { localStorage: storage, dispatchEvent: vi.fn(), location: { pathname: "/" } });
-    saveThemeSettings({ ...DEFAULT_THEME_SETTINGS, style: "memory-film", cardStyle: "paper", navStyle: "paper" });
+    saveThemeSettings({ ...DEFAULT_THEME_SETTINGS, style: "soft-aurora", cardStyle: "glass", navStyle: "floating" });
     const saved = getThemeSettings();
-    expect(saved.style).toBe("memory-film");
-    expect(saved.navStyle).toBe("paper");
+    expect(saved.style).toBe("soft-aurora");
+    expect(saved.navStyle).toBe("floating");
   });
 
   it("night-lamp theme uses a dark card background", () => {
