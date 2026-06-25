@@ -11,6 +11,17 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # Tailwind CSS v4 is a breaking major upgrade requiring dedicated
+      # migration (PostCSS, global CSS, config, plugins, design tokens,
+      # dark mode, custom utilities, visual regression). See:
+      # docs/maintenance/tailwind-upgrade-policy.md
+      - dependency-name: "tailwindcss"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@tailwindcss/*"
+        update-types:
+          - "version-update:semver-major"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
