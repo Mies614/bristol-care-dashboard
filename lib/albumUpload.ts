@@ -51,6 +51,7 @@ export async function uploadAlbumFileDirectly(file: File, kind: "image" | "video
   const folder = kind === "image" ? "images" : "videos";
   const path = `${code}/${folder}/${Date.now()}-${randomId()}.${ext}`;
   const upload = supabase.storage.from(BUCKET).upload(path, file, {
+    cacheControl: "31536000", // 1 year for immutable assets
     contentType: file.type || "application/octet-stream",
     upsert: false
   });

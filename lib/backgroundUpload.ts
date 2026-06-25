@@ -42,6 +42,7 @@ export async function uploadBackgroundImageDirectly(file: File, code: string) {
   const ext = getBackgroundImageExtension(file);
   const path = buildBackgroundImagePath(code, ext);
   const upload = supabase.storage.from(BACKGROUND_BUCKET).upload(path, file, {
+    cacheControl: "31536000", // 1 year for immutable assets
     contentType: file.type || "application/octet-stream",
     upsert: false
   });

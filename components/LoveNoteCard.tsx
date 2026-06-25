@@ -178,7 +178,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
       ) : null}
       {!compact && note?.videoUrl ? (
         <div className="mt-4 space-y-2">
-          <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls />
+          <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls preload="none" />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}

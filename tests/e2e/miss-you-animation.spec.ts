@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 // ──────────────────────────────────────────────
 // Miss You Delight Animation E2E

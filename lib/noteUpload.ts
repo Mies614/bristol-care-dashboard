@@ -22,6 +22,7 @@ export async function uploadNoteMediaDirectly(file: File | Blob, kind: "images" 
   const ext = getNoteFileExtension(file as Blob & { name?: string });
   const path = `${code}/${kind}/${Date.now()}-${randomId()}.${ext}`;
   const uploadPromise = supabase.storage.from(BUCKET).upload(path, file, {
+    cacheControl: "31536000", // 1 year for immutable assets
     contentType: file.type || "application/octet-stream",
     upsert: false
   });

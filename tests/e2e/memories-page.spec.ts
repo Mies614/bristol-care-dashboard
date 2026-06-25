@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 const SHARED_ACCESS_KEY = "bristol_dashboard_shared_access";
 

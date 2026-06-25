@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /**
  * Round 12.3 — Mobile overlay safe-area fix E2E tests.

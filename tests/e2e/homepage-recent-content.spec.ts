@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /**
  * Round 12.2 — Homepage recent content ordering + notes filter chip E2E tests.

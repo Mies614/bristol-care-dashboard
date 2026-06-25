@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /**
  * Round 12.4 — Reactions & Comments Experience Upgrade E2E tests.

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 // ──────────────────────────────────────────────
 // Round 11: Final UI QA — partner + owner pages
