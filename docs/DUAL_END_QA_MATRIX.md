@@ -35,7 +35,7 @@ Generated: 2026-06-26 | Commit: 0f44180 | Mode: observe
 
 | Feature | Owner /me | Owner / | Partner / | Test |
 |---|---|---|---|---|
-| /me accessible | PASS | N/A | FAIL (redirect /) | middleware audit |
+| /me accessible | PASS | N/A | PASS (redirect /) | middleware audit |
 | / accessible | PASS | PASS | PASS | middleware audit |
 | /login → /me (owner) | PASS | PASS | N/A | middleware audit |
 | /login → / (partner) | N/A | N/A | PASS | middleware audit |
@@ -137,3 +137,23 @@ Generated: 2026-06-26 | Commit: 0f44180 | Mode: observe
 | 403 unauthorized | PASS (code audit) |
 | media not found | PASS (code audit) |
 | download failed toast | PASS (code audit) |
+
+## Notification Identity Audit (S3)
+
+| Route | Before | After | Identity Source |
+|---|---|---|---|
+| push/subscribe | resolveRequestContext + pathname role | resolveApiAuth → space_members.identity_id | auth.uid() |
+| push/test | resolveRequestContext + pathname role | resolveApiAuth → role check | auth.uid() |
+| push/unsubscribe | endpoint-based (no auth) | endpoint-based (de-identification OK) | N/A |
+| miss-you GET | resolveRequestContext | resolveApiAuth | auth.uid() |
+| miss-you POST | resolveRequestContext identity | resolveApiAuth identity | auth.uid() |
+| miss-you PATCH | resolveRequestContext identity | resolveApiAuth identity | auth.uid() |
+| cron/reminders | CRON_SECRET + service role | CRON_SECRET + service role (correct) | N/A |
+
+## Owner-on-Partner-Side Identity
+
+| Operation | Actor Identity | Recipient |
+|---|---|---|
+| miss-you from / | me | xiaoguai |
+| push subscribe from / | me | N/A |
+| push test from / | me | xiaoguai or me |

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 import {
   sendMissYouPushToRole,
   getOppositeAuthors,
@@ -28,13 +28,9 @@ function getLocalDateKey(): string {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const contextResult = resolveRequestContext(request, {
-      spaceCode: searchParams.get("spaceCode"),
-      code: searchParams.get("code"),
-      viewer: searchParams.get("viewer"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode: code } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode: code } = auth.context;
     const localDate = searchParams.get("localDate") || getLocalDateKey();
     const limit = Math.min(Number(searchParams.get("limit")) || 10, 50);
     const viewer = searchParams.get("viewer");
@@ -199,9 +195,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode: code, identity: author } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode: code, identity: author } = auth.context;
     const recipient = getRecipientForAuthor(author);
     const message = body.message || "想你一下";
     const localDate = body.localDate || getLocalDateKey();
@@ -318,9 +314,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode: code, identity: viewer } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode: code, identity: viewer } = auth.context;
     const action = body.action as string;
 
     if (!viewer || (viewer !== "xiaoguai" && viewer !== "me")) {

@@ -86,3 +86,23 @@ Media is shared at the database level — both owner and partner read from the s
 - Service role never exposed to client: confirmed
 - No object/public URLs for private buckets: confirmed
 - Bucket/path correctly split: confirmed
+
+
+## S3 Notification Identity Fix
+
+All notification/push/miss-you routes upgraded from `resolveRequestContext` (path-based identity) to `resolveApiAuth` (auth.uid() → space_members). The cron/reminders route was already correct (CRON_SECRET + service role).
+
+Routes upgraded:
+- /api/push/subscribe: now records `identity_id` from space_members instead of `role=side==="owner"?"admin":"xiaoguai"`
+- /api/push/test: owner-only enforced via real auth role check
+- /api/miss-you (GET, POST, PATCH): identity from space_members instead of Referer/pathname
+
+## Updated PASS/FAIL/NOT_TESTED
+
+| Status | Count |
+|---|---|
+| PASS | 56 |
+| FAIL | 0 |
+| NOT_TESTED | 24 |
+| N/A | 18 |
+| BLOCKED | 0 |
