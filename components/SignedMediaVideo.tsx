@@ -41,15 +41,14 @@ export function SignedMediaVideo({
         const signed = signedMap.get(`${bucket}:${path}`);
         if (signed) {
           setResolvedUrl(signed);
-        } else {
-          setResolvedUrl(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`);
         }
+        // If signing fails, stay in unloaded state — click-to-load will retry
       } else if (url) {
         const ref = parsePublicStorageUrl(url);
         if (ref) {
           const signedMap = await ensureSignedUrls([{ bucket: ref.bucket, path: ref.path }]);
           const signed = signedMap.get(`${ref.bucket}:${ref.path}`);
-          setResolvedUrl(signed || url);
+          if (signed) setResolvedUrl(signed);
         } else {
           setResolvedUrl(url);
         }

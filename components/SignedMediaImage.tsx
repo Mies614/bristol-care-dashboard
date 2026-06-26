@@ -58,8 +58,8 @@ export function SignedMediaImage({
           if (signed) {
             setResolvedUrl(signed);
           } else {
-            // Fallback: construct public URL (works while bucket is still public)
-            setResolvedUrl(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`);
+            // Signing failed — show error state, do not fall back to public URL
+            setError(true);
           }
         }
         return;
@@ -80,7 +80,8 @@ export function SignedMediaImage({
           if (signed) {
             setResolvedUrl(signed);
           } else {
-            setResolvedUrl(url);
+            // Signing failed — show error state
+            setError(true);
           }
           return;
         }

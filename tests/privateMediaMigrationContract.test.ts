@@ -173,3 +173,52 @@ describe("S2.3: signed media components", () => {
     expect(cache).toContain("expiresAt");
   });
 });
+
+
+describe("S3: media sign API uses auth-based context", () => {
+  const route = readFileSync(
+    resolve(__dirname, "../app/api/media/sign/route.ts"),
+    "utf-8",
+  );
+
+  it("imports requireAuth from authenticatedRequestContext", () => {
+    expect(route).toContain("requireAuth");
+    expect(route).toContain("authenticatedRequestContext");
+  });
+
+  it("falls back to resolveRequestContext in off mode", () => {
+    expect(route).toContain('"off"');
+    expect(route).toContain("resolveRequestContext");
+  });
+
+  it("validates batch paths belong to authenticated space", () => {
+    expect(route).toContain("startsWith(spaceCode");
+  });
+});
+
+describe("S3: signed media components do not use public URL fallback", () => {
+  const img = readFileSync(
+    resolve(__dirname, "../components/SignedMediaImage.tsx"),
+    "utf-8",
+  );
+  const video = readFileSync(
+    resolve(__dirname, "../components/SignedMediaVideo.tsx"),
+    "utf-8",
+  );
+  const audio = readFileSync(
+    resolve(__dirname, "../components/SignedMediaAudio.tsx"),
+    "utf-8",
+  );
+
+  it("SignedMediaImage does not construct public storage URL", () => {
+    expect(img).not.toContain("object/public");
+  });
+
+  it("SignedMediaVideo does not construct public storage URL", () => {
+    expect(video).not.toContain("object/public");
+  });
+
+  it("SignedMediaAudio does not construct public storage URL", () => {
+    expect(audio).not.toContain("object/public");
+  });
+});
