@@ -1,7 +1,10 @@
 -- Bristol Care Dashboard — S3 RLS Rollback
--- Remove all authenticated RLS policies and restore permissive access.
--- WARNING: Restores public access to all business tables.
--- Do NOT use this to restore anonymous INSERT policies (those are separate).
+-- Remove all authenticated RLS policies.
+-- Restores S2.3 state: all business table access goes through
+-- service-role API layer. Does NOT recreate permissive or anonymous policies.
+-- WARNING: After rollback, tables have NO policies — accessible only via
+-- service role API (server-only). Browser-anon-key access will be denied
+-- by Supabase Data API when no policy matches.
 -- Table structure and data are NOT modified.
 
 DO $$
@@ -18,18 +21,23 @@ BEGIN
       'user_identities', 'couple_spaces', 'space_members'
     )
   LOOP
-    -- Drop all existing policies on each table
+    -- Drop all known authenticated policy names
     EXECUTE format('DROP POLICY IF EXISTS "Authenticated access" ON %I', tbl.tablename);
+    EXECUTE format('DROP POLICY IF EXISTS "Members can read settings" ON %I', tbl.tablename);
+    EXECUTE format('DROP POLICY IF EXISTS "Owner can insert settings" ON %I', tbl.tablename);
+    EXECUTE format('DROP POLICY IF EXISTS "Owner can update settings" ON %I', tbl.tablename);
+    EXECUTE format('DROP POLICY IF EXISTS "Owner can delete settings" ON %I', tbl.tablename);
     EXECUTE format('DROP POLICY IF EXISTS "Owner settings write" ON %I', tbl.tablename);
     EXECUTE format('DROP POLICY IF EXISTS "Owner settings update" ON %I', tbl.tablename);
-    -- Restore permissive policy (service role access only, no public access)
-    EXECUTE format('CREATE POLICY "Authenticated access" ON %I FOR ALL USING (true) WITH CHECK (true)', tbl.tablename);
+    EXECUTE format('DROP POLICY IF EXISTS "Users can read own membership" ON %I', tbl.tablename);
   END LOOP;
 END $$;
 
--- Post-check
+-- Post-check: verify no authenticated policies remain on business tables
 SELECT schemaname, tablename, policyname, roles, cmd
 FROM pg_policies
 WHERE schemaname = 'public'
-  AND tablename IN ('album_items', 'content_comments', 'love_notes', 'space_members')
+  AND tablename IN ('album_items', 'settings', 'love_notes', 'content_comments', 'space_members')
 ORDER BY tablename, policyname;
+
+-- Expected: no rows returned (all authenticated policies dropped)

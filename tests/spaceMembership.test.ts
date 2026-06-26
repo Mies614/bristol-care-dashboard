@@ -60,13 +60,62 @@ describe("S3: authenticated RLS migration", () => {
     expect(migration).toContain("auth.uid()");
   });
 
-  it("includes owner-only restrictions on settings", () => {
-    expect(migration).toContain("Owner settings write");
+  it("settings has separate member-SELECT and owner-write policies", () => {
+    expect(migration).toContain("Members can read settings");
+    expect(migration).toContain("Owner can insert settings");
+    expect(migration).toContain("Owner can update settings");
+    expect(migration).toContain("Owner can delete settings");
     expect(migration).toContain("role = 'owner'");
+  });
+
+  it("settings is NOT included in generic FOR ALL", () => {
+    // The settings section should use named policies, not FOR ALL
+    // Check that settings has FOR SELECT (not FOR ALL)
+    expect(migration).toContain("FOR SELECT");
+    expect(migration).toContain("TO authenticated");
+  });
+
+  it("settings UPDATE has both USING and WITH CHECK with owner role", () => {
+    const settingsSection = migration.split("settings:").pop()?.split("SETTINGS_DONE")?.[0] || migration;
+    // UPDATE policy should include USING and WITH CHECK both with owner role
+    expect(settingsSection).toContain("FOR UPDATE");
   });
 
   it("uses idempotent DROP IF EXISTS", () => {
     expect(migration).toContain("DROP POLICY IF EXISTS");
+  });
+});
+
+describe("S3: rollback migration", () => {
+  const rollback = readFileSync(
+    resolve(__dirname, "../supabase/migrations/20260626000011_rollback_authenticated_business_rls.sql"),
+    "utf-8",
+  );
+
+  it("drops all known settings policy names", () => {
+    expect(rollback).toContain("Members can read settings");
+    expect(rollback).toContain("Owner can insert settings");
+    expect(rollback).toContain("Owner can update settings");
+    expect(rollback).toContain("Owner can delete settings");
+    expect(rollback).toContain("Owner settings write");
+    expect(rollback).toContain("Owner settings update");
+  });
+
+  it("does NOT recreate any policies", () => {
+    expect(rollback).not.toContain("CREATE POLICY");
+  });
+
+  it("does NOT create permissive USING/WITH CHECK true", () => {
+    expect(rollback).not.toMatch(/USING\s*\(\s*true\s*\)/i);
+    expect(rollback).not.toMatch(/WITH CHECK\s*\(\s*true\s*\)/i);
+  });
+
+  it("does NOT create TO anon policies", () => {
+    expect(rollback).not.toContain("TO anon");
+  });
+
+  it("documents that tables become service-role-only after rollback", () => {
+    expect(rollback).toContain("service-role");
   });
 });
 

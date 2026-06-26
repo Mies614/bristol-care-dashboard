@@ -83,11 +83,69 @@ CREATE POLICY "Authenticated access" ON deadlines FOR ALL
   USING (EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = deadlines.space_id AND sm.user_id = auth.uid()))
   WITH CHECK (EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = deadlines.space_id AND sm.user_id = auth.uid()));
 
--- settings
+-- settings: members can read, only owner can write
+DROP POLICY IF EXISTS "Members can read settings" ON settings;
+DROP POLICY IF EXISTS "Owner can insert settings" ON settings;
+DROP POLICY IF EXISTS "Owner can update settings" ON settings;
+DROP POLICY IF EXISTS "Owner can delete settings" ON settings;
 DROP POLICY IF EXISTS "Authenticated access" ON settings;
-CREATE POLICY "Authenticated access" ON settings FOR ALL
-  USING (EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = settings.space_id AND sm.user_id = auth.uid()))
-  WITH CHECK (EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = settings.space_id AND sm.user_id = auth.uid()));
+DROP POLICY IF EXISTS "Owner settings write" ON settings;
+DROP POLICY IF EXISTS "Owner settings update" ON settings;
+
+CREATE POLICY "Members can read settings" ON settings
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM space_members sm
+      WHERE sm.space_id = settings.space_id
+        AND sm.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Owner can insert settings" ON settings
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM space_members sm
+      WHERE sm.space_id = settings.space_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
+    )
+  );
+
+CREATE POLICY "Owner can update settings" ON settings
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM space_members sm
+      WHERE sm.space_id = settings.space_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM space_members sm
+      WHERE sm.space_id = settings.space_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
+    )
+  );
+
+CREATE POLICY "Owner can delete settings" ON settings
+  FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM space_members sm
+      WHERE sm.space_id = settings.space_id
+        AND sm.user_id = auth.uid()
+        AND sm.role = 'owner'
+    )
+  );
 
 -- quick_links
 DROP POLICY IF EXISTS "Authenticated access" ON quick_links;
@@ -186,39 +244,8 @@ CREATE POLICY "Authenticated access" ON couple_spaces
   );
 
 -- ============================================
--- 4. Owner-only: settings write restricted to owner
+-- 4. Owner-only settings policies already applied above
 -- ============================================
-DROP POLICY IF EXISTS "Owner settings write" ON settings;
-CREATE POLICY "Owner settings write" ON settings
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM space_members sm
-      WHERE sm.space_id = settings.space_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
-  );
-
-DROP POLICY IF EXISTS "Owner settings update" ON settings;
-CREATE POLICY "Owner settings update" ON settings
-  FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM space_members sm
-      WHERE sm.space_id = settings.space_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM space_members sm
-      WHERE sm.space_id = settings.space_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'owner'
-    )
-  );
 
 -- ============================================
 -- Post-check
