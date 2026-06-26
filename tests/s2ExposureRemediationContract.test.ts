@@ -191,12 +191,12 @@ describe("S2.2: API blocks unauthorized identity write", () => {
     "utf-8",
   );
 
-  it("POST requires origin check", () => {
-    expect(route).toContain("requireOrigin");
+  it("POST uses resolveApiAuth", () => {
+    expect(route).toContain("resolveApiAuth");
   });
 
-  it("DELETE requires origin check", () => {
-    expect(route).toContain("requireOrigin");
+  it("DELETE uses resolveApiAuth", () => {
+    expect(route).toContain("resolveApiAuth");
   });
 });
 

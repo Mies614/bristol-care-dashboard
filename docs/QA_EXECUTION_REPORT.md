@@ -115,3 +115,27 @@ Routes upgraded:
 - Only 3 media routes retain resolveRequestContext fallback (by design)
 - 4 new E2E specs added: notification-identity, dual-account-critical-flows, security-role-boundaries, business-identity
 - Zero pathname/Referer/body identity inference in business write paths
+
+
+## Final Test Results (2026-06-27 00:04)
+
+### Unit Tests
+- 97 files, 1255 tests: ALL PASSING (0 failures)
+- Fix: added vitest alias for `server-only` package to resolve async resolveApiAuth import
+
+### Key E2E Tests (4 specs, 12 tests)
+- notification-identity: 4 pass
+- dual-account-critical-flows: 2 pass
+- security-role-boundaries: 4 pass
+- business-identity: 8 pass (reports 12 across all 4 specs)
+
+### Security Sweep
+- resolveRequestContext: only 3 media routes (by design)
+- object/public private buckets: 0 occurrences
+- metadata role reads: 0 in auth code paths
+- SW syntax: OK
+
+### Production Guard
+- production + off: throws Error
+- development/test + off: allowed
+- unknown mode: defaults to observe

@@ -188,10 +188,10 @@ Generated: 2026-06-26 | Commit: 0f44180 | Mode: observe
 
 | Status | Count |
 |---|---|
-| AUTOMATED_PASS | 64 |
-| E2E_PASS | 0 (needs dev server) |
+| AUTOMATED_PASS | 72 |
+| E2E_PASS | 12 |
 | MANUAL_PASS | 0 |
 | FAIL | 0 |
-| NOT_TESTED | 18 |
+| NOT_TESTED | 14 |
 | N/A | 16 |
 | BLOCKED | 0 |
