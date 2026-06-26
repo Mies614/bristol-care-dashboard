@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { toSafeApiError } from "@/lib/apiError";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory", "timeline"] as const;
 type ReadContentType = (typeof VALID_CONTENT_TYPES)[number];
@@ -12,13 +12,9 @@ type ReadContentType = (typeof VALID_CONTENT_TYPES)[number];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const contextResult = resolveRequestContext(request, {
-      spaceCode: searchParams.get("spaceCode"),
-      code: searchParams.get("code"),
-      identity: searchParams.get("identity"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = searchParams.get("contentType") as ReadContentType | null;
     const contentIdsRaw = searchParams.get("contentIds");
 
@@ -101,9 +97,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
 
     // Normalize items: accept either single or batch
     const rawItems: Array<{ contentType: string; contentId: string }> =
@@ -207,9 +203,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true, defaultSide: "owner" });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
 
     if (!spaceCode || !identity) {
       return NextResponse.json(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { toSafeApiError } from "@/lib/apiError";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 
 async function buildFullSummaryResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
@@ -64,13 +64,9 @@ const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const contextResult = resolveRequestContext(request, {
-      spaceCode: searchParams.get("spaceCode"),
-      code: searchParams.get("code"),
-      identity: searchParams.get("identity"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = searchParams.get("contentType");
     const contentIdsRaw = searchParams.get("contentIds");
 
@@ -200,9 +196,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
@@ -351,9 +347,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;

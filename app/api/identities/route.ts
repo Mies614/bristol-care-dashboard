@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { toSafeApiError } from "@/lib/apiError";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const contextResult = resolveRequestContext(request);
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode } = auth.context;
 
     const supabase = createSupabaseServerClient();
 
@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode } = auth.context;
 
     const identityId = String(body.id ?? "").trim();
     const displayName = String(body.displayName ?? "").trim();
@@ -118,9 +118,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode } = auth.context;
 
     const identityId = String(body.id ?? "").trim();
     if (!identityId) {

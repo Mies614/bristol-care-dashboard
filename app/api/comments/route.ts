@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
 import { toSafeApiError } from "@/lib/apiError";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const MAX_COMMENT_LENGTH = 500;
@@ -13,13 +13,9 @@ const MAX_COMMENT_LENGTH = 500;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const contextResult = resolveRequestContext(request, {
-      spaceCode: searchParams.get("spaceCode"),
-      code: searchParams.get("code"),
-      identity: searchParams.get("identity"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = searchParams.get("contentType");
     const contentId = searchParams.get("contentId");
     const includeDeleted = searchParams.get("includeDeleted") === "true" && identity === "me";
@@ -106,9 +102,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const commentBody = (body.body as string || "").trim();
@@ -208,9 +204,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const commentId = body.commentId as string;
 
     // ── Required param validation ──

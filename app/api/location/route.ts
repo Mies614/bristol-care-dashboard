@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { toSafeApiError } from "@/lib/apiError";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
 const VALID_LOCATION_IDENTITIES = new Set(["me", DEFAULT_NORMAL_IDENTITY_ID]);
@@ -10,12 +10,9 @@ const VALID_LOCATION_IDENTITIES = new Set(["me", DEFAULT_NORMAL_IDENTITY_ID]);
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const contextResult = resolveRequestContext(request, {
-      spaceCode: searchParams.get("spaceCode"),
-      code: searchParams.get("code"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode } = contextResult.context;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const { spaceCode } = auth.context;
     const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!spaceCode || !identity) {
@@ -83,9 +80,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const { spaceCode, identity } = contextResult.context;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const { spaceCode, identity } = auth.context;
     const latitude = Number(body.latitude);
     const longitude = Number(body.longitude);
     const accuracy = body.accuracy != null ? Number(body.accuracy) : undefined;

@@ -4,7 +4,7 @@ import { loveNoteFromRow, loveNoteToRow } from "@/lib/mappers";
 import { getNotePatchUpdate } from "@/lib/noteActions";
 import { hasNoteContent, inferNoteType, isValidAuthor, isValidDisplayStyle, normalizeDisplayStyle } from "@/lib/noteValidation";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 import type { LoveNote } from "@/lib/types";
 
 type ApiError = {
@@ -37,12 +37,9 @@ function optionalMood(value: unknown): LoveNote["mood"] | undefined {
 export async function GET(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("小纸条墙未配置云端。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
-    const contextResult = resolveRequestContext(request, {
-      code: request.nextUrl.searchParams.get("code"),
-      spaceCode: request.nextUrl.searchParams.get("spaceCode"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
     const filter = request.nextUrl.searchParams.get("filter") || "all";
     const sort = request.nextUrl.searchParams.get("sort") || "pinned";
     const author = request.nextUrl.searchParams.get("author");
@@ -89,9 +86,9 @@ export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("小纸条墙未配置云端。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
     const content = optionalString(body.content) || "";
     const imageUrl = optionalString(body.image_url);
     const audioUrl = optionalString(body.audio_url);
@@ -105,7 +102,7 @@ export async function POST(request: NextRequest) {
     if (!space) return fail("小纸条空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
 
     step = "insert_note";
-    const author = contextResult.context.identity;
+    const author = auth.context.identity;
     const note: Omit<LoveNote, "id"> = {
       content,
       active: true,
@@ -142,9 +139,9 @@ export async function PATCH(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("小纸条墙未配置云端。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
     if (!body.id) return fail("缺少小纸条 id。", "NOTE_ID_MISSING", "validate_id", 400);
     const action = String(body.action || "update");
     if (!["update", "toggle_pinned", "set_pinned", "set_active", "delete", "soft_delete", "change_style", "change_mood"].includes(action)) {

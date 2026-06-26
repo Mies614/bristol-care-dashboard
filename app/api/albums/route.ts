@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { albumItemFromRow, albumItemToRow } from "@/lib/mappers";
 import { getSpaceByCode } from "@/lib/api/cloud";
-import { resolveRequestContext } from "@/lib/security/requestContext";
+import { resolveApiAuth } from "@/lib/security/apiAuth";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import type { AlbumItem } from "@/lib/types";
 
@@ -38,12 +38,9 @@ function optionalNumber(value: unknown) {
 export async function GET(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法读取。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
-    const contextResult = resolveRequestContext(request, {
-      code: request.nextUrl.searchParams.get("code"),
-      spaceCode: request.nextUrl.searchParams.get("spaceCode"),
-    });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
     const filter = request.nextUrl.searchParams.get("filter") || "all";
     const space = await getSpaceByCode(code);
     if (!space) return fail("相册空间不存在，请检查默认访问码配置。", "SPACE_NOT_FOUND", "get_space", 404);
@@ -69,9 +66,9 @@ export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法保存。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
 
     step = "get_space";
     const space = await getSpaceByCode(code);
@@ -99,7 +96,7 @@ export async function POST(request: NextRequest) {
       videoPath: optionalString(body.video_path),
       fileSize: optionalNumber(body.file_size),
       isFavorite: Boolean(body.is_favorite),
-      createdBy: contextResult.context.identity
+      createdBy: auth.context.identity
     };
     const row = albumItemToRow(item, space.id);
     const { data, error } = await createSupabaseServerClient()
@@ -119,9 +116,9 @@ export async function PATCH(request: NextRequest) {
   try {
     if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法更新。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
     const body = await request.json();
-    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
-    if (!contextResult.ok) return contextResult.response;
-    const code = contextResult.context.spaceCode;
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
     if (!body.id) return fail("缺少相册项目 ID。", "ALBUM_ID_MISSING", "validate_album_id", 400);
     step = "get_space";
     const space = await getSpaceByCode(code);
