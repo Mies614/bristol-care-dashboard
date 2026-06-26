@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSpaceByCode, getDefaultSpaceCode } from "@/lib/api/cloud";
+import { getSpaceByCode } from "@/lib/api/cloud";
+import { resolveRequestContext } from "@/lib/security/requestContext";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -21,8 +22,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const code = (typeof body.code === "string" ? body.code : undefined) || getDefaultSpaceCode();
-  const role = typeof body.role === "string" ? body.role : "admin";
+  const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+  if (!contextResult.ok) return contextResult.response;
+  const code = contextResult.context.spaceCode;
+  const role = contextResult.context.side === "owner" ? "admin" : "xiaoguai";
 
   if (!body.subscription || typeof body.subscription !== "object") {
     return NextResponse.json(

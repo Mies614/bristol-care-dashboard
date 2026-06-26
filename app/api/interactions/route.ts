@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { toSafeApiError } from "@/lib/apiError";
-
-function getDefaultCode(): string {
-  return getDefaultSpaceCodeServer();
-}
+import { resolveRequestContext } from "@/lib/security/requestContext";
 
 async function buildFullSummaryResponse(
   supabase: ReturnType<typeof createSupabaseServerClient>,
@@ -69,10 +64,15 @@ const VALID_INTERACTION_TYPES = ["read", "like", "reaction"] as const;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
+    const contextResult = resolveRequestContext(request, {
+      spaceCode: searchParams.get("spaceCode"),
+      code: searchParams.get("code"),
+      identity: searchParams.get("identity"),
+    });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = searchParams.get("contentType");
     const contentIdsRaw = searchParams.get("contentIds");
-    const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
     const missing: string[] = [];
     if (!spaceCode) missing.push("spaceCode");
@@ -200,12 +200,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
     const reaction = body.reaction as string | undefined;
-    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     const missing: string[] = [];
     if (!spaceCode) missing.push("spaceCode");
@@ -350,12 +351,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const interactionType = body.interactionType as string;
     const reaction = body.reaction as string | undefined;
-    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!isSupabaseServerConfigured()) {
       return NextResponse.json(

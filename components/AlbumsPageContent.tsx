@@ -180,12 +180,12 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
     try {
       if (image) {
         setUploadStage(createUploadStageMessage("upload_image"));
-        uploadedImage = await uploadAlbumFileDirectly(image, "image", code);
+        uploadedImage = await uploadAlbumFileDirectly(image, "image", code, identity);
         if (cancelled) throw new Error("上传已取消。");
       }
       if (video) {
         setUploadStage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
-        uploadedVideo = await uploadAlbumFileDirectly(video, "video", code);
+        uploadedVideo = await uploadAlbumFileDirectly(video, "video", code, identity);
         if (cancelled) throw new Error("上传已取消。");
         if (uploadedVideo && shouldGenerateVideoThumbnail(video)) {
           setUploadStage("生成视频封面...");

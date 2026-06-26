@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
-import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import { toSafeApiError } from "@/lib/apiError";
+import { resolveRequestContext } from "@/lib/security/requestContext";
+import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 
-function getDefaultCode(): string {
-  return getDefaultSpaceCodeServer();
-}
+const VALID_LOCATION_IDENTITIES = new Set(["me", DEFAULT_NORMAL_IDENTITY_ID]);
 
 // ─── GET /api/location?spaceCode=...&identity=... ───
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
-    const identity = searchParams.get("identity");
+    const contextResult = resolveRequestContext(request, {
+      spaceCode: searchParams.get("spaceCode"),
+      code: searchParams.get("code"),
+    });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode } = contextResult.context;
+    const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
 
     if (!spaceCode || !identity) {
       return NextResponse.json(
         { ok: false, error: "缺少 spaceCode 或 identity。", code: "MISSING_PARAMS" },
         { status: 400 }
+      );
+    }
+
+    if (!VALID_LOCATION_IDENTITIES.has(identity)) {
+      return NextResponse.json(
+        { ok: false, error: "identity 无效。", code: "INVALID_IDENTITY" },
+        { status: 400 },
       );
     }
 
@@ -72,8 +83,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
-    const identity = (body.identity as string) || "";
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const latitude = Number(body.latitude);
     const longitude = Number(body.longitude);
     const accuracy = body.accuracy != null ? Number(body.accuracy) : undefined;

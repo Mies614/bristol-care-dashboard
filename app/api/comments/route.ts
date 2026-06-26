@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
-import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import { toSafeApiError } from "@/lib/apiError";
+import { resolveRequestContext } from "@/lib/security/requestContext";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory"] as const;
 const MAX_COMMENT_LENGTH = 500;
-
-function getDefaultCode(): string {
-  return getDefaultSpaceCodeServer();
-}
 
 // ─── GET /api/comments ───
 // Query params:
@@ -18,11 +13,16 @@ function getDefaultCode(): string {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
+    const contextResult = resolveRequestContext(request, {
+      spaceCode: searchParams.get("spaceCode"),
+      code: searchParams.get("code"),
+      identity: searchParams.get("identity"),
+    });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = searchParams.get("contentType");
     const contentId = searchParams.get("contentId");
-    const includeDeleted = searchParams.get("includeDeleted") === "true";
-    const identity = searchParams.get("identity") || DEFAULT_NORMAL_IDENTITY_ID;
+    const includeDeleted = searchParams.get("includeDeleted") === "true" && identity === "me";
 
     // ── Required param validation ──
     const missing: string[] = [];
@@ -106,11 +106,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = body.contentType as string;
     const contentId = body.contentId as string;
     const commentBody = (body.body as string || "").trim();
-    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     // ── Required param validation ──
     const missing: string[] = [];
@@ -207,9 +208,10 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const commentId = body.commentId as string;
-    const identity = (body.identity as string) || DEFAULT_NORMAL_IDENTITY_ID;
 
     // ── Required param validation ──
     const missing: string[] = [];
@@ -259,9 +261,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Check identity ownership (admin can delete any)
-    const isAdmin = identity === "admin" || identity === "me";
-    if (!isAdmin && comment.identity !== identity) {
+    // Owner-side context can moderate comments; partner can delete only their own.
+    const isOwnerSide = identity === "me";
+    if (!isOwnerSide && comment.identity !== identity) {
       return NextResponse.json(
         { ok: false, error: "无权删除此评论。", code: "UNAUTHORIZED_COMMENT_DELETE" },
         { status: 403 }

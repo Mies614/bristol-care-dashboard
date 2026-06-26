@@ -78,17 +78,17 @@ export function NoteComposer({ onCreated, identityId: propIdentityId, side }: { 
     try {
       if (image) {
         setMessage(`${createUploadStageMessage("upload_image")}${isLargeMediaFile(image, "image") ? "，文件较大，可能较慢" : ""}`);
-        uploadedImage = await uploadNoteMediaDirectly(image, "images", code);
+        uploadedImage = await uploadNoteMediaDirectly(image, "images", code, author);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (audio) {
         setMessage(createUploadStageMessage("upload_audio"));
-        uploadedAudio = await uploadNoteMediaDirectly(audio, "audio", code);
+        uploadedAudio = await uploadNoteMediaDirectly(audio, "audio", code, author);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       if (video) {
         setMessage(`${createUploadStageMessage("upload_video")}${isLargeMediaFile(video, "video") ? "，手机端上传可能较慢" : ""}`);
-        uploadedVideo = await uploadNoteMediaDirectly(video, "videos", code);
+        uploadedVideo = await uploadNoteMediaDirectly(video, "videos", code, author);
         if (cancelRef.current) throw new Error("上传已取消。");
       }
       setMessage(createUploadStageMessage("save"));

@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { getVapidConfig } from "@/lib/push";
-import { getDefaultSpaceCode, getSpaceByCode } from "@/lib/api/cloud";
+import { getSpaceByCode } from "@/lib/api/cloud";
+import { resolveRequestContext } from "@/lib/security/requestContext";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -22,8 +23,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const code = body.code || getDefaultSpaceCode();
-    const role = body.role || "xiaoguai";
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true, defaultSide: "owner" });
+    if (!contextResult.ok) return contextResult.response;
+    if (contextResult.context.side !== "owner") {
+      return NextResponse.json(
+        { ok: false, error: "只有我端可以发送测试通知。", code: "OWNER_CONTEXT_REQUIRED" },
+        { status: 403 },
+      );
+    }
+    const code = contextResult.context.spaceCode;
+    const role = body.role === "xiaoguai" ? "xiaoguai" : "admin";
 
     const supabase = createSupabaseServerClient();
     const space = await getSpaceByCode(code);

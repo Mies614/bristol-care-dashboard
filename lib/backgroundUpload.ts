@@ -1,19 +1,20 @@
 "use client";
 
 import { uploadWithTimeout } from "./mediaUpload";
+import { buildImmutableStoragePath } from "./storagePathPolicy";
 import { getSupabaseBrowserClient } from "./supabase/client";
 
 export const BACKGROUND_BUCKET = "backgrounds";
 export const MAX_BACKGROUND_IMAGE_SIZE = 30 * 1024 * 1024;
 export const ALLOWED_BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
 
-function randomId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID().slice(0, 8);
-  return Math.random().toString(36).slice(2, 10);
-}
-
-export function buildBackgroundImagePath(code: string, extension: string, timestamp = Date.now(), random = randomId()) {
-  return `${code}/backgrounds/${timestamp}-${random}.${extension}`;
+export function buildBackgroundImagePath(code: string, extension: string, identity?: string) {
+  return buildImmutableStoragePath({
+    spaceCode: code,
+    identity,
+    kind: "backgrounds",
+    extension,
+  });
 }
 
 export function validateBackgroundImageFile(file: File | Blob) {
@@ -36,11 +37,11 @@ export function getBackgroundImageExtension(file: File | Blob & { name?: string 
   return "jpg";
 }
 
-export async function uploadBackgroundImageDirectly(file: File, code: string) {
+export async function uploadBackgroundImageDirectly(file: File, code: string, identity?: string) {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) throw new Error("Supabase publishable client 未配置，无法上传背景图片。");
   const ext = getBackgroundImageExtension(file);
-  const path = buildBackgroundImagePath(code, ext);
+  const path = buildBackgroundImagePath(code, ext, identity);
   const upload = supabase.storage.from(BACKGROUND_BUCKET).upload(path, file, {
     cacheControl: "31536000", // 1 year for immutable assets
     contentType: file.type || "application/octet-stream",

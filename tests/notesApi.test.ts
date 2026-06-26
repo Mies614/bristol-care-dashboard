@@ -31,7 +31,11 @@ vi.mock("@/lib/supabase/server", () => ({
 function patchRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/notes", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "http://localhost:3000",
+      Referer: "http://localhost:3000/notes",
+    },
     body: JSON.stringify(body)
   });
 }
@@ -88,11 +92,15 @@ describe("notes API", () => {
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ content: "updated" }));
   });
 
-  it("POST respects the provided author field", async () => {
+  it("POST derives the owner author from /me context", async () => {
     const { POST } = await import("@/app/api/notes/route");
     const request = new NextRequest("http://localhost/api/notes", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:3000",
+        Referer: "http://localhost:3000/me/notes",
+      },
       body: JSON.stringify({ content: "hello", author: "me" })
     });
     const response = await POST(request);
@@ -109,7 +117,11 @@ describe("notes API", () => {
     const { POST } = await import("@/app/api/notes/route");
     const request = new NextRequest("http://localhost/api/notes", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:3000",
+        Referer: "http://localhost:3000/notes",
+      },
       body: JSON.stringify({ content: "hello" })
     });
     const response = await POST(request);

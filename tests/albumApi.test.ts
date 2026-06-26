@@ -40,7 +40,11 @@ vi.mock("@/lib/supabase/server", () => ({
 function postRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/albums", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "http://localhost:3000",
+      Referer: "http://localhost:3000/albums",
+    },
     body: JSON.stringify(body)
   });
 }
@@ -48,7 +52,11 @@ function postRequest(body: Record<string, unknown>) {
 function patchRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/albums", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "http://localhost:3000",
+      Referer: "http://localhost:3000/albums",
+    },
     body: JSON.stringify(body)
   });
 }

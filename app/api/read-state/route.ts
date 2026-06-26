@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, isSupabaseServerConfigured } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
-import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
 import { toSafeApiError } from "@/lib/apiError";
+import { resolveRequestContext } from "@/lib/security/requestContext";
 
 const VALID_CONTENT_TYPES = ["note", "album", "memory", "timeline"] as const;
 type ReadContentType = (typeof VALID_CONTENT_TYPES)[number];
-
-function getDefaultCode(): string {
-  return getDefaultSpaceCodeServer();
-}
 
 // ─── GET /api/read-state ───
 // Query: spaceCode, identity, contentType? (optional), contentIds? (comma-separated, optional)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const spaceCode = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
-    const identity = searchParams.get("identity");
+    const contextResult = resolveRequestContext(request, {
+      spaceCode: searchParams.get("spaceCode"),
+      code: searchParams.get("code"),
+      identity: searchParams.get("identity"),
+    });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
     const contentType = searchParams.get("contentType") as ReadContentType | null;
     const contentIdsRaw = searchParams.get("contentIds");
 
@@ -100,8 +101,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
-    const identity = (body.identity as string) || "";
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
 
     // Normalize items: accept either single or batch
     const rawItems: Array<{ contentType: string; contentId: string }> =
@@ -205,8 +207,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const spaceCode = body.spaceCode || body.code || getDefaultCode();
-    const identity = (body.identity as string) || "";
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true, defaultSide: "owner" });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode, identity } = contextResult.context;
 
     if (!spaceCode || !identity) {
       return NextResponse.json(

@@ -2,9 +2,9 @@
 
 ## Current State (待生产验证)
 
-代码仓库中未发现可追踪的 RLS policy 定义。`supabase/schema.sql` 不包含 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` 或 `CREATE POLICY` 语句。生产状态需通过 `docs/security/production-rls-verification.sql` 验证。
+仓库中已发现可追踪的 RLS 定义：`supabase/schema.sql` 包含 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` 与 `CREATE POLICY` 语句。
 
-仓库未发现可追踪的 RLS 定义，生产状态待只读 SQL 验证。
+生产真实状态仍需通过 `docs/security/production-rls-verification.sql` 做只读 SQL 验证。不得仅凭仓库文件断言生产 RLS 已启用或未启用。
 
 ## Access Boundary Review
 

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSpaceByCode } from "@/lib/supabase/spaces";
-import { getDefaultSpaceCodeServer } from "@/lib/spaceCode";
-import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
+import { resolveRequestContext } from "@/lib/security/requestContext";
 import {
   sendMissYouPushToRole,
   getOppositeAuthors,
@@ -13,10 +12,6 @@ import {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function getDefaultCode(): string {
-  return getDefaultSpaceCodeServer();
-}
-
 function getLocalDateKey(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -33,7 +28,13 @@ function getLocalDateKey(): string {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const code = searchParams.get("spaceCode") || searchParams.get("code") || getDefaultCode();
+    const contextResult = resolveRequestContext(request, {
+      spaceCode: searchParams.get("spaceCode"),
+      code: searchParams.get("code"),
+      viewer: searchParams.get("viewer"),
+    });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode: code } = contextResult.context;
     const localDate = searchParams.get("localDate") || getLocalDateKey();
     const limit = Math.min(Number(searchParams.get("limit")) || 10, 50);
     const viewer = searchParams.get("viewer");
@@ -198,9 +199,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.spaceCode || body.code || getDefaultCode();
-    const author = (body.author || DEFAULT_NORMAL_IDENTITY_ID) as string;
-    const recipient = body.recipient || getRecipientForAuthor(author);
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode: code, identity: author } = contextResult.context;
+    const recipient = getRecipientForAuthor(author);
     const message = body.message || "想你一下";
     const localDate = body.localDate || getLocalDateKey();
     const source = body.source || "button";
@@ -316,13 +318,14 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const code = body.spaceCode || body.code || getDefaultCode();
-    const viewer = body.viewer as string;
+    const contextResult = resolveRequestContext(request, body, { requireOrigin: true });
+    if (!contextResult.ok) return contextResult.response;
+    const { spaceCode: code, identity: viewer } = contextResult.context;
     const action = body.action as string;
 
-    if (!viewer || (viewer !== "admin" && viewer !== "xiaoguai" && viewer !== "me")) {
+    if (!viewer || (viewer !== "xiaoguai" && viewer !== "me")) {
       return NextResponse.json(
-        { ok: false, error: "viewer 必须是 admin、xiaoguai 或 me。", code: "INVALID_VIEWER" },
+        { ok: false, error: "viewer 必须是 xiaoguai 或 me。", code: "INVALID_VIEWER" },
         { status: 400 }
       );
     }

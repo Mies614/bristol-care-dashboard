@@ -1,5 +1,6 @@
 import { determineAlbumItemType, getAlbumFileExtension } from "./albumValidation";
 import { timeoutForKind, uploadWithTimeout } from "./mediaUpload";
+import { buildImmutableStoragePath } from "./storagePathPolicy";
 import { getSupabaseBrowserClient } from "./supabase/client";
 import type { AlbumItem } from "./types";
 
@@ -36,20 +37,19 @@ export type AlbumMetadataPayload = {
 
 const BUCKET = "couple-albums";
 
-function randomId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID().slice(0, 8);
-  return Math.random().toString(36).slice(2, 10);
-}
-
-export async function uploadAlbumFileDirectly(file: File, kind: "image" | "video", code: string): Promise<UploadedAlbumFile> {
+export async function uploadAlbumFileDirectly(file: File, kind: "image" | "video", code: string, identity?: string): Promise<UploadedAlbumFile> {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) {
     throw new Error("Supabase publishable client 未配置，无法直传相册文件。");
   }
 
   const ext = getAlbumFileExtension(file);
-  const folder = kind === "image" ? "images" : "videos";
-  const path = `${code}/${folder}/${Date.now()}-${randomId()}.${ext}`;
+  const path = buildImmutableStoragePath({
+    spaceCode: code,
+    identity,
+    kind: kind === "image" ? "images" : "videos",
+    extension: ext,
+  });
   const upload = supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: "31536000", // 1 year for immutable assets
     contentType: file.type || "application/octet-stream",
