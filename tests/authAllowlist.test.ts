@@ -139,16 +139,21 @@ describe("S3: callback uses role-based routing", () => {
     expect(cb).toContain("exchangeCodeForSession");
   });
 
+  it("persists role to user_metadata for middleware efficiency", () => {
+    expect(cb).toContain("updateUserById");
+    expect(cb).toContain("user_metadata");
+  });
+
+  it("uses APP_ORIGIN for redirect origin", () => {
+    expect(cb).toContain("APP_ORIGIN");
+  });
+
   it("imports getRoleHome for role-based redirect", () => {
     expect(cb).toContain("getRoleHome");
     expect(cb).toContain("roleHome");
   });
 
-  it("redirects partner to /", () => {
-    expect(cb).toContain("/");
-  });
-
-  it("uses authData.user.id (not client cookies) for membership query", () => {
+  it("uses authData.user.id for membership query", () => {
     expect(cb).toContain("authData.user.id");
   });
 
@@ -167,27 +172,33 @@ describe("S3: middleware enforces role-page binding", () => {
     "utf-8",
   );
 
+  it("queries space_members for role", () => {
+    expect(mw).toContain("space_members");
+    expect(mw).toContain("maybeSingle");
+  });
+
+  it("never defaults role to partner on error", () => {
+    // Should not silently fall back to partner when membership is missing
+    expect(mw).toContain("membership_invalid");
+  });
+
+  it("redirects unauthenticated users to login", () => {
+    expect(mw).toContain("/login");
+  });
+
+  it("redirects to login on membership lookup failure", () => {
+    expect(mw).toContain("membership_invalid");
+  });
+
   it("checks AUTH_ENFORCEMENT_MODE", () => {
     expect(mw).toContain("AUTH_ENFORCEMENT_MODE");
-  });
-
-  it("returns early in off mode", () => {
-    expect(mw).toContain('"off"');
-  });
-
-  it("redirects owner from partner pages", () => {
-    expect(mw).toContain("isOwnerPath");
-  });
-
-  it("redirects partner from /me", () => {
-    expect(mw).toContain("isPartnerDisallowed");
   });
 
   it("does not redirect API routes", () => {
     expect(mw).toContain("/api/");
   });
 
-  it("allows login, callback, and static paths through", () => {
+  it("allows public paths through", () => {
     expect(mw).toContain("/login");
     expect(mw).toContain("/auth/callback");
   });

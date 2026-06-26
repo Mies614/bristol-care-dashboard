@@ -28,6 +28,28 @@ function isPartnerDisallowed(pathname: string): boolean {
   return pathname === "/me" || pathname.startsWith("/me/");
 }
 
+/** Resolve role from space_members. Returns null if membership not found or query fails. */
+async function resolveRole(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<"owner" | "partner" | null> {
+  try {
+    const { data, error } = await supabase
+      .from("space_members")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    if (data.role === "owner" || data.role === "partner") {
+      return data.role as "owner" | "partner";
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -71,34 +93,32 @@ async function updateSession(request: NextRequest) {
   // ─── observe / enforce modes ───
 
   if (!user) {
-    // No session: redirect to login
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);
   }
 
-  // Get user role from app_metadata or space_members
-  // We use user_metadata.role if set during login, otherwise fall back
-  const role = (user.user_metadata?.role as string) || "partner";
+  // Resolve role from space_members — never default to partner
+  const role = await resolveRole(supabase, user.id);
 
-  if (role !== "owner" && role !== "partner") {
-    // Unknown role — redirect to login
+  if (!role) {
+    // Could not resolve membership — redirect to login with membership error
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("error", "membership_invalid");
     return NextResponse.redirect(loginUrl);
   }
 
   // ─── Role-based page enforcement ───
 
   if (role === "owner") {
-    // Owner can only access /me, /login, /auth, and static/api
     if (!isOwnerPath(pathname) && pathname !== "/login") {
       const home = request.nextUrl.clone();
       home.pathname = "/me";
       return NextResponse.redirect(home);
     }
   } else {
-    // Partner cannot access /me
+    // Partner
     if (isPartnerDisallowed(pathname)) {
       const home = request.nextUrl.clone();
       home.pathname = "/";
