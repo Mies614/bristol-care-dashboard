@@ -10,45 +10,72 @@
  * authentication (Bearer secret) and NOT rely on this guard for
  * Origin exemption.
  *
- * space_code is a DATA PARTITION field, NOT an authentication credential.
- * routing identity (/** vs /me/**) is for UI routing, NOT authorization.
+ * Origin Guard is NOT identity authentication — it only reduces
+ * cross-site request abuse. space_code is a DATA PARTITION field,
+ * NOT an authentication credential.
  */
 
-// Exact allowed origins — no wildcards, no pattern matching
+/**
+ * Exact allowed origins — no wildcards, no pattern matching.
+ * Compares full origins (scheme + host + port) via new URL().origin.
+ */
 function getAllowedOrigins(): string[] {
   const origins: string[] = [];
 
-  // Vercel production URL (if configured)
-  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL;
-  if (vercelUrl) {
-    origins.push(vercelUrl);
+  // Explicitly configured origins (comma-separated)
+  //   ALLOWED_ORIGINS=https://example.com,https://www.example.com
+  const configured = process.env.ALLOWED_ORIGINS;
+  if (configured) {
+    for (const entry of configured.split(",")) {
+      const trimmed = entry.trim();
+      if (trimmed) {
+        try {
+          origins.push(new URL(trimmed).origin);
+        } catch {
+          // Skip malformed entries
+        }
+      }
+    }
   }
 
-  // Vercel preview deployments
-  const vercelBranchUrl = process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL;
-  if (vercelBranchUrl) {
-    origins.push(vercelBranchUrl);
+  // Vercel production URL (set automatically by Vercel at runtime)
+  const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProdUrl) {
+    try {
+      origins.push(new URL(`https://${vercelProdUrl}`).origin);
+    } catch {
+      // Skip malformed
+    }
   }
 
-  // Development origins
-  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-    origins.push("localhost:3000");
-    origins.push("127.0.0.1:3000");
-    origins.push("[::1]:3000");
+  // Vercel deployment URL (automatically available at runtime)
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl && vercelUrl !== vercelProdUrl) {
+    try {
+      origins.push(new URL(`https://${vercelUrl}`).origin);
+    } catch {
+      // Skip malformed
+    }
+  }
+
+  // Development origins (only in non-production)
+  if (process.env.NODE_ENV !== "production") {
+    origins.push("http://localhost:3000");
+    origins.push("http://127.0.0.1:3000");
+    origins.push("http://[::1]:3000");
   }
 
   return origins;
 }
 
 /**
- * Returns request's origin host (hostname:port).
- * Handles malformed Origin headers gracefully.
+ * Parse the origin into a normalized URL.origin form.
+ * This handles scheme, host, port, and trailing-slash normalization.
  */
-function parseOriginHost(origin: string | null): string | null {
+function normalizeOrigin(origin: string | null): string | null {
   if (!origin) return null;
   try {
-    const url = new URL(origin);
-    return url.host; // hostname:port
+    return new URL(origin).origin;
   } catch {
     return null;
   }
@@ -59,16 +86,16 @@ function parseOriginHost(origin: string | null): string | null {
  *
  * Rules:
  * - Origin MUST be present and parseable → else 403
- * - Origin host MUST exactly match an allowlist entry → else 403
+ * - Origin origin MUST exactly match an allowlist entry → else 403
  * - No wildcards, no substring matches, no Referer fallback
  */
 export function isAllowedOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
-  const originHost = parseOriginHost(origin);
-  if (!originHost) return false;
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
 
   const allowed = getAllowedOrigins();
-  return allowed.includes(originHost);
+  return allowed.includes(normalized);
 }
 
 /**
@@ -77,7 +104,6 @@ export function isAllowedOrigin(request: Request): boolean {
  * Requires Bearer token validation.
  */
 export function isServerToServer(request: Request): boolean {
-  // Cron requests use Bearer CRON_SECRET
   const authHeader = request.headers.get("authorization") || "";
   if (authHeader.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
@@ -92,10 +118,10 @@ export function isServerToServer(request: Request): boolean {
  */
 export function forbiddenOriginResponse(): Response {
   return new Response(
-    JSON.stringify({ ok: false, error: "不允许的跨域请求。" }),
+    JSON.stringify({ ok: false, error: "Origin not allowed." }),
     {
       status: 403,
       headers: { "Content-Type": "application/json" },
-    }
+    },
   );
 }

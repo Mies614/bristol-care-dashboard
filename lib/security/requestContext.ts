@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
-import { forbiddenOriginResponse, isAllowedOrigin } from "@/lib/originGuard";
+import { forbiddenOriginResponse, isAllowedOrigin, isServerToServer } from "@/lib/originGuard";
 import { getDefaultSpaceCodeServer, normalizeSpaceCode } from "@/lib/spaceCode";
 
 export type RequestSide = "owner" | "partner";
@@ -93,8 +93,11 @@ export function resolveRequestContext(
   input?: RequestInput,
   options: ResolveOptions = {},
 ): ContextResult {
-  if (options.requireOrigin && !isAllowedOrigin(request)) {
-    return { ok: false, response: forbiddenOriginResponse() };
+  if (options.requireOrigin) {
+    // Server-to-server calls (Cron, webhooks) bypass origin check
+    if (!isServerToServer(request) && !isAllowedOrigin(request)) {
+      return { ok: false, response: forbiddenOriginResponse() };
+    }
   }
 
   const configuredSpaceCode = normalizeSpaceCode(getDefaultSpaceCodeServer());
