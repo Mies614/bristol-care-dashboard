@@ -43,14 +43,8 @@ export async function GET(request: Request) {
   const role = member.role as MemberRole;
   const roleHome = getRoleHome(role);
 
-  // Persist role to user_metadata so middleware can read it quickly
-  try {
-    await serviceClient.auth.admin.updateUserById(userId, {
-      user_metadata: { role },
-    });
-  } catch {
-    // Non-critical — middleware will query space_members directly
-  }
+  // Role resolved from space_members — the sole authoritative source.
+  // No user_metadata write: middleware and API query space_members directly.
 
   // If client passed a `next` param, validate it belongs to this role
   if (nextParam && isPathAllowedForRole(nextParam, role)) {

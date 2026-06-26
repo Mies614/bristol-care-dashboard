@@ -139,9 +139,10 @@ describe("S3: callback uses role-based routing", () => {
     expect(cb).toContain("exchangeCodeForSession");
   });
 
-  it("persists role to user_metadata for middleware efficiency", () => {
-    expect(cb).toContain("updateUserById");
-    expect(cb).toContain("user_metadata");
+  it("does NOT write role via auth admin API", () => {
+    expect(cb).not.toContain("updateUserById");
+    // Role must only come from space_members
+    expect(cb).toContain("space_members");
   });
 
   it("uses APP_ORIGIN for redirect origin", () => {
@@ -201,5 +202,58 @@ describe("S3: middleware enforces role-page binding", () => {
   it("allows public paths through", () => {
     expect(mw).toContain("/login");
     expect(mw).toContain("/auth/callback");
+  });
+});
+
+
+describe("S3: role source of truth is space_members only", () => {
+  const mw = readFileSync(
+    resolve(__dirname, "../middleware.ts"),
+    "utf-8",
+  );
+  const cb = readFileSync(
+    resolve(__dirname, "../app/auth/callback/route.ts"),
+    "utf-8",
+  );
+
+  it("middleware does not read user_metadata.role", () => {
+    expect(mw).not.toMatch(/user_metadata\??\.role/);
+    expect(mw).not.toMatch(/app_metadata\??\.role/);
+  });
+
+  it("middleware does not read app_metadata.role", () => {
+    expect(mw).not.toContain("app_metadata");
+  });
+
+  it("callback does not read user_metadata.role", () => {
+    expect(cb).not.toMatch(/user_metadata\??\.role/);
+  });
+
+  it("callback resolves role from space_members only", () => {
+    expect(cb).toContain("space_members");
+    // Must use auth user id for query
+    expect(cb).toContain("authData.user.id");
+  });
+
+  it("owner callback redirects to /me via space_members role", () => {
+    expect(cb).toContain("getRoleHome");
+    expect(cb).toContain("roleHome");
+  });
+
+  it("partner callback redirects to / via space_members role", () => {
+    expect(cb).toContain("getRoleHome");
+  });
+
+  it("faked owner in metadata cannot elevate partner", () => {
+    // Middleware queries space_members, not metadata
+    expect(mw).toContain("space_members");
+    expect(mw).toContain("maybeSingle");
+    // No metadata fallback
+    expect(mw).not.toMatch(/user_metadata/);
+  });
+
+  it("membership missing does not fall back to metadata", () => {
+    expect(mw).toContain("membership_invalid");
+    expect(cb).toContain("membership_missing");
   });
 });
