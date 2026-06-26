@@ -139,3 +139,34 @@ Routes upgraded:
 - production + off: throws Error
 - development/test + off: allowed
 - unknown mode: defaults to observe
+
+
+## 2026-06-27 00:30 — Full E2E Attempt
+
+### What was achieved
+- Dev server started successfully
+- 4 key identity E2E specs (12 tests): ALL PASS
+- Dev server crashed under full suite load (Out of memory: worker)
+
+### Why full suite couldn't complete
+Next.js 15 uses ~800MB RAM during `next dev`. Combined with Playwright browser (~500MB), the total exceeds the 1-2GB available in the build environment. This is a known constraint of the development environment, not a code issue.
+
+### Verified today
+- Lint: zero warnings (fixed server-only stub anonymous export)
+- Build: success
+- Unit tests: 97 files, 1255 tests, 0 failures
+- Security sweep: clean (resolveRequestContext 3 routes only, 0 private public URLs, 0 metadata role reads)
+- SW syntax: OK
+- Key E2E (12 tests): ALL PASS
+
+### Not verified today (BLOCKED by environment)
+- Full E2E regression (19 specs not re-run)
+- Real device testing (iPhone, Android)
+- PWA offline
+- Push delivery
+- Cron reminders
+
+### Next steps
+1. Run `npm run test:e2e` on CI or local machine with >4GB RAM
+2. Real iPhone + Android manual verification per MANUAL_DEVICE_CHECKLIST.md
+3. If all green: switch AUTH_ENFORCEMENT_MODE=enforce

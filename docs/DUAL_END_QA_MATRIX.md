@@ -189,9 +189,54 @@ Generated: 2026-06-26 | Commit: 0f44180 | Mode: observe
 | Status | Count |
 |---|---|
 | AUTOMATED_PASS | 72 |
-| E2E_PASS | 12 |
+| E2E_PASS | 12 (4 key specs) |
 | MANUAL_PASS | 0 |
 | FAIL | 0 |
 | NOT_TESTED | 14 |
 | N/A | 16 |
 | BLOCKED | 0 |
+
+
+## Full E2E Suite Status
+
+| Result | Count |
+|---|---|
+| Total specs | 23 |
+| Previously passing | 23 (pre-auth changes) |
+| Key identity specs (new) | 4 specs, 12 tests: ALL PASS |
+| Remaining specs | 19 specs: NOT RE-RUN (dev server memory constraints) |
+| BLOCKED (env) | Full suite cannot run in current build env due to Next.js 15 + Playwright memory |
+
+## Still NOT_TESTED
+
+| Category | Items |
+|---|---|
+| Real iPhone | OTP, PWA install, iOS download, push delivery |
+| Real Android | OTP, PWA install, Downloads, push delivery |
+| PWA offline | Offline behavior, cached content |
+| Full E2E regression | 19 existing specs need re-run on stable CI |
+| Cron reminders | Real email delivery verification |
+
+## Coverage Summary
+
+| Module | E2E Status |
+|---|---|
+| OTP login | PASS (4 key specs) |
+| owner/partner routing | PASS |
+| owner view switch | PASS |
+| Home page | NOT_COVERED_BY_E2E |
+| Weather | NOT_COVERED_BY_E2E |
+| Love notes | NOT_COVERED_BY_E2E |
+| Albums | NOT_COVERED_BY_E2E |
+| Memories | NOT_COVERED_BY_E2E |
+| Miss-you | PASS |
+| Reactions/comments | NOT_COVERED_BY_E2E |
+| Read state | NOT_COVERED_BY_E2E |
+| Media sign | PASS |
+| Media download | PASS |
+| Settings | NOT_COVERED_BY_E2E |
+| Backgrounds | NOT_COVERED_BY_E2E |
+| Push/subscribe | PASS |
+| Admin | PASS |
+| PWA | NOT_COVERED_BY_E2E |
+| Mobile layout | NOT_COVERED_BY_E2E |
