@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useState, useCallback } from "react";
 import type { LoveNote } from "@/lib/types";
 import { DEFAULT_NORMAL_IDENTITY_ID, isSameIdentity } from "@/lib/identity";
@@ -13,6 +11,9 @@ import type { CommentEntry } from "@/lib/contentInteractions";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { NoteMediaDownload } from "./NoteMediaDownload";
 import { MobileSheet } from "@/components/ui/MobileSheet";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
+import { SignedMediaVideo } from "@/components/SignedMediaVideo";
+import { SignedMediaAudio } from "@/components/SignedMediaAudio";
 import type { AppSide } from "@/lib/appIdentity";
 
 export interface NoteCardProps {
@@ -211,9 +212,11 @@ export function NoteCard({
         {/* Media: image */}
         {note.imageUrl ? (
           <div className="mb-3 space-y-2">
-            <img
+            <SignedMediaImage
               className="max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]"
-              src={note.imageUrl}
+              path={note.imagePath}
+              bucket="love-notes"
+              url={note.imageUrl}
               alt={note.imageAlt || "小纸条图片"}
               loading="lazy"
             />
@@ -224,12 +227,12 @@ export function NoteCard({
         {/* Media: video */}
         {note.videoUrl ? (
           <div className="mb-3 space-y-2">
-            <video
+            <SignedMediaVideo
               className="max-h-56 w-full rounded-[1.25rem] bg-black"
-              src={note.videoUrl}
+              path={note.videoPath}
+              bucket="love-notes"
+              url={note.videoUrl}
               controls
-              onClick={(event) => event.stopPropagation()}
-              preload="metadata"
             />
             <NoteMediaDownload note={note} />
           </div>
@@ -238,7 +241,12 @@ export function NoteCard({
         {/* Media: audio */}
         {note.audioUrl ? (
           <div className="mb-3 space-y-2">
-            <audio className="w-full" src={note.audioUrl} controls onClick={(event) => event.stopPropagation()} />
+            <SignedMediaAudio
+              className="w-full"
+              path={note.audioPath}
+              bucket="love-notes"
+              url={note.audioUrl}
+            />
             <NoteMediaDownload note={note} />
           </div>
         ) : null}

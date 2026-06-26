@@ -44,19 +44,23 @@ describe("Signed upload replaces anon Storage", () => {
 // --- Video preload ---
 
 describe("Video preload attributes", () => {
-  it("LoveNoteCard video has preload=none", () => {
+  it("LoveNoteCard video uses SignedMediaVideo", () => {
     const src = readFileSync(resolve(__dirname, "../components/LoveNoteCard.tsx"), "utf-8");
-    expect(src).toContain('preload="none"');
+    expect(src).toContain("SignedMediaVideo");
+    expect(src).not.toContain("<video");
   });
 
-  it("NoteCard video source contains preload=metadata", () => {
+  it("NoteCard video uses SignedMediaVideo", () => {
     const src = readFileSync(resolve(__dirname, "../components/NoteCard.tsx"), "utf-8");
-    expect(src).toContain('preload="metadata"');
+    expect(src).toContain("SignedMediaVideo");
+    expect(src).not.toContain("<video");
   });
 
-  it("AlbumsPageContent lightbox video source contains preload=metadata", () => {
+  it("AlbumsPageContent lightbox video uses SignedMediaVideo", () => {
     const src = readFileSync(resolve(__dirname, "../components/AlbumsPageContent.tsx"), "utf-8");
-    expect(src).toContain('preload="metadata"');
+    expect(src).toContain("SignedMediaVideo");
+    // The old video tag should be replaced
+    expect(src).not.toContain("<video className");
   });
 });
 

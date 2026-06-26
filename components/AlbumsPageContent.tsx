@@ -14,7 +14,8 @@ import { validateAlbumImageFile, validateAlbumVideoFile } from "@/lib/albumValid
 import { buildAlbumMetadataPayload, uploadAlbumFileDirectly, type UploadedAlbumFile } from "@/lib/albumUpload";
 import { createThumbnailFileFromVideo, shouldGenerateVideoThumbnail } from "@/lib/videoThumbnail";
 import { cleanupVideoElement } from "@/lib/media-utils";
-import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
+import { SignedMediaVideo } from "@/components/SignedMediaVideo";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { AppEmptyState } from "@/components/ui/AppEmptyState";
@@ -426,8 +427,10 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
                     onClick={() => openLightbox(item)}
                   >
                     <div className="relative">
-                      <ImageWithSkeleton
-                        src={item.imageUrl || ""}
+                      <SignedMediaImage
+                        path={item.imagePath}
+                        bucket="couple-albums"
+                        url={item.imageUrl}
                         alt={item.title || "相册照片"}
                         aspectRatio="square"
                         showPlayIcon={Boolean(item.videoUrl)}
@@ -496,18 +499,19 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
 
               {/* Media display */}
               {selected.videoUrl && (playing || !selected.imageUrl) ? (
-                <video
-                  ref={videoRef}
+                <SignedMediaVideo
                   className="max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
-                  src={selected.videoUrl}
+                  path={selected.videoPath}
+                  bucket="couple-albums"
+                  url={selected.videoUrl}
                   controls
                   autoPlay
-                  preload="metadata"
-                  onEnded={() => setPlaying(false)}
                 />
               ) : selected.imageUrl ? (
-                <ImageWithSkeleton
-                  src={selected.imageUrl}
+                <SignedMediaImage
+                  path={selected.imagePath}
+                  bucket="couple-albums"
+                  url={selected.imageUrl}
                   alt={selected.title || "相册照片"}
                   aspectRatio="video"
                   className="max-h-[60dvh] w-full rounded-[1.35rem] object-contain"

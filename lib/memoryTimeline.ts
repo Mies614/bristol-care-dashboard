@@ -13,6 +13,7 @@ export type TimelineItem = {
   content?: string;
   date: string;
   imageUrl?: string;
+  imagePath?: string;
   videoUrl?: string;
   audioUrl?: string;
   href: string;
@@ -59,6 +60,7 @@ export function buildMemoryTimelineItems(input: {
     content: note.content,
     date: note.createdAt || note.visibleFrom || new Date(0).toISOString(),
     imageUrl: note.imageUrl,
+      imagePath: note.imagePath,
     videoUrl: note.videoUrl,
     audioUrl: note.audioUrl,
     href: `${basePath}/notes`
@@ -72,6 +74,7 @@ export function buildMemoryTimelineItems(input: {
     content: item.note,
     date: item.takenAt || item.createdAt || new Date(0).toISOString(),
     imageUrl: item.imageUrl,
+      imagePath: item.imagePath,
     videoUrl: item.videoUrl,
     href: `${basePath}/albums`
   }));

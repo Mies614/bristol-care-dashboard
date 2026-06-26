@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +10,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppEmptyState } from "@/components/ui/AppEmptyState";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
-import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
 import { NoteCard } from "@/components/NoteCard";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
@@ -198,7 +197,7 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
                     <Link href={albumsHref} key={item.id}>
                       <AppCard interactive compact className="overflow-hidden p-0 relative">
                         {item.imageUrl ? (
-                          <ImageWithSkeleton src={item.imageUrl} alt={item.title || "相册照片"} aspectRatio="square" showPlayIcon={item.type === "video"} />
+                          <SignedMediaImage path={item.imagePath} bucket="couple-albums" url={item.imageUrl} alt={item.title || "相册照片"} aspectRatio="square" showPlayIcon={item.type === "video"} />
                         ) : (
                           <div className="flex aspect-square items-center justify-center bg-cocoa/10 text-cocoa/40">▶</div>
                         )}
@@ -238,9 +237,11 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
                             >
                               <div className="flex gap-2 sm:gap-3">
                                 {item.imageUrl ? (
-                                  <img
+                                  <SignedMediaImage
                                     className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-2xl object-cover"
-                                    src={item.imageUrl}
+                                    path={item.imagePath}
+                                    bucket={item.sourceType === "album" ? "couple-albums" : "love-notes"}
+                                    url={item.imageUrl}
                                     alt={item.title}
                                     loading="lazy"
                                   />

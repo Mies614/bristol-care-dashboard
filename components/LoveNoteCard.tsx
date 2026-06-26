@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -12,6 +11,9 @@ import ContentComments from "./ContentComments";
 import ContentInteractionBar from "./ContentInteractionBar";
 import type { CommentEntry as CommentEntryType } from "@/lib/contentInteractions";
 import { NoteMediaDownload } from "./NoteMediaDownload";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
+import { SignedMediaVideo } from "@/components/SignedMediaVideo";
+import { SignedMediaAudio } from "@/components/SignedMediaAudio";
 
 interface LoveNoteCardProps {
   note?: LoveNote;
@@ -24,7 +26,6 @@ interface LoveNoteCardProps {
 }
 
 export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdentityId, appSide, compact }: LoveNoteCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
   const [unread, setUnread] = useState(false);
   const [comments, setComments] = useState<CommentEntryType[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -159,26 +160,38 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
       )}
 
-      {!compact && note?.imageUrl && !imageFailed ? (
+      {!compact && note?.imageUrl ? (
         <div className="mt-4 space-y-2">
-          <img
+          <SignedMediaImage
             alt={note.imageAlt || "小纸条图片"}
             className="max-h-[280px] w-full rounded-[1.5rem] border border-white/80 bg-white/60 object-cover shadow-sm"
-            src={note.imageUrl}
-            onError={() => setImageFailed(true)}
+            path={note.imagePath}
+            bucket="love-notes"
+            url={note.imageUrl}
           />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {!compact && note?.audioUrl ? (
         <div className="mt-4 space-y-2">
-          <audio className="w-full" src={note.audioUrl} controls />
+          <SignedMediaAudio
+            className="w-full"
+            path={note.audioPath}
+            bucket="love-notes"
+            url={note.audioUrl}
+          />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
       {!compact && note?.videoUrl ? (
         <div className="mt-4 space-y-2">
-          <video className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm" src={note.videoUrl} controls preload="none" />
+          <SignedMediaVideo
+            className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm"
+            path={note.videoPath}
+            bucket="love-notes"
+            url={note.videoUrl}
+            controls
+          />
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
@@ -218,7 +231,6 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         </div>
       ) : null}
 
-      {!compact && imageFailed ? <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-cocoa/65">图片暂时加载失败。</p> : null}
     </section>
   );
 }

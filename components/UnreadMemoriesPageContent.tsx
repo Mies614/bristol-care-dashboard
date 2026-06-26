@@ -9,7 +9,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppEmptyState } from "@/components/ui/AppEmptyState";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
-import { ImageWithSkeleton } from "@/components/ImageWithSkeleton";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
 import { getDefaultSpaceCode } from "@/lib/cloudSync";
 import { DEFAULT_NORMAL_IDENTITY_ID } from "@/lib/identity";
 import type { AlbumItem, LoveNote } from "@/lib/types";
@@ -148,7 +148,7 @@ export function UnreadMemoriesPageContent({ identityId: propIdentityId, appSide 
                   <Link href={albumsHref} key={item.id} onClick={() => markAlbumRead(item.id)}>
                     <AppCard interactive compact className="overflow-hidden p-0 relative">
                       {item.imageUrl ? (
-                        <ImageWithSkeleton src={item.imageUrl} alt={item.title || "相册照片"} aspectRatio="square" showPlayIcon={item.type === "video"} />
+                        <SignedMediaImage path={item.imagePath} bucket="couple-albums" url={item.imageUrl} alt={item.title || "相册照片"} aspectRatio="square" showPlayIcon={item.type === "video"} />
                       ) : (
                         <div className="flex aspect-square items-center justify-center bg-cocoa/10 text-cocoa/40">▶</div>
                       )}
