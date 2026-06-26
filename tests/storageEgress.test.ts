@@ -1,57 +1,43 @@
-/**
- * Storage Egress unit tests.
- *
- * Verifies:
- * 1. Upload functions set cacheControl for immutable assets
- * 2. Media URLs are public (not signed) — no per-request URL generation
- * 3. Video tags in components have preload="none"/"metadata" (not auto)
- * 4. E2E intercept infrastructure exists
- */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
 
-// --- cacheControl on uploads ---
+// --- Signed upload replaces anon Storage ---
 
-describe("Storage upload cacheControl", () => {
-  it("albumUpload sets cacheControl on storage.upload", () => {
-    const src = readFileSync(resolve(__dirname, "../lib/albumUpload.ts"), "utf-8");
-    expect(src).toContain("cacheControl");
-    expect(src).toContain("31536000");
-  });
-
-  it("noteUpload sets cacheControl on storage.upload", () => {
+describe("Signed upload replaces anon Storage", () => {
+  it("noteUpload uses signedUpload, not supabase.storage.from directly", () => {
     const src = readFileSync(resolve(__dirname, "../lib/noteUpload.ts"), "utf-8");
-    expect(src).toContain("cacheControl");
-    expect(src).toContain("31536000");
+    expect(src).toContain("signedUpload");
+    expect(src).not.toContain("supabase.storage.from");
   });
 
-  it("backgroundUpload sets cacheControl on storage.upload", () => {
-    const src = readFileSync(resolve(__dirname, "../lib/backgroundUpload.ts"), "utf-8");
-    expect(src).toContain("cacheControl");
-    expect(src).toContain("31536000");
-  });
-});
-
-// --- No signed URL regeneration ---
-
-describe("No signed URL regeneration", () => {
-  it("albumUpload uses getPublicUrl (static), not createSignedUrl", () => {
+  it("albumUpload uses signedUpload, not supabase.storage.from directly", () => {
     const src = readFileSync(resolve(__dirname, "../lib/albumUpload.ts"), "utf-8");
-    expect(src).toContain("getPublicUrl");
-    expect(src).not.toContain("createSignedUrl");
+    expect(src).toContain("signedUpload");
+    expect(src).not.toContain("supabase.storage.from");
   });
 
-  it("noteUpload uses getPublicUrl (static), not createSignedUrl", () => {
-    const src = readFileSync(resolve(__dirname, "../lib/noteUpload.ts"), "utf-8");
-    expect(src).toContain("getPublicUrl");
-    expect(src).not.toContain("createSignedUrl");
-  });
-
-  it("backgroundUpload uses getPublicUrl (static), not createSignedUrl", () => {
+  it("backgroundUpload uses signedUpload, not supabase.storage.from directly", () => {
     const src = readFileSync(resolve(__dirname, "../lib/backgroundUpload.ts"), "utf-8");
-    expect(src).toContain("getPublicUrl");
-    expect(src).not.toContain("createSignedUrl");
+    expect(src).toContain("signedUpload");
+    expect(src).not.toContain("supabase.storage.from");
+  });
+
+  it("signedUpload client uses /api/upload/authorize for server validation", () => {
+    const src = readFileSync(resolve(__dirname, "../lib/signedUpload.ts"), "utf-8");
+    expect(src).toContain("/api/upload/authorize");
+    expect(src).toContain("signedUrl");
+  });
+
+  it("signedUpload constructs public URL from bucket and path", () => {
+    const src = readFileSync(resolve(__dirname, "../lib/signedUpload.ts"), "utf-8");
+    expect(src).toContain("storage/v1/object/public");
+  });
+
+  it("cacheControl is set in signedUpload via fetch headers", () => {
+    const src = readFileSync(resolve(__dirname, "../lib/signedUpload.ts"), "utf-8");
+    expect(src).toContain("Cache-Control");
+    expect(src).toContain("31536000");
   });
 });
 
@@ -65,7 +51,6 @@ describe("Video preload attributes", () => {
 
   it("NoteCard video source contains preload=metadata", () => {
     const src = readFileSync(resolve(__dirname, "../components/NoteCard.tsx"), "utf-8");
-    // Source-level check (regex fails on => in onClick handler)
     expect(src).toContain('preload="metadata"');
   });
 
@@ -104,7 +89,6 @@ describe("E2E Storage intercept", () => {
   it("storage-intercept.ts exists and contains supabase Storage pattern", () => {
     const src = readFileSync(resolve(__dirname, "../tests/e2e/utils/storage-intercept.ts"), "utf-8");
     expect(src).toContain("SUPABASE_STORAGE_PATTERN");
-    // The pattern uses a regex with supabase.co in it
     expect(src).toMatch(/supabase.*storage.*public/i);
     expect(src).toContain("fulfill");
   });

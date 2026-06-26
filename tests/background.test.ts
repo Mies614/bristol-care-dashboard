@@ -116,11 +116,10 @@ describe("background settings", () => {
     expect(sanitized.imageDataUrl).toBeUndefined();
   });
 
-  it("builds immutable background upload paths under the default code folder", () => {
-    const path = buildBackgroundImagePath("xiaoguai520", "webp", "me");
-    expect(path).toMatch(
-      /^xiaoguai520\/me\/\d{4}\/\d{2}\/backgrounds\/[0-9a-f-]{36}\.webp$/,
-    );
+  it("buildBackgroundImagePath returns empty (path now server-generated)", () => {
+    const path = buildBackgroundImagePath("testcode", "jpg", "me");
+    expect(typeof path).toBe("string");
+    expect(path).toBe("");
   });
 
   it("exports the uppercase default constant", () => {

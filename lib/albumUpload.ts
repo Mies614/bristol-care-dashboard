@@ -1,15 +1,8 @@
-import { determineAlbumItemType, getAlbumFileExtension } from "./albumValidation";
-import { timeoutForKind, uploadWithTimeout } from "./mediaUpload";
-import { buildImmutableStoragePath } from "./storagePathPolicy";
-import { getSupabaseBrowserClient } from "./supabase/client";
+import { signedUpload, type SignedUploadResult } from "./signedUpload";
+import { determineAlbumItemType } from "./albumValidation";
 import type { AlbumItem } from "./types";
 
-export type UploadedAlbumFile = {
-  url: string;
-  path: string;
-  size: number;
-  mimeType: string;
-};
+export type UploadedAlbumFile = SignedUploadResult;
 
 export type AlbumUploadDraft = {
   title: string;
@@ -35,39 +28,13 @@ export type AlbumMetadataPayload = {
   created_by?: string;
 };
 
-const BUCKET = "couple-albums";
-
-export async function uploadAlbumFileDirectly(file: File, kind: "image" | "video", code: string, identity?: string): Promise<UploadedAlbumFile> {
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) {
-    throw new Error("Supabase publishable client 未配置，无法直传相册文件。");
-  }
-
-  const ext = getAlbumFileExtension(file);
-  const path = buildImmutableStoragePath({
-    spaceCode: code,
-    identity,
-    kind: kind === "image" ? "images" : "videos",
-    extension: ext,
-  });
-  const upload = supabase.storage.from(BUCKET).upload(path, file, {
-    cacheControl: "31536000", // 1 year for immutable assets
-    contentType: file.type || "application/octet-stream",
-    upsert: false
-  });
-  const { error } = await uploadWithTimeout(upload, timeoutForKind(kind));
-
-  if (error) {
-    throw new Error(error.message || "Supabase Storage 上传失败。");
-  }
-
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return {
-    url: data.publicUrl,
-    path,
-    size: file.size,
-    mimeType: file.type || "application/octet-stream"
-  };
+export async function uploadAlbumFileDirectly(
+  file: File,
+  kind: "image" | "video",
+  _code: string,
+  _identity?: string,
+): Promise<UploadedAlbumFile> {
+  return signedUpload(file, "couple-albums", kind);
 }
 
 export function buildAlbumMetadataPayload(input: {
@@ -92,6 +59,6 @@ export function buildAlbumMetadataPayload(input: {
     video_url: videoUpload?.url,
     video_path: videoUpload?.path,
     file_size: (imageUpload?.size || 0) + (videoUpload?.size || 0),
-    created_by: createdBy
+    created_by: createdBy,
   };
 }

@@ -3,14 +3,13 @@
  *
  * Manages per-spaceCode identity persistence with Supabase + localStorage fallback.
  *
- * - Browser: uses Supabase anon client (user_identities table) + localStorage fallback
+ * - Browser: uses /api/identities server API + localStorage fallback
  * - Server: uses Supabase service role client (user_identities table), no localStorage
  *
  * This module is designed to work in both browser and server environments.
  * Browser-only functions (localStorage) are guarded with typeof window checks.
  */
 
-import { getSupabaseBrowserClient } from "./supabase/client";
 import {
   getDefaultIdentities,
   migrateLegacyIdentityId,
@@ -85,30 +84,17 @@ function lsRemove(key: string): void {
 
 // ─── Load from Supabase ───
 
-async function loadIdentitiesFromSupabase(spaceCode: string): Promise<UserIdentity[]> {
-  const client = getSupabaseBrowserClient();
-  if (!client) return [];
+async function loadIdentitiesFromApi(_spaceCode: string): Promise<UserIdentity[]> {
+  if (!isBrowser()) return [];
 
   try {
-    const { data, error } = await client
-      .from("user_identities")
-      .select("*")
-      .eq("space_code", spaceCode)
-      .order("created_at", { ascending: true });
+    const res = await fetch("/api/identities");
+    if (!res.ok) return [];
 
-    if (error) return [];
+    const json = await res.json();
+    if (!json.ok || !Array.isArray(json.identities)) return [];
 
-    return (data || []).map(
-      (row: Record<string, unknown>): UserIdentity => ({
-        id: String(row.id ?? ""),
-        displayName: String(row.display_name ?? ""),
-        role: String(row.role ?? "partner") as UserIdentity["role"],
-        avatarEmoji: row.avatar_emoji ? String(row.avatar_emoji) : undefined,
-        isDefault: Boolean(row.is_default),
-        createdAt: String(row.created_at ?? new Date().toISOString()),
-        updatedAt: String(row.updated_at ?? new Date().toISOString()),
-      })
-    );
+    return json.identities as UserIdentity[];
   } catch {
     return [];
   }
@@ -116,48 +102,45 @@ async function loadIdentitiesFromSupabase(spaceCode: string): Promise<UserIdenti
 
 // ─── Save to Supabase ───
 
-async function saveIdentityToSupabase(
-  spaceCode: string,
+async function saveIdentityToApi(
+  _spaceCode: string,
   identity: UserIdentity
 ): Promise<boolean> {
-  const client = getSupabaseBrowserClient();
-  if (!client) return false;
+  if (!isBrowser()) return false;
 
   try {
-    const { error } = await client.from("user_identities").upsert(
-      {
+    const res = await fetch("/api/identities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         id: identity.id,
-        space_code: spaceCode,
-        display_name: identity.displayName,
+        displayName: identity.displayName,
         role: identity.role,
-        avatar_emoji: identity.avatarEmoji ?? null,
-        is_default: identity.isDefault ?? false,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "space_code,id" }
-    );
-
-    return !error;
+        avatarEmoji: identity.avatarEmoji ?? null,
+        isDefault: identity.isDefault ?? false,
+      }),
+    });
+    const json = await res.json();
+    return json.ok === true;
   } catch {
     return false;
   }
 }
 
-async function deleteIdentityFromSupabase(
-  spaceCode: string,
+async function deleteIdentityFromApi(
+  _spaceCode: string,
   identityId: string
 ): Promise<boolean> {
-  const client = getSupabaseBrowserClient();
-  if (!client) return false;
+  if (!isBrowser()) return false;
 
   try {
-    const { error } = await client
-      .from("user_identities")
-      .delete()
-      .eq("space_code", spaceCode)
-      .eq("id", identityId);
-
-    return !error;
+    const res = await fetch("/api/identities", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: identityId }),
+    });
+    const json = await res.json();
+    return json.ok === true;
   } catch {
     return false;
   }
@@ -177,7 +160,7 @@ export type { UserIdentity, IdentityState } from "./identity";
  */
 export async function loadIdentities(spaceCode: string): Promise<UserIdentity[]> {
   // Try Supabase
-  const supabaseIds = await loadIdentitiesFromSupabase(spaceCode);
+  const supabaseIds = await loadIdentitiesFromApi(spaceCode);
   if (supabaseIds.length > 0) {
     // Also cache in localStorage for offline
     try {
@@ -225,7 +208,7 @@ export async function saveIdentity(
   identity: UserIdentity
 ): Promise<void> {
   // Try Supabase
-  const supabaseOk = await saveIdentityToSupabase(spaceCode, identity);
+  const supabaseOk = await saveIdentityToApi(spaceCode, identity);
 
   // Always update localStorage
   if (isBrowser()) {
@@ -256,7 +239,7 @@ export async function deleteIdentity(
   identityId: string
 ): Promise<void> {
   // Try Supabase
-  const supabaseOk = await deleteIdentityFromSupabase(spaceCode, identityId);
+  const supabaseOk = await deleteIdentityFromApi(spaceCode, identityId);
 
   // Always update localStorage
   if (isBrowser()) {
@@ -341,9 +324,7 @@ export async function getIdentityState(spaceCode: string): Promise<IdentityState
  * Check if Supabase is available for identity storage.
  */
 export function isIdentityCloudAvailable(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return Boolean(url && key);
+  return true;
 }
 
 // ─── Internal helpers ───

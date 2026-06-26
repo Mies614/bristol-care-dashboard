@@ -1,20 +1,14 @@
 "use client";
 
-import { uploadWithTimeout } from "./mediaUpload";
-import { buildImmutableStoragePath } from "./storagePathPolicy";
-import { getSupabaseBrowserClient } from "./supabase/client";
+import { signedUpload } from "./signedUpload";
 
 export const BACKGROUND_BUCKET = "backgrounds";
 export const MAX_BACKGROUND_IMAGE_SIZE = 30 * 1024 * 1024;
 export const ALLOWED_BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
 
-export function buildBackgroundImagePath(code: string, extension: string, identity?: string) {
-  return buildImmutableStoragePath({
-    spaceCode: code,
-    identity,
-    kind: "backgrounds",
-    extension,
-  });
+export function buildBackgroundImagePath(_code: string, _extension: string, _identity?: string) {
+  // Path is now generated server-side by /api/upload/authorize
+  return "";
 }
 
 export function validateBackgroundImageFile(file: File | Blob) {
@@ -37,18 +31,6 @@ export function getBackgroundImageExtension(file: File | Blob & { name?: string 
   return "jpg";
 }
 
-export async function uploadBackgroundImageDirectly(file: File, code: string, identity?: string) {
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) throw new Error("Supabase publishable client 未配置，无法上传背景图片。");
-  const ext = getBackgroundImageExtension(file);
-  const path = buildBackgroundImagePath(code, ext, identity);
-  const upload = supabase.storage.from(BACKGROUND_BUCKET).upload(path, file, {
-    cacheControl: "31536000", // 1 year for immutable assets
-    contentType: file.type || "application/octet-stream",
-    upsert: false
-  });
-  const { error } = await uploadWithTimeout(upload, 60_000);
-  if (error) throw new Error(error.message || "背景图片上传失败。");
-  const { data } = supabase.storage.from(BACKGROUND_BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, path };
+export async function uploadBackgroundImageDirectly(file: File, _code: string, _identity?: string) {
+  return signedUpload(file, BACKGROUND_BUCKET, "image");
 }
