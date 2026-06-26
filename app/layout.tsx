@@ -3,6 +3,8 @@ import { Toaster } from "sonner";
 import { AppBackground } from "@/components/AppBackground";
 import { PwaRegister } from "@/components/PwaRegister";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthRoleProvider } from "@/components/AuthRoleProvider";
+import { getAuthenticatedRequestContext } from "@/lib/security/authenticatedRequestContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,13 +25,29 @@ export const viewport: Viewport = {
   maximumScale: 1
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+async function resolveAuthRole(): Promise<"owner" | "partner" | null> {
+  try {
+    const result = await getAuthenticatedRequestContext();
+    if (result.ok && result.context.role) {
+      return result.context.role;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const role = await resolveAuthRole();
+
   return (
     <html lang="zh-CN">
       <body>
         <PwaRegister />
         <ThemeProvider>
-          <AppBackground>{children}</AppBackground>
+          <AuthRoleProvider role={role}>
+            <AppBackground>{children}</AppBackground>
+          </AuthRoleProvider>
           <Toaster
             position="top-center"
             toastOptions={{
