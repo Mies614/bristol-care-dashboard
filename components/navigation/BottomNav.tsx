@@ -11,7 +11,7 @@ import {
   normalizeThemeStyle,
 } from "./navVariants";
 import { BottomNavItem } from "./BottomNavItem";
-import { getThemeSettings } from "@/lib/theme";
+import { DEFAULT_THEME_SETTINGS, getThemeSettings } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import type { AppThemeStyle, ThemeNavStyle, ThemeDecoration } from "@/lib/types";
 
@@ -31,7 +31,7 @@ interface NavStatus {
 
 export function BottomNav({ status }: { status?: NavStatus }) {
   const pathname = usePathname();
-  const [settings, setSettings] = useState(() => getThemeSettings());
+  const [settings, setSettings] = useState(DEFAULT_THEME_SETTINGS);
   const isOwner = isOwnerPath(pathname);
 
   // All hooks must be called before any conditional returns

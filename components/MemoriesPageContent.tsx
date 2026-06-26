@@ -257,7 +257,7 @@ export function MemoriesPageContent({ identityId: propIdentityId, appSide = "par
                                     )}
                                   </div>
                                   <p className="mt-0.5 text-xs text-[var(--app-muted)]">
-                                    {new Date(item.date).toLocaleDateString("zh-CN")}
+                                    {new Date(item.date).toISOString().slice(0, 10)}
                                   </p>
                                   {item.content && (
                                     <p className="mt-1 line-clamp-2 text-xs sm:text-sm leading-5 text-cocoa/65">{item.content}</p>
