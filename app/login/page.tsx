@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import { AppCard } from "@/components/ui/AppCard";
-import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
+
+type LoginStatus = "idle" | "sending" | "sent" | "error";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [status, setStatus] = useState<LoginStatus>("idle");
 
-  const submitLogin = useCallback(async () => {
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
     const trimmed = email.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || status === "sending") return;
 
-    setMessage("");
-    setLoading(true);
+    setStatus("sending");
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -26,23 +26,13 @@ export default function LoginPage() {
       });
       const json = await res.json();
 
-      if (json.ok) {
-        setMessage("登录链接已发送，请检查邮箱。");
-      } else {
-        setMessage("无法发送登录链接，请检查邮箱或稍后重试。");
-      }
+      setStatus(json.ok ? "sent" : "error");
     } catch {
-      setMessage("网络错误，请稍后重试。");
-    } finally {
-      setLoading(false);
+      setStatus("error");
     }
-  }, [email, loading]);
-
-  // Form submit handler for Enter key support
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    submitLogin();
   }
+
+  const isLoading = status === "sending";
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4">
@@ -52,7 +42,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-cocoa/55">输入你的邮箱以登录</p>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="email"
             className="w-full"
@@ -60,23 +50,33 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            disabled={loading}
+            disabled={isLoading}
             autoComplete="email"
           />
-          <AppButton
-            variant="primary"
-            className="w-full"
-            type="button"
-            disabled={loading || !email.trim()}
-            onClick={submitLogin}
+          <button
+            type="submit"
+            disabled={isLoading || !email.trim()}
+            className="w-full rounded-[var(--app-radius)] bg-[#b87060] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#a06055] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "发送中..." : "发送登录链接"}
-          </AppButton>
+            {isLoading
+              ? "发送中…"
+              : status === "sent"
+                ? "重新发送登录链接"
+                : "发送登录链接"}
+          </button>
         </form>
 
-        {message ? (
-          <p className="mt-4 text-center text-sm text-cocoa/65">{message}</p>
-        ) : null}
+        {status === "sent" && (
+          <p role="status" className="mt-4 text-center text-sm text-cocoa/65">
+            登录链接已发送，请检查邮箱。
+          </p>
+        )}
+
+        {status === "error" && (
+          <p role="alert" className="mt-4 text-center text-sm text-cocoa/65">
+            发送失败，请稍后重试。
+          </p>
+        )}
       </AppCard>
     </main>
   );

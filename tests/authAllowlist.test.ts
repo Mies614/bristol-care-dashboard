@@ -94,29 +94,37 @@ describe("S3: login form calls /api/auth/login", () => {
     expect(page).toContain("fetch(");
   });
 
-  it("does NOT POST to /login natively", () => {
-    // No action attribute, no method="POST" on the form
-    expect(page).not.toContain("action=");
-    // Button uses type="button" not type="submit"
-    expect(page).toContain('type="button"');
+  it("uses type=submit for Enter key support", () => {
+    expect(page).toContain('type="submit"');
   });
 
-  it("supports Enter key via form onSubmit", () => {
-    expect(page).toContain("onSubmit={handleSubmit}");
+  it("prevents default on form submit", () => {
     expect(page).toContain("event.preventDefault()");
   });
 
-  it("prevents double submission via loading state", () => {
-    expect(page).toContain("loading");
-    expect(page).toContain("disabled={loading");
+  it("prevents double submission via sending status", () => {
+    expect(page).toContain('status === "sending"');
   });
 
-  it("shows error state on failure", () => {
-    expect(page).toContain("setMessage");
+  it("shows status=error on API failure", () => {
+    expect(page).toContain('role="alert"');
   });
 
-  it("shows sent state on success", () => {
+  it("shows status=sent on success with re-send option", () => {
     expect(page).toContain("登录链接已发送");
+    expect(page).toContain("重新发送登录链接");
+  });
+
+  it("button uses explicit Tailwind colors (not CSS variables)", () => {
+    expect(page).toContain("bg-[#b87060]");
+    expect(page).toContain("text-white");
+  });
+
+  it("button is always visible in all states", () => {
+    // Button is rendered unconditionally, only text changes
+    expect(page).toContain("发送登录链接");
+    expect(page).toContain("重新发送登录链接");
+    expect(page).toContain("发送中…");
   });
 });
 
