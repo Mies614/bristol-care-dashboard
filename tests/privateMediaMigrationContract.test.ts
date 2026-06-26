@@ -191,8 +191,9 @@ describe("S3: media sign API uses auth-based context", () => {
     expect(route).toContain("resolveRequestContext");
   });
 
-  it("validates batch paths belong to authenticated space", () => {
-    expect(route).toContain("startsWith(spaceCode");
+  it("validates batch paths via database space ownership", () => {
+    expect(route).toContain("verifyPathsBySpace");
+    expect(route).toContain("space_id");
   });
 });
 
