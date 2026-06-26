@@ -49,24 +49,12 @@ where table_schema = 'public'
 order by ordinal_position;
 ```
 
-## Quick Data Sample
+## Data Safety
 
-```sql
-select space_code, content_type, content_id, identity, read_at
-from content_reads
-order by read_at desc
-limit 20;
-
-select space_code, note_id, title, author_identity
-from love_notes
-order by created_at desc
-limit 10;
-
-select space_code, content_type, content_id, identity, interaction_type
-from content_interactions
-order by created_at desc
-limit 20;
-```
+For Security Phase S2.1, use `docs/security/production-rls-verification.sql`.
+It only requests structure, policy, grant and Storage metadata. Do not paste
+production user content, media paths, keys, JWTs, tokens or database passwords
+into Codex.
 
 ## Migration & Change Rules
 

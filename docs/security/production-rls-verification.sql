@@ -1,11 +1,9 @@
--- ═══════════════════════════════════════════════════════════
--- Bristol Care Dashboard — Production RLS Verification
--- ═══════════════════════════════════════════════════════════
--- READ-ONLY. 不包含 ALTER、CREATE POLICY、DROP、UPDATE、INSERT。
--- 在 Supabase Dashboard → SQL Editor 中执行。
--- ═══════════════════════════════════════════════════════════
+-- Bristol Care Dashboard — Production Supabase Verification
+-- Read-only structure audit for Security Phase S2.1.
+-- Run in Supabase Dashboard SQL Editor.
+-- Share only structure/policy output. Do not share rows from user tables or secrets.
 
--- ── 1. 表是否启用 RLS ──
+-- 1. Public table RLS status.
 SELECT
   n.nspname AS schema_name,
   c.relname AS table_name,
@@ -17,7 +15,7 @@ WHERE n.nspname = 'public'
   AND c.relkind = 'r'
 ORDER BY c.relname;
 
--- ── 2. 所有 Policy 清单 ──
+-- 2. Public table policies.
 SELECT
   schemaname,
   tablename,
@@ -31,74 +29,189 @@ FROM pg_policies
 WHERE schemaname = 'public'
 ORDER BY tablename, policyname;
 
--- ── 3. 关键表列和类型 ──
--- content_comments
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'content_comments'
-ORDER BY ordinal_position;
-
--- content_interactions
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'content_interactions'
-ORDER BY ordinal_position;
-
--- content_reads
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'content_reads'
-ORDER BY ordinal_position;
-
--- space_locations
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'space_locations'
-ORDER BY ordinal_position;
-
--- love_notes
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'love_notes'
-ORDER BY ordinal_position;
-
--- album_items
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'album_items'
-ORDER BY ordinal_position;
-
--- ── 4. Storage Bucket 信息 ──
--- 在 Supabase Dashboard → Storage → Policies 中查看各 bucket：
---   love-notes
---   couple-albums
---   backgrounds
---
--- 检查每项：
--- ✅ bucket 是否为 public
--- ✅ 是否有 storage.objects 的 SELECT/INSERT/UPDATE/DELETE policy
--- ✅ policy 角色是否为 anon/authenticated
--- ✅ object path 是否包含 space_code 或 identity 限制
-
--- ── 5. Storage Object Policies (SQL版) ──
+-- 3. Business table columns needed for schema drift review.
+WITH business_tables(table_name) AS (
+  VALUES
+    ('couple_spaces'),
+    ('settings'),
+    ('courses'),
+    ('deadlines'),
+    ('quick_links'),
+    ('love_notes'),
+    ('album_items'),
+    ('miss_you_events'),
+    ('miss_you_seen_state'),
+    ('period_records'),
+    ('push_subscriptions'),
+    ('reminder_preferences'),
+    ('reminder_delivery_log'),
+    ('reminder_run_logs'),
+    ('user_identities'),
+    ('content_interactions'),
+    ('content_comments'),
+    ('content_reads'),
+    ('space_locations')
+)
 SELECT
-  name AS policy_name,
-  bucket_id,
-  operation,
-  definition
-FROM storage.policies
-ORDER BY bucket_id, operation;
+  c.table_schema,
+  c.table_name,
+  c.ordinal_position,
+  c.column_name,
+  c.data_type,
+  c.udt_name,
+  c.is_nullable,
+  c.column_default
+FROM information_schema.columns c
+JOIN business_tables bt ON bt.table_name = c.table_name
+WHERE c.table_schema = 'public'
+ORDER BY c.table_name, c.ordinal_position;
 
--- ── 6. 关键数据抽样 ──
--- 不输出具体值到日志，仅确认查询可用
-SELECT count(*) AS total_love_notes FROM love_notes;
-SELECT count(*) AS total_album_items FROM album_items;
-SELECT count(*) AS total_interactions FROM content_interactions;
-SELECT count(*) AS total_comments FROM content_comments;
-SELECT count(*) AS total_reads FROM content_reads;
+-- 4. Constraints for uniqueness, primary keys, checks and foreign keys.
+WITH business_tables(table_name) AS (
+  VALUES
+    ('couple_spaces'),
+    ('settings'),
+    ('courses'),
+    ('deadlines'),
+    ('quick_links'),
+    ('love_notes'),
+    ('album_items'),
+    ('miss_you_events'),
+    ('miss_you_seen_state'),
+    ('period_records'),
+    ('push_subscriptions'),
+    ('reminder_preferences'),
+    ('reminder_delivery_log'),
+    ('reminder_run_logs'),
+    ('user_identities'),
+    ('content_interactions'),
+    ('content_comments'),
+    ('content_reads'),
+    ('space_locations')
+)
+SELECT
+  tc.table_schema,
+  tc.table_name,
+  tc.constraint_name,
+  tc.constraint_type,
+  kcu.column_name,
+  ccu.table_name AS foreign_table_name,
+  ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints tc
+LEFT JOIN information_schema.key_column_usage kcu
+  ON kcu.constraint_schema = tc.constraint_schema
+ AND kcu.constraint_name = tc.constraint_name
+ AND kcu.table_schema = tc.table_schema
+ AND kcu.table_name = tc.table_name
+LEFT JOIN information_schema.constraint_column_usage ccu
+  ON ccu.constraint_schema = tc.constraint_schema
+ AND ccu.constraint_name = tc.constraint_name
+JOIN business_tables bt ON bt.table_name = tc.table_name
+WHERE tc.table_schema = 'public'
+ORDER BY tc.table_name, tc.constraint_name, kcu.ordinal_position;
+
+-- 5. Index definitions for partition and policy planning.
+WITH business_tables(table_name) AS (
+  VALUES
+    ('couple_spaces'),
+    ('settings'),
+    ('courses'),
+    ('deadlines'),
+    ('quick_links'),
+    ('love_notes'),
+    ('album_items'),
+    ('miss_you_events'),
+    ('miss_you_seen_state'),
+    ('period_records'),
+    ('push_subscriptions'),
+    ('reminder_preferences'),
+    ('reminder_delivery_log'),
+    ('reminder_run_logs'),
+    ('user_identities'),
+    ('content_interactions'),
+    ('content_comments'),
+    ('content_reads'),
+    ('space_locations')
+)
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  indexdef
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND tablename IN (SELECT table_name FROM business_tables)
+ORDER BY tablename, indexname;
+
+-- 6. Data API grants for anon/authenticated exposure review.
+WITH business_tables(table_name) AS (
+  VALUES
+    ('couple_spaces'),
+    ('settings'),
+    ('courses'),
+    ('deadlines'),
+    ('quick_links'),
+    ('love_notes'),
+    ('album_items'),
+    ('miss_you_events'),
+    ('miss_you_seen_state'),
+    ('period_records'),
+    ('push_subscriptions'),
+    ('reminder_preferences'),
+    ('reminder_delivery_log'),
+    ('reminder_run_logs'),
+    ('user_identities'),
+    ('content_interactions'),
+    ('content_comments'),
+    ('content_reads'),
+    ('space_locations')
+)
+SELECT
+  grantee,
+  table_schema,
+  table_name,
+  privilege_type,
+  is_grantable
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
+  AND table_name IN (SELECT table_name FROM business_tables)
+  AND grantee IN ('anon', 'authenticated')
+ORDER BY table_name, grantee, privilege_type;
+
+-- 7. Storage bucket configuration.
+SELECT
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+FROM storage.buckets
+ORDER BY id;
+
+-- 8. Storage object policies.
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE schemaname = 'storage'
+  AND tablename = 'objects'
+ORDER BY policyname;
+
+-- 9. Storage object grants for anon/authenticated exposure review.
+SELECT
+  grantee,
+  table_schema,
+  table_name,
+  privilege_type,
+  is_grantable
+FROM information_schema.role_table_grants
+WHERE table_schema = 'storage'
+  AND table_name = 'objects'
+  AND grantee IN ('anon', 'authenticated')
+ORDER BY grantee, privilege_type;
