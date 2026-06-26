@@ -128,22 +128,67 @@ describe("S3: login form calls /api/auth/login", () => {
   });
 });
 
-describe("S3: callback prevents open redirect", () => {
+describe("S3: callback uses role-based routing", () => {
   const cb = readFileSync(
     resolve(__dirname, "../app/auth/callback/route.ts"),
     "utf-8",
   );
 
-  it("validates redirect path against allowlist", () => {
-    expect(cb).toContain("ALLOWED_REDIRECT_PREFIXES");
-    expect(cb).toContain("safeRedirectPath");
+  it("queries space_members for role after exchangeCodeForSession", () => {
+    expect(cb).toContain("space_members");
+    expect(cb).toContain("exchangeCodeForSession");
   });
 
-  it("rejects paths with protocol prefix", () => {
-    expect(cb).toContain("://");
+  it("imports getRoleHome for role-based redirect", () => {
+    expect(cb).toContain("getRoleHome");
+    expect(cb).toContain("roleHome");
   });
 
-  it("defaults to / on invalid path", () => {
-    expect(cb).toContain('return "/"');
+  it("redirects partner to /", () => {
+    expect(cb).toContain("/");
+  });
+
+  it("uses authData.user.id (not client cookies) for membership query", () => {
+    expect(cb).toContain("authData.user.id");
+  });
+
+  it("redirects to membership_missing when no space_members record", () => {
+    expect(cb).toContain("membership_missing");
+  });
+
+  it("validates next param against role-allowed paths", () => {
+    expect(cb).toContain("isPathAllowedForRole");
+  });
+});
+
+describe("S3: middleware enforces role-page binding", () => {
+  const mw = readFileSync(
+    resolve(__dirname, "../middleware.ts"),
+    "utf-8",
+  );
+
+  it("checks AUTH_ENFORCEMENT_MODE", () => {
+    expect(mw).toContain("AUTH_ENFORCEMENT_MODE");
+  });
+
+  it("returns early in off mode", () => {
+    expect(mw).toContain('"off"');
+  });
+
+  it("redirects owner from partner pages", () => {
+    expect(mw).toContain("isOwnerPath");
+  });
+
+  it("redirects partner from /me", () => {
+    expect(mw).toContain("isPartnerDisallowed");
+  });
+
+  it("does not redirect API routes", () => {
+    expect(mw).toContain("/api/");
+  });
+
+  it("allows login, callback, and static paths through", () => {
+    expect(mw).toContain("/login");
+    expect(mw).toContain("/auth/callback");
   });
 });
