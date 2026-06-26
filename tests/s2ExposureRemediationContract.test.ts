@@ -70,8 +70,9 @@ describe("S2.2: upload modules use signed upload, not anon Storage", () => {
     expect(signedUpload).toContain("/api/upload/authorize");
   });
 
-  it("signedUpload constructs public URL server-side", () => {
-    expect(signedUpload).toContain("storage/v1/object/public");
+  it("signedUpload does not generate public URLs for private buckets", () => {
+    expect(signedUpload).not.toContain("object/public");
+    expect(signedUpload).not.toContain("publicUrl");
   });
 });
 

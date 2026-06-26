@@ -153,7 +153,8 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-      imageUrl = supabase.storage.from(BUCKET).getPublicUrl(imagePath).data.publicUrl;
+      const signed = await supabase.storage.from(BUCKET).createSignedUrl(imagePath, 300);
+      imageUrl = signed.data?.signedUrl || "";
     }
 
     const { data, error: insertError } = await supabase

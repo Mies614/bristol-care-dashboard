@@ -35,12 +35,6 @@ export type SignedUploadResult = {
   mimeType: string;
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-
-function publicUrl(bucket: string, path: string): string {
-  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-}
-
 export async function signedUpload(
   file: File | Blob,
   bucket: string,
@@ -86,7 +80,7 @@ export async function signedUpload(
 
   // 3. Return public URL and metadata
   return {
-    url: publicUrl(authJson.bucket, authJson.path),
+    url: "",
     path: authJson.path,
     size: file.size,
     mimeType: file.type || "application/octet-stream",

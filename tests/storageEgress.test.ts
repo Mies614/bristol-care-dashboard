@@ -29,9 +29,9 @@ describe("Signed upload replaces anon Storage", () => {
     expect(src).toContain("signedUrl");
   });
 
-  it("signedUpload constructs public URL from bucket and path", () => {
+  it("signedUpload does not construct public URL", () => {
     const src = readFileSync(resolve(__dirname, "../lib/signedUpload.ts"), "utf-8");
-    expect(src).toContain("storage/v1/object/public");
+    expect(src).not.toContain("object/public");
   });
 
   it("cacheControl is set in signedUpload via fetch headers", () => {
