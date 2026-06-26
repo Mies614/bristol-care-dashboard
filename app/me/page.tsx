@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +18,7 @@ import { defaultAppData } from "@/lib/sampleData";
 import { DEFAULT_PERIOD_SETTINGS, getCurrentCycleDay, getDaysUntilNextPeriod } from "@/lib/period";
 import { buildRandomMemoryItems, pickRandomMemory } from "@/lib/randomMemory";
 import { getUnreadHomeSummary } from "@/lib/readState";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
 import { fetchCloudReadStates, buildReadKeySet } from "@/lib/readStateClient";
 import { MissYouCombinedCard } from "@/components/MissYouCombinedCard";
 import { XiaoguaiStatusCard } from "@/components/XiaoguaiStatusCard";
@@ -351,7 +351,7 @@ export default function MeHomePage() {
             <div className="grid grid-cols-2 gap-2">
               {recentMemories.map((item) => (
                 <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/me/albums" key={item.id}>
-                  {item.imageUrl ? <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" /> : <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>}
+                  {item.imageUrl ? <SignedMediaImage className="aspect-square w-full object-cover" path={item.imagePath} bucket="couple-albums" url={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" /> : <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>}
                   {item.isFavorite ? <span className="absolute right-1 top-1 rounded-full bg-white/75 px-1.5 text-xs">♡</span> : null}
                 </Link>
               ))}

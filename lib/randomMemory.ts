@@ -7,6 +7,7 @@ export type RandomMemoryItem = {
   title?: string;
   content?: string;
   imageUrl?: string;
+  imagePath?: string;
   videoUrl?: string;
   audioUrl?: string;
   createdAt?: string;
@@ -29,6 +30,7 @@ export function buildRandomMemoryItems(notes: LoveNote[] = [], albums: AlbumItem
     title: note.mood || "小纸条",
     content: note.content,
     imageUrl: note.imageUrl,
+    imagePath: note.imagePath,
     videoUrl: note.videoUrl,
     audioUrl: note.audioUrl,
     createdAt: note.createdAt,
@@ -41,6 +43,7 @@ export function buildRandomMemoryItems(notes: LoveNote[] = [], albums: AlbumItem
     title: item.title || "相册回忆",
     content: item.note,
     imageUrl: item.imageUrl,
+    imagePath: item.imagePath,
     videoUrl: item.videoUrl,
     createdAt: item.takenAt || item.createdAt,
     href: "/albums"

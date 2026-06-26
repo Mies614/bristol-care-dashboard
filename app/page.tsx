@@ -11,6 +11,7 @@ import { LoveNoteCard } from "@/components/LoveNoteCard";
 import { useWeatherCare } from "@/components/WeatherCareCard";
 import { WeatherCareHint } from "@/components/WeatherCareHint";
 import { HomeTimeHint } from "@/components/HomeTimeHint";
+import { SignedMediaImage } from "@/components/SignedMediaImage";
 import { loadAppData } from "@/lib/storage";
 import type { AlbumItem, AppData, PeriodRecord, PeriodSettings } from "@/lib/types";
 import { getCloudConnection, getDefaultSpaceCode, isCloudConfigured, pullAndPersistCloudData, syncLoveNotesIntoLocalData } from "@/lib/cloudSync";
@@ -333,8 +334,14 @@ export default function HomePage() {
                 {recentMemories.map((item) => (
                   <Link className="relative overflow-hidden rounded-2xl bg-white/60 shadow-sm" href="/albums" key={item.id}>
                     {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="aspect-square w-full object-cover" src={item.imageUrl} alt={item.title || "相册照片"} loading="lazy" />
+                      <SignedMediaImage
+                        className="aspect-square w-full object-cover"
+                        path={item.imagePath}
+                        bucket="couple-albums"
+                        url={item.imageUrl}
+                        alt={item.title || "相册照片"}
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="flex aspect-square items-center justify-center bg-cocoa/75 text-white">▶</div>
                     )}
