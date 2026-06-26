@@ -26,10 +26,10 @@ import { ApiClientError } from "@/lib/apiError";
 import ContentComments from "@/components/ContentComments";
 import type { CommentEntry } from "@/lib/contentInteractions";
 import type { AlbumItem } from "@/lib/types";
-import { getAlbumMediaDownloadUrl, getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
+import { getAlbumMediaDownloadLabel } from "@/lib/notesMedia";
+import { downloadPrivateMedia } from "@/lib/downloadHelper";
 import { UnreadBadge } from "@/components/ui/UnreadBadge";
 import { X } from "lucide-react";
-import { MediaActionButton } from "@/components/ui/MediaActionButton";
 import { useCloudReadStates } from "@/hooks/useCloudReadStates";
 import type { AppSide } from "@/lib/appIdentity";
 
@@ -296,9 +296,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
     }
   }
 
-  const selectedDownloadUrl = selected ? getAlbumMediaDownloadUrl(selected) : null;
   const selectedDownloadLabel = selected ? getAlbumMediaDownloadLabel(selected) : "";
-  const selectedMediaType = selected?.videoUrl ? "video" as const : "image" as const;
 
   const reduceMotion = useAccessibleMotion();
   const isUnread = (item: AlbumItem) => !readKeySet.has(`album:${item.id}`) && item.createdBy !== identity && !item.deletedAt;
@@ -525,12 +523,31 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
                     {playing ? "回到封面" : "播放"}
                   </AppButton>
                 )}
-                {selectedDownloadUrl && (
-                  <MediaActionButton
-                    mediaType={selectedMediaType}
-                    downloadUrl={selectedDownloadUrl}
-                    label={selectedDownloadLabel}
-                  />
+                {selected && selected.id && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await downloadPrivateMedia({
+                          contentType: "album",
+                          contentId: selected.id,
+                          field: selected.videoUrl ? "video" : "image",
+                        });
+                      } catch {
+                        toast.error("下载失败");
+                      }
+                    }}
+                    aria-label={selectedDownloadLabel}
+                    className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-xs font-medium text-cocoa shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/85 active:scale-[var(--tap-scale)] min-h-[40px] min-w-[40px]"
+                  >
+                    {selected.videoUrl ? (
+                      <svg className="h-3.5 w-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    ) : (
+                      <svg className="h-3.5 w-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                    )}
+                    <svg className="h-3.5 w-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>{selectedDownloadLabel}</span>
+                  </button>
                 )}
               </div>
 

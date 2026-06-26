@@ -1,33 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import type { LoveNote } from "@/lib/types";
-import { getNoteMediaDownloadUrl, getNoteMediaDownloadLabel } from "@/lib/notesMedia";
+import { hasNoteDownloadableMedia } from "@/lib/notesMedia";
+import { downloadPrivateMedia, type DownloadType } from "@/lib/downloadHelper";
+import { toast } from "sonner";
 
 export interface NoteMediaDownloadProps {
   note: LoveNote;
   className?: string;
 }
 
-export function NoteMediaDownload({ note, className = "" }: NoteMediaDownloadProps) {
-  const url = getNoteMediaDownloadUrl(note);
-  if (!url) return null;
+function getMediaType(note: LoveNote): DownloadType | null {
+  if (note.videoUrl) return "video";
+  if (note.imageUrl) return "image";
+  if (note.audioUrl) return "audio";
+  return null;
+}
 
-  const label = getNoteMediaDownloadLabel(note);
+function getMediaLabel(note: LoveNote): string {
+  if (note.videoUrl) return "保存视频";
+  if (note.imageUrl) return "保存图片";
+  if (note.audioUrl) return "保存语音";
+  return "下载";
+}
+
+export function NoteMediaDownload({ note, className = "" }: NoteMediaDownloadProps) {
+  const [loading, setLoading] = useState(false);
+
+  if (!hasNoteDownloadableMedia(note)) return null;
+
+  const mediaType = getMediaType(note);
+  if (!mediaType || !note.id) return null;
+
+  const label = getMediaLabel(note);
   const isVideo = Boolean(note.videoUrl);
   const icon = isVideo ? "🎬" : note.imageUrl ? "🖼️" : "🎵";
 
+  async function handleDownload(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (loading) return;
+
+    setLoading(true);
+    try {
+      await downloadPrivateMedia({
+        contentType: "note",
+        contentId: note.id,
+        field: mediaType as DownloadType,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "下载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <a
-      href={url}
-      download
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      onClick={handleDownload}
+      disabled={loading}
       aria-label={label}
-      className={`inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/90 hover:text-cocoa/80 active:scale-95 transition-all ${className}`}
-      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-cocoa/65 hover:bg-white/90 hover:text-cocoa/80 active:scale-95 transition-all disabled:opacity-50 ${className}`}
     >
       <span aria-hidden="true" className="text-[11px]">{icon}</span>
-      {label}
-    </a>
+      {loading ? "下载中…" : label}
+    </button>
   );
 }
