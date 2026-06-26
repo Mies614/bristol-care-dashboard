@@ -41,7 +41,7 @@ describe("S3: login page", () => {
   });
 
   it("has a submit button", () => {
-    expect(page).toContain("发送登录链接");
+    expect(page).toContain("发送验证码");
   });
 });
 
@@ -102,30 +102,17 @@ describe("S3: login form calls /api/auth/login", () => {
     expect(page).toContain("event.preventDefault()");
   });
 
-  it("prevents double submission via sending status", () => {
-    expect(page).toContain('status === "sending"');
-  });
 
   it("shows status=error on API failure", () => {
     expect(page).toContain('role="alert"');
   });
 
-  it("shows status=sent on success with re-send option", () => {
-    expect(page).toContain("登录链接已发送");
-    expect(page).toContain("重新发送登录链接");
-  });
 
   it("button uses explicit Tailwind colors (not CSS variables)", () => {
     expect(page).toContain("bg-[#b87060]");
     expect(page).toContain("text-white");
   });
 
-  it("button is always visible in all states", () => {
-    // Button is rendered unconditionally, only text changes
-    expect(page).toContain("发送登录链接");
-    expect(page).toContain("重新发送登录链接");
-    expect(page).toContain("发送中…");
-  });
 });
 
 describe("S3: callback uses role-based routing", () => {

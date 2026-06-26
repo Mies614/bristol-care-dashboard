@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
+import { OwnerViewSwitcher } from "@/components/OwnerViewSwitcher";
 import { useAppSafeArea } from "@/hooks/useAppSafeArea";
 import { loadAppData } from "@/lib/storage";
 import { fadeIn } from "@/lib/design/motionVariants";
@@ -34,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       initial="hidden"
       animate="visible"
     >
+      <OwnerViewSwitcher />
       {children}
       <BottomNav status={navStatus} />
       <PwaInstallPrompt />
