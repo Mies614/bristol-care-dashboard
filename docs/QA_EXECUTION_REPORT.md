@@ -106,3 +106,12 @@ Routes upgraded:
 | NOT_TESTED | 24 |
 | N/A | 18 |
 | BLOCKED | 0 |
+
+
+## Final Verification
+
+- All business API routes use resolveApiAuth (auth.uid() → space_members)
+- Production auth guard: throws on AUTH_ENFORCEMENT_MODE=off in production
+- Only 3 media routes retain resolveRequestContext fallback (by design)
+- 4 new E2E specs added: notification-identity, dual-account-critical-flows, security-role-boundaries, business-identity
+- Zero pathname/Referer/body identity inference in business write paths

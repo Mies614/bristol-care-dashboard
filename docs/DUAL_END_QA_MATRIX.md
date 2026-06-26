@@ -157,3 +157,41 @@ Generated: 2026-06-26 | Commit: 0f44180 | Mode: observe
 | miss-you from / | me | xiaoguai |
 | push subscribe from / | me | N/A |
 | push test from / | me | xiaoguai or me |
+
+
+## Production Auth Guard
+
+| Check | Status |
+|---|---|
+| production + off mode | FAIL (throws) |
+| development + off mode | PASS |
+| test + off mode | PASS |
+| production + observe mode | PASS |
+| unknown mode | PASS (defaults observe) |
+
+## Identity Chain Final Status
+
+| Route | Identity Source | Owner on / | Partner on / |
+|---|---|---|---|
+| /api/comments | space_members.identity_id | me | xiaoguai |
+| /api/interactions | space_members.identity_id | me | xiaoguai |
+| /api/read-state | space_members.identity_id | me | xiaoguai |
+| /api/notes | space_members.identity_id | me | xiaoguai |
+| /api/albums | space_members.identity_id | me | xiaoguai |
+| /api/identities | space_members.identity_id | me | xiaoguai |
+| /api/location | space_members.identity_id | me | xiaoguai |
+| /api/miss-you | space_members.identity_id | me | xiaoguai |
+| /api/push/subscribe | space_members.identity_id | me | xiaoguai |
+| /api/push/test | auth.context.role | owner | owner |
+
+## Updated PASS/FAIL/NOT_TESTED
+
+| Status | Count |
+|---|---|
+| AUTOMATED_PASS | 64 |
+| E2E_PASS | 0 (needs dev server) |
+| MANUAL_PASS | 0 |
+| FAIL | 0 |
+| NOT_TESTED | 18 |
+| N/A | 16 |
+| BLOCKED | 0 |

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAuthenticatedRequestContext } from "./authenticatedRequestContext";
+import { getAuthEnforcementMode } from "./productionAuthGuard";
 import { resolveRequestContext } from "./requestContext";
 
 export type ApiAuthContext = {
@@ -25,7 +26,7 @@ export async function resolveApiAuth(
   body?: Record<string, unknown>,
   requireOrigin = true,
 ): Promise<ResolvedAuth> {
-  const mode = process.env.AUTH_ENFORCEMENT_MODE || "off";
+  const mode = getAuthEnforcementMode();
 
   if (mode === "off") {
     const ctx = resolveRequestContext(request, body, { requireOrigin });
