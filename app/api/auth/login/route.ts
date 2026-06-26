@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createAuthClient();
-    const origin = request.headers.get("origin") || request.nextUrl.origin;
+    // Prefer explicit APP_ORIGIN for production, fall back to current origin
+    const origin = process.env.APP_ORIGIN || request.headers.get("origin") || request.nextUrl.origin;
 
     const { error } = await supabase.auth.signInWithOtp({
       email: rawEmail,

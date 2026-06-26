@@ -81,3 +81,61 @@ describe("S3: auth callback", () => {
     expect(cb).toContain("${origin}");
   });
 });
+
+
+describe("S3: login form calls /api/auth/login", () => {
+  const page = readFileSync(
+    resolve(__dirname, "../app/login/page.tsx"),
+    "utf-8",
+  );
+
+  it("calls /api/auth/login via fetch", () => {
+    expect(page).toContain("/api/auth/login");
+    expect(page).toContain("fetch(");
+  });
+
+  it("does NOT POST to /login natively", () => {
+    // No action attribute, no method="POST" on the form
+    expect(page).not.toContain("action=");
+    // Button uses type="button" not type="submit"
+    expect(page).toContain('type="button"');
+  });
+
+  it("supports Enter key via form onSubmit", () => {
+    expect(page).toContain("onSubmit={handleSubmit}");
+    expect(page).toContain("event.preventDefault()");
+  });
+
+  it("prevents double submission via loading state", () => {
+    expect(page).toContain("loading");
+    expect(page).toContain("disabled={loading");
+  });
+
+  it("shows error state on failure", () => {
+    expect(page).toContain("setMessage");
+  });
+
+  it("shows sent state on success", () => {
+    expect(page).toContain("登录链接已发送");
+  });
+});
+
+describe("S3: callback prevents open redirect", () => {
+  const cb = readFileSync(
+    resolve(__dirname, "../app/auth/callback/route.ts"),
+    "utf-8",
+  );
+
+  it("validates redirect path against allowlist", () => {
+    expect(cb).toContain("ALLOWED_REDIRECT_PREFIXES");
+    expect(cb).toContain("safeRedirectPath");
+  });
+
+  it("rejects paths with protocol prefix", () => {
+    expect(cb).toContain("://");
+  });
+
+  it("defaults to / on invalid path", () => {
+    expect(cb).toContain('return "/"');
+  });
+});

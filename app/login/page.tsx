@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { AppCard } from "@/components/ui/AppCard";
 import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  async function handleLogin(event: React.FormEvent) {
-    event.preventDefault();
+  const submitLogin = useCallback(async () => {
+    const trimmed = email.trim();
+    if (!trimmed || loading) return;
+
     setMessage("");
     setLoading(true);
 
@@ -19,7 +22,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: trimmed }),
       });
       const json = await res.json();
 
@@ -33,6 +36,12 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }, [email, loading]);
+
+  // Form submit handler for Enter key support
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    submitLogin();
   }
 
   return (
@@ -43,7 +52,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-cocoa/55">输入你的邮箱以登录</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="email"
             className="w-full"
@@ -54,7 +63,13 @@ export default function LoginPage() {
             disabled={loading}
             autoComplete="email"
           />
-          <AppButton variant="primary" className="w-full" type="submit" disabled={loading || !email.trim()}>
+          <AppButton
+            variant="primary"
+            className="w-full"
+            type="button"
+            disabled={loading || !email.trim()}
+            onClick={submitLogin}
+          >
             {loading ? "发送中..." : "发送登录链接"}
           </AppButton>
         </form>
