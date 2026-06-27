@@ -118,7 +118,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
   const videoPreview = useMemo(() => (video ? URL.createObjectURL(video) : ""), [video]);
 
   async function loadItems() {
-    const response = await fetch(`/api/albums?code=${encodeURIComponent(code)}&filter=${filter}`);
+    const response = await fetch(`/api/albums?code=${encodeURIComponent(code)}&filter=${filter}`, { cache: "no-store" });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) return setMessage(formatApiError(payload, "相册加载失败。"));
     setItems(payload.items || []);
