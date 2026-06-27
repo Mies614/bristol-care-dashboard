@@ -133,3 +133,63 @@ describe("notes API", () => {
     }));
   });
 });
+
+
+describe("NoteMediaDownload comprehensive", () => {
+  it("getNoteMediaDownloadUrl returns imagePath when imageUrl is null", async () => {
+    const { getNoteMediaDownloadUrl } = await import("@/lib/notesMedia");
+    const result = getNoteMediaDownloadUrl({
+      imagePath: "xiaoguai520/me/2026/test.jpg",
+      imageUrl: undefined,
+    } as unknown as import("@/lib/types").LoveNote);
+    expect(result).toBe("xiaoguai520/me/2026/test.jpg");
+  });
+
+  it("hasNoteDownloadableMedia returns true for imagePath with null imageUrl", async () => {
+    const { hasNoteDownloadableMedia } = await import("@/lib/notesMedia");
+    const result = hasNoteDownloadableMedia({
+      imagePath: "xiaoguai520/me/2026/test.jpg",
+      imageUrl: undefined,
+    } as unknown as import("@/lib/types").LoveNote);
+    expect(result).toBe(true);
+  });
+
+  it("hasNoteDownloadableMedia returns true for mixed note with imagePath", async () => {
+    const { hasNoteDownloadableMedia } = await import("@/lib/notesMedia");
+    const result = hasNoteDownloadableMedia({
+      type: "mixed",
+      imagePath: "xiaoguai520/me/2026/test.jpg",
+      imageUrl: undefined,
+    } as unknown as import("@/lib/types").LoveNote);
+    expect(result).toBe(true);
+  });
+
+  it("hasNoteDownloadableMedia returns false for text-only note", async () => {
+    const { hasNoteDownloadableMedia } = await import("@/lib/notesMedia");
+    const result = hasNoteDownloadableMedia({
+      content: "hello",
+      imagePath: undefined,
+      videoPath: undefined,
+      audioPath: undefined,
+    } as unknown as import("@/lib/types").LoveNote);
+    expect(result).toBe(false);
+  });
+
+  it("getNoteMediaDownloadUrl returns videoPath over imagePath", async () => {
+    const { getNoteMediaDownloadUrl } = await import("@/lib/notesMedia");
+    const result = getNoteMediaDownloadUrl({
+      imagePath: "test-img.jpg",
+      videoPath: "test-video.mp4",
+    } as unknown as import("@/lib/types").LoveNote);
+    expect(result).toBe("test-video.mp4");
+  });
+
+  it("getAlbumMediaDownloadUrl returns imagePath (not legacy imageUrl)", async () => {
+    const { getAlbumMediaDownloadUrl } = await import("@/lib/notesMedia");
+    const result = getAlbumMediaDownloadUrl({
+      imagePath: "album/path/img.jpg",
+      imageUrl: undefined,
+    } as unknown as import("@/lib/types").AlbumItem);
+    expect(result).toBe("album/path/img.jpg");
+  });
+});
