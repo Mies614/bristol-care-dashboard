@@ -102,11 +102,8 @@ export function NoteComposer({ onCreated, identityId: propIdentityId, side }: { 
           content: draft.content,
           display_style: draft.displayStyle,
           mood: draft.mood || undefined,
-          image_url: uploadedImage?.url,
           image_path: uploadedImage?.path,
-          audio_url: uploadedAudio?.url,
           audio_path: uploadedAudio?.path,
-          video_url: uploadedVideo?.url,
           video_path: uploadedVideo?.path,
           media_size: (uploadedImage?.size || 0) + (uploadedAudio?.size || 0) + (uploadedVideo?.size || 0)
         })

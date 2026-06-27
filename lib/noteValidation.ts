@@ -65,12 +65,12 @@ export function getNoteFileExtension(file: FileLike): string {
   throw new Error("Unsupported note media file type");
 }
 
-export function inferNoteType(input: { content?: string; imageUrl?: string; audioUrl?: string; videoUrl?: string; imagePath?: string; audioPath?: string; videoPath?: string }): LoveNote["noteType"] {
-  const count = [input.content?.trim(), input.imageUrl, input.audioUrl, input.videoUrl, input.imagePath, input.audioPath, input.videoPath].filter(Boolean).length;
+export function inferNoteType(input: { content?: string; imagePath?: string; audioPath?: string; videoPath?: string }): LoveNote["noteType"] {
+  const count = [input.content?.trim(), input.imagePath, input.audioPath, input.videoPath].filter(Boolean).length;
   if (count > 1) return "mixed";
-  if (input.videoUrl || input.videoPath) return "video";
-  if (input.audioUrl || input.audioPath) return "audio";
-  if (input.imageUrl || input.imagePath) return "image";
+  if (input.videoPath) return "video";
+  if (input.audioPath) return "audio";
+  if (input.imagePath) return "image";
   return "text";
 }
 
@@ -90,6 +90,6 @@ export function isValidAuthor(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-export function hasNoteContent(input: { content?: string; imageUrl?: string; audioUrl?: string; videoUrl?: string; imagePath?: string; audioPath?: string; videoPath?: string }) {
-  return Boolean(input.content?.trim() || input.imageUrl || input.audioUrl || input.videoUrl || input.imagePath || input.audioPath || input.videoPath);
+export function hasNoteContent(input: { content?: string; imagePath?: string; audioPath?: string; videoPath?: string }) {
+  return Boolean(input.content?.trim() || input.imagePath || input.audioPath || input.videoPath);
 }
