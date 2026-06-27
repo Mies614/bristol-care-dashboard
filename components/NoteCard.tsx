@@ -94,7 +94,7 @@ export function NoteCard({
     ? "ring-1 ring-[var(--app-accent)]/25 shadow-[0_0_10px_rgba(232,169,155,0.12)]"
     : "";
 
-  const type = note.noteType || (note.videoUrl || note.videoPath ? "video" : note.audioUrl || note.audioPath ? "audio" : note.imageUrl || note.imagePath ? "image" : "text");
+  const type = note.noteType || (note.videoPath ? "video" : note.audioPath ? "audio" : note.imagePath ? "image" : "text");
 
   const [showComments] = useState(false);
   const [showCommentSheet, setShowCommentSheet] = useState(false);
@@ -210,7 +210,7 @@ export function NoteCard({
         </div>
 
         {/* Media: image */}
-        {(note.imageUrl || note.imagePath) ? (
+        {note.imagePath ? (
           <div className="mb-3 space-y-2">
             <SignedMediaImage
               className="max-h-56 w-full rounded-[1.25rem] object-cover animate-[fadeIn_0.3s_ease-out]"
@@ -225,7 +225,7 @@ export function NoteCard({
         ) : null}
 
         {/* Media: video */}
-        {(note.videoUrl || note.videoPath) ? (
+        {note.videoPath ? (
           <div className="mb-3 space-y-2">
             <SignedMediaVideo
               className="max-h-56 w-full rounded-[1.25rem] bg-black"
@@ -239,7 +239,7 @@ export function NoteCard({
         ) : null}
 
         {/* Media: audio */}
-        {(note.audioUrl || note.audioPath) ? (
+        {note.audioPath ? (
           <div className="mb-3 space-y-2">
             <SignedMediaAudio
               className="w-full"
