@@ -11,9 +11,9 @@ import type { LoveNote, AlbumItem } from "./types";
  * Priority: videoUrl > imageUrl > audioUrl
  */
 export function getNoteMediaDownloadUrl(note: LoveNote): string | null {
-  if (note.videoUrl) return note.videoUrl;
-  if (note.imageUrl) return note.imageUrl;
-  if (note.audioUrl) return note.audioUrl;
+  if (note.videoUrl || note.videoPath) return note.videoUrl ?? note.videoPath ?? null;
+  if (note.imageUrl || note.imagePath) return note.imageUrl ?? note.imagePath ?? null;
+  if (note.audioUrl || note.audioPath) return note.audioUrl ?? note.audioPath ?? null;
   return null;
 }
 
@@ -21,9 +21,9 @@ export function getNoteMediaDownloadUrl(note: LoveNote): string | null {
  * Get a human-readable label for the download button based on media type.
  */
 export function getNoteMediaDownloadLabel(note: LoveNote): string {
-  if (note.videoUrl) return "保存视频";
-  if (note.imageUrl) return "保存图片";
-  if (note.audioUrl) return "保存语音";
+  if (note.videoUrl || note.videoPath) return "保存视频";
+  if (note.imageUrl || note.imagePath) return "保存图片";
+  if (note.audioUrl || note.audioPath) return "保存语音";
   return "下载";
 }
 

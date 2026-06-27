@@ -160,7 +160,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
         <p className="mt-4 whitespace-pre-wrap text-[0.95rem] leading-8 text-cocoa/78">{content}</p>
       )}
 
-      {!compact && note?.imageUrl ? (
+      {!compact && (note?.imageUrl || note?.imagePath) ? (
         <div className="mt-4 space-y-2">
           <SignedMediaImage
             alt={note.imageAlt || "小纸条图片"}
@@ -172,7 +172,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
-      {!compact && note?.audioUrl ? (
+      {!compact && (note?.audioUrl || note?.audioPath) ? (
         <div className="mt-4 space-y-2">
           <SignedMediaAudio
             className="w-full"
@@ -183,7 +183,7 @@ export function LoveNoteCard({ note, fallback, onRefresh, identityId: propIdenti
           <NoteMediaDownload note={note} />
         </div>
       ) : null}
-      {!compact && note?.videoUrl ? (
+      {!compact && (note?.videoUrl || note?.videoPath) ? (
         <div className="mt-4 space-y-2">
           <SignedMediaVideo
             className="max-h-[280px] w-full rounded-[1.5rem] bg-black shadow-sm"
