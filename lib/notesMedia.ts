@@ -39,8 +39,8 @@ export function hasNoteDownloadableMedia(note: LoveNote): boolean {
  * Priority: videoUrl > imageUrl
  */
 export function getAlbumMediaDownloadUrl(album: AlbumItem): string | null {
-  if (album.videoUrl) return album.videoUrl;
-  if (album.imageUrl) return album.imageUrl;
+  if (album.videoPath) return album.videoPath;
+  if (album.imagePath) return album.imagePath;
   return null;
 }
 
@@ -48,8 +48,8 @@ export function getAlbumMediaDownloadUrl(album: AlbumItem): string | null {
  * Get a human-readable label for the download button based on album media type.
  */
 export function getAlbumMediaDownloadLabel(album: AlbumItem): string {
-  if (album.videoUrl) return "保存视频";
-  if (album.imageUrl) return "保存图片";
+  if (album.videoPath) return "保存视频";
+  if (album.imagePath) return "保存图片";
   return "下载";
 }
 
