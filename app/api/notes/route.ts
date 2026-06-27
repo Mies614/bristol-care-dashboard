@@ -91,9 +91,12 @@ export async function POST(request: NextRequest) {
     const code = auth.context.spaceCode;
     const content = optionalString(body.content) || "";
     const imageUrl = optionalString(body.image_url);
+    const imagePath = optionalString(body.image_path);
     const audioUrl = optionalString(body.audio_url);
+    const audioPath = optionalString(body.audio_path);
     const videoUrl = optionalString(body.video_url);
-    if (!hasNoteContent({ content, imageUrl, audioUrl, videoUrl })) {
+    const videoPath = optionalString(body.video_path);
+    if (!hasNoteContent({ content, imageUrl, audioUrl, videoUrl, imagePath, audioPath, videoPath })) {
       return fail("小纸条至少需要文字、语音、图片或视频中的一种。", "NOTE_EMPTY", "validate_note", 400);
     }
 
@@ -108,7 +111,7 @@ export async function POST(request: NextRequest) {
       active: true,
       pinned: false,
       author,
-      noteType: inferNoteType({ content, imageUrl, audioUrl, videoUrl }),
+      noteType: inferNoteType({ content, imageUrl, audioUrl, videoUrl, imagePath, audioPath, videoPath }),
       displayStyle: normalizeDisplayStyle(body.display_style),
       mood: optionalMood(body.mood),
       visibleFrom: new Date().toISOString(),

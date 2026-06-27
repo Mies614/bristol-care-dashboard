@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
 
     step = "validate_metadata";
     if (!isAlbumType(body.type)) return fail("相册类型不正确。", "ALBUM_TYPE_INVALID", "validate_metadata", 400);
-    const hasImage = Boolean(optionalString(body.image_url) && optionalString(body.image_path));
-    const hasVideo = Boolean(optionalString(body.video_url) && optionalString(body.video_path));
+    const hasImage = Boolean(optionalString(body.image_path));
+    const hasVideo = Boolean(optionalString(body.video_path));
     if (!hasImage && !hasVideo) return fail("请至少提供图片或视频的 Storage URL。", "ALBUM_MEDIA_MISSING", "validate_metadata", 400);
     if (body.type === "photo" && !hasImage) return fail("照片项目缺少图片。", "ALBUM_IMAGE_METADATA_MISSING", "validate_metadata", 400);
     if (body.type === "video" && !hasVideo) return fail("视频项目缺少视频。", "ALBUM_VIDEO_METADATA_MISSING", "validate_metadata", 400);
