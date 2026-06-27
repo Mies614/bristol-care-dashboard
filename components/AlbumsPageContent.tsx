@@ -496,7 +496,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
               </button>
 
               {/* Media display */}
-              {selected.videoUrl && (playing || !selected.imageUrl) ? (
+              {selected.videoPath && (playing || !selected.imagePath) ? (
                 <SignedMediaVideo
                   className="max-h-[60dvh] w-full rounded-[1.35rem] bg-black"
                   path={selected.videoPath}
@@ -505,7 +505,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
                   controls
                   autoPlay
                 />
-              ) : selected.imageUrl ? (
+              ) : selected.imagePath ? (
                 <SignedMediaImage
                   path={selected.imagePath}
                   bucket="couple-albums"
@@ -518,7 +518,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
 
               {/* Media action row */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                {selected.videoUrl && (
+                {selected.videoPath && (
                   <AppButton variant="secondary" size="sm" onClick={() => setPlaying((v) => !v)}>
                     {playing ? "回到封面" : "播放"}
                   </AppButton>
@@ -552,7 +552,7 @@ export function AlbumsPageContent({ identityId: propIdentityId, appSide }: Album
               </div>
 
               {/* MOV hint */}
-              {(selected.videoUrl?.includes(".mov") || selected.videoPath?.endsWith(".mov")) ? (
+              {(selected.videoPath?.endsWith(".mov")) ? (
                 <div className="mt-3 rounded-[var(--app-radius)] border border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] p-3 text-sm text-[var(--app-accent)] break-words">
                   如果 MOV 无法播放，请在浏览器中打开或下载查看。
                 </div>
