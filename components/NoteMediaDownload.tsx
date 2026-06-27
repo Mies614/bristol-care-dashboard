@@ -12,16 +12,16 @@ export interface NoteMediaDownloadProps {
 }
 
 function getMediaType(note: LoveNote): DownloadType | null {
-  if (note.videoUrl) return "video";
-  if (note.imageUrl) return "image";
-  if (note.audioUrl) return "audio";
+  if (note.videoPath) return "video";
+  if (note.imagePath) return "image";
+  if (note.audioPath) return "audio";
   return null;
 }
 
 function getMediaLabel(note: LoveNote): string {
-  if (note.videoUrl) return "保存视频";
-  if (note.imageUrl) return "保存图片";
-  if (note.audioUrl) return "保存语音";
+  if (note.videoPath) return "保存视频";
+  if (note.imagePath) return "保存图片";
+  if (note.audioPath) return "保存语音";
   return "下载";
 }
 
@@ -34,8 +34,8 @@ export function NoteMediaDownload({ note, className = "" }: NoteMediaDownloadPro
   if (!mediaType || !note.id) return null;
 
   const label = getMediaLabel(note);
-  const isVideo = Boolean(note.videoUrl);
-  const icon = isVideo ? "🎬" : note.imageUrl ? "🖼️" : "🎵";
+  const isVideo = Boolean(note.videoPath);
+  const icon = isVideo ? "🎬" : note.imagePath ? "🖼️" : "🎵";
 
   async function handleDownload(event: React.MouseEvent) {
     event.preventDefault();
