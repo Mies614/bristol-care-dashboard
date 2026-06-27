@@ -42,6 +42,7 @@ export function NoteComposer({ onCreated, identityId: propIdentityId, side }: { 
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadCanRetry, setUploadCanRetry] = useState(false);
+
   const [showExtraStyles, setShowExtraStyles] = useState(false);
   const cancelRef = useRef(false);
 
