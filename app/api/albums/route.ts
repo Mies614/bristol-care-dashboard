@@ -164,3 +164,45 @@ export async function PATCH(request: NextRequest) {
     return fail("相册更新请求失败。", "ALBUM_PATCH_FAILED", step, 500, error);
   }
 }
+
+// ─── DELETE /api/albums ───
+// Body: { id, code }
+export async function DELETE(request: NextRequest) {
+  let step = "parse_body";
+  try {
+    if (!isSupabaseServerConfigured()) return fail("云相册未配置，当前无法删除。", "SUPABASE_NOT_CONFIGURED", "configure_supabase", 503);
+    const body = await request.json();
+    const auth = await resolveApiAuth(request, body, true);
+    if (!auth.ok) return auth.response;
+    const code = auth.context.spaceCode;
+    if (!body.id) return fail("缺少相册项目 ID。", "ALBUM_ID_MISSING", "validate_album_id", 400);
+
+    step = "get_space";
+    const space = await getSpaceByCode(code);
+    if (!space) return fail("相册空间不存在。", "SPACE_NOT_FOUND", "get_space", 404);
+
+    const supabase = createSupabaseServerClient();
+
+    const { data: current, error: currentError } = await supabase
+      .from("album_items")
+      .select("id")
+      .eq("space_id", space.id)
+      .eq("id", String(body.id))
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (currentError) return fail("相册项目查询失败。", "ALBUM_LOOKUP_FAILED", "lookup_album_item", 500, currentError);
+    if (!current) return fail("相册项目不存在。", "ALBUM_NOT_FOUND", "lookup_album_item", 404);
+
+    step = "delete_album_item";
+    const { error } = await supabase
+      .from("album_items")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("space_id", space.id)
+      .eq("id", String(body.id));
+
+    if (error) return fail("相册项目删除失败。", "ALBUM_DELETE_FAILED", "delete_album_item", 500, error);
+    return NextResponse.json({ ok: true, action: "deleted" });
+  } catch (err) {
+    return fail("相册删除请求失败。", "ALBUM_DELETE_FAILED", step, 500, err);
+  }
+}
