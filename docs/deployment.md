@@ -21,6 +21,7 @@
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | 否 | Web Push 公钥 |
 | `VAPID_PRIVATE_KEY` | 否 | Web Push 私钥 |
 | `VAPID_SUBJECT` | 否 | 如 `mailto:you@example.com` |
+| `SUPABASE_KEEPALIVE_SECRET` | 否 | GitHub Actions 保活接口密钥，仅服务端 |
 
 - 不配置 Supabase 相关变量时，App 以 localStorage 模式运行。
 - 不配置 VAPID 时，Push 通知功能不可用，但不影响 App 其他功能。
@@ -95,3 +96,15 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/remi
    - `GET /api/health` — 确认 CRON_SECRET 显示 "configured"
    - `/admin` → 数据维护中心 → 提醒监控 → 点击"模拟运行"
    - settings 页 → 通知设置 → 开启通知 → 发送测试通知
+
+## Supabase Free 保活
+
+Free 项目可能因长期无活动而暂停。仓库提供受保护的、只读的 `/api/keepalive`，由 GitHub Actions 每周一和周四各调用一次。检查只会对 `couple_spaces` 执行无数据返回的计数查询，不会读取、写入或返回业务数据。
+
+配置步骤：
+
+1. 在 Vercel 的 **Production** 环境变量中设置 `SUPABASE_KEEPALIVE_SECRET` 为新的随机字符串；不要复用 `CRON_SECRET`。
+2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions** 新建：
+   - `SUPABASE_KEEPALIVE_URL`: `https://<正式域名>/api/keepalive`
+   - `SUPABASE_KEEPALIVE_SECRET`: 与 Vercel 中完全相同的值
+3. 部署后手动运行一次 **Supabase Keepalive** 工作流，确认成功。

@@ -1,0 +1,27 @@
+name: Supabase Keepalive
+
+on:
+  schedule:
+    # Twice weekly keeps the maximum gap below Supabase Free's 7-day window.
+    - cron: "17 3 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Verify Supabase availability
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call the protected keepalive endpoint
+        env:
+          KEEPALIVE_URL: ${{ secrets.SUPABASE_KEEPALIVE_URL }}
+          KEEPALIVE_SECRET: ${{ secrets.SUPABASE_KEEPALIVE_SECRET }}
+        run: |
+          test -n "$KEEPALIVE_URL"
+          test -n "$KEEPALIVE_SECRET"
+          curl --fail --silent --show-error --max-time 20 --retry 2 --retry-all-errors \
+            -H "Authorization: Bearer ${KEEPALIVE_SECRET}" \
+            "$KEEPALIVE_URL"

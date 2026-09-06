@@ -53,6 +53,7 @@ SUPABASE_SERVICE_ROLE_KEY=<production-service-role-key>
 NEXT_PUBLIC_DEFAULT_SPACE_CODE=<production-space-code>
 ADMIN_PASSWORD=<production-admin-password>
 CRON_SECRET=<production-cron-secret>
+SUPABASE_KEEPALIVE_SECRET=<production-keepalive-secret>
 ```
 
 ### `.env.preview` (Vercel Preview — NOT YET IMPLEMENTED)
