@@ -34,7 +34,7 @@ export async function uploadAlbumFileDirectly(
   _code: string,
   _identity?: string,
 ): Promise<UploadedAlbumFile> {
-  return signedUpload(file, "couple-albums", kind);
+  return signedUpload(file, "couple-albums", kind, { spaceCode: _code, identity: _identity });
 }
 
 export function buildAlbumMetadataPayload(input: {

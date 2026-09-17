@@ -39,6 +39,7 @@ export async function signedUpload(
   file: File | Blob,
   bucket: string,
   kind: MediaKind,
+  context?: { spaceCode?: string; identity?: string },
 ): Promise<SignedUploadResult> {
   // 1. Request signed URL from server
   const authRes = await fetch("/api/upload/authorize", {
@@ -48,12 +49,15 @@ export async function signedUpload(
       bucket,
       mimeType: file.type || "application/octet-stream",
       fileSize: file.size,
+      spaceCode: context?.spaceCode,
+      identity: context?.identity,
+      side: context?.identity === "me" ? "owner" : "partner",
     }),
   });
 
   if (!authRes.ok) {
     const errBody = await authRes.json().catch(() => ({})) as ApiErrorResponse;
-    throw new Error(errBody.error || `Upload authorize failed (${authRes.status})`);
+    throw new Error(errBody.error || errBody.code || `Upload authorize failed (${authRes.status})`);
   }
 
   const authJson = await authRes.json() as AuthorizeResponse;

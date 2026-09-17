@@ -9,5 +9,5 @@ export async function uploadNoteMediaDirectly(
   _identity?: string,
 ): Promise<UploadedNoteMedia> {
   const mediaKind = kind === "images" ? "image" : kind === "videos" ? "video" : "audio";
-  return signedUpload(file, "love-notes", mediaKind);
+  return signedUpload(file, "love-notes", mediaKind, { spaceCode: _code, identity: _identity });
 }

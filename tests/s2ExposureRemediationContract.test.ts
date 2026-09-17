@@ -70,6 +70,11 @@ describe("S2.2: upload modules use signed upload, not anon Storage", () => {
     expect(signedUpload).toContain("/api/upload/authorize");
   });
 
+  it("signedUpload sends explicit space and side context", () => {
+    expect(signedUpload).toContain("spaceCode: context?.spaceCode");
+    expect(signedUpload).toContain('side: context?.identity === "me" ? "owner" : "partner"');
+  });
+
   it("signedUpload does not generate public URLs for private buckets", () => {
     expect(signedUpload).not.toContain("object/public");
     expect(signedUpload).not.toContain("publicUrl");

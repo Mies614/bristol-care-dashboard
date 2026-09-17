@@ -32,5 +32,5 @@ export function getBackgroundImageExtension(file: File | Blob & { name?: string 
 }
 
 export async function uploadBackgroundImageDirectly(file: File, _code: string, _identity?: string) {
-  return signedUpload(file, BACKGROUND_BUCKET, "image");
+  return signedUpload(file, BACKGROUND_BUCKET, "image", { spaceCode: _code, identity: _identity });
 }
